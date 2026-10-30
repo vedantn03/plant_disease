@@ -5,7 +5,6 @@ Shared pytest fixtures for the plant_disease test suite.
 Sets DATA_ROOT from .env before any test module is imported.
 """
 
-import os
 import sys
 from pathlib import Path
 

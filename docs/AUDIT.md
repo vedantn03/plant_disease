@@ -27,13 +27,13 @@ Generated as part of Task T0 (Repository audit & ground truth verification). Gua
 ## 2. Command Execution Evidence
 
 ### A. Test Suite (`pytest -q`)
-Command: `..\.venv\Scripts\pytest.exe -q`  
+Command: `..\.venv\Scripts\pytest.exe -q`
 Result: **23 passed, 1 failed, 5 warnings** (19.58s)
 - **Failure**: `tests/test_advisory_kb.py::test_no_fungicide_in_viral_pest_hlb`
   - Cause: `orange/haunglongbing_(citrus_greening)` entry contains the word "fungicide" in a negative context (*"no fungicide or chemical cures the bacteria... negative assertion: fungicides must never be sprayed for hlb"*), tripping the strict substring assertion `assert keyword not in rec_clean`.
 
 ### B. Training Script (`python scripts/train.py --help`)
-Command: `..\.venv\Scripts\python.exe scripts/train.py --help`  
+Command: `..\.venv\Scripts\python.exe scripts/train.py --help`
 Output:
 ```text
 usage: train.py [-h] [--config CONFIG]

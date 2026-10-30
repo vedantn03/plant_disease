@@ -31,7 +31,7 @@ import sys
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from src.model import build_model, preprocess_image
-from src.ood_detector import check_image_heuristics, compute_energy_score, MahalanobisDetector
+from src.ood_detector import check_image_heuristics, compute_energy_score
 from src.utils import set_seed
 
 
@@ -40,10 +40,10 @@ def main():
     root = Path(__file__).resolve().parent.parent
     figures_dir = root / "reports" / "figures"
     figures_dir.mkdir(parents=True, exist_ok=True)
-    
+
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"OOD Benchmark running on {device}")
-    
+
     # Load model
     ckpt_path = root / "models" / "best_model.pth"
     ckpt = torch.load(ckpt_path, map_location=device, weights_only=False)
@@ -52,26 +52,26 @@ def main():
     model.load_state_dict(ckpt["model_state_dict"])
     model.to(device)
     model.eval()
-    
+
     # Hook penultimate layer (avgpool) for Mahalanobis features
     penultimate_feats = []
     def hook_fn(module, input, output):
         penultimate_feats.append(output.squeeze().detach().cpu().numpy())
-    hook = model.avgpool.register_forward_hook(hook_fn)
-    
+    hook = model.avgpool.register_forward_hook(hook_fn)  # noqa: F841
+
     # ── 1. In-Distribution (ID) Samples from test.csv ─────────────────────────
     test_csv = root / "data" / "splits" / "test.csv"
     with open(test_csv, "r", encoding="utf-8") as f:
         records = list(csv.DictReader(f))
-        
+
     rng = np.random.default_rng(42)
     sample_size = min(300, len(records))
     id_records = rng.choice(records, size=sample_size, replace=False)
-    
+
     id_msp = []
     id_energy = []
     id_features = []
-    
+
     print("Evaluating In-Distribution test samples...")
     for rec in tqdm(id_records, desc="ID test"):
         im = Image.open(rec["path"]).convert("RGB")
@@ -80,18 +80,18 @@ def main():
         with torch.no_grad():
             with torch.autocast(device_type=device.type, dtype=torch.float16, enabled=(device.type == "cuda")):
                 logits = model(tensor)
-        
+
         prob = F.softmax(logits, dim=1).max().item()
         energy = compute_energy_score(logits, temperature=1.0).item()
         id_msp.append(prob)
         id_energy.append(-energy)  # Invert so higher = more in-distribution
         if penultimate_feats:
             id_features.append(penultimate_feats[0].flatten())
-            
+
     id_msp = np.array(id_msp)
     id_energy = np.array(id_energy)
     id_features = np.array(id_features)
-    
+
     # ── 2. Generate OOD Evaluation Sets ───────────────────────────────────────
     # Set A: Synthetic Noise (Uniform & Gaussian)
     # Set B: Solid / Flat Colors (Gray tiles, black, white, cyan, pink)
@@ -102,7 +102,7 @@ def main():
     ood_energy = []
     ood_features = []
     ood_heuristic_rejected = []
-    
+
     print("Evaluating Out-of-Distribution samples...")
     for i in tqdm(range(n_ood), desc="OOD eval"):
         kind = i % 4
@@ -125,47 +125,47 @@ def main():
                 arr = np.array(Image.open(nl_path).convert("RGB"))
             else:
                 arr = np.zeros((224, 224, 3), dtype=np.uint8) + 128
-                
+
         im = Image.fromarray(arr)
         is_valid, code, msg = check_image_heuristics(im)
         ood_heuristic_rejected.append(not is_valid)
-        
+
         tensor = preprocess_image(im).to(device)
         penultimate_feats.clear()
         with torch.no_grad():
             with torch.autocast(device_type=device.type, dtype=torch.float16, enabled=(device.type == "cuda")):
                 logits = model(tensor)
-                
+
         prob = F.softmax(logits, dim=1).max().item()
         energy = compute_energy_score(logits, temperature=1.0).item()
         ood_msp.append(prob)
         ood_energy.append(-energy)
         if penultimate_feats:
             ood_features.append(penultimate_feats[0].flatten())
-            
+
     ood_msp = np.array(ood_msp)
     ood_energy = np.array(ood_energy)
     ood_features = np.array(ood_features)
     heuristic_rejection_rate = np.mean(ood_heuristic_rejected)
-    
+
     # ── 3. Compute AUROC & FPR95 ──────────────────────────────────────────────
     # Ground truth: 1 for ID, 0 for OOD
     y_true = np.concatenate([np.ones(len(id_msp)), np.zeros(len(ood_msp))])
-    
+
     # Detector 1: Max Softmax
     scores_msp = np.concatenate([id_msp, ood_msp])
     auroc_msp = roc_auc_score(y_true, scores_msp)
     fpr_msp, tpr_msp, thresh_msp = roc_curve(y_true, scores_msp)
     idx95_msp = np.argmin(np.abs(tpr_msp - 0.95))
     fpr95_msp = fpr_msp[idx95_msp]
-    
+
     # Detector 2: Energy Score
     scores_energy = np.concatenate([id_energy, ood_energy])
     auroc_energy = roc_auc_score(y_true, scores_energy)
     fpr_energy, tpr_energy, thresh_energy = roc_curve(y_true, scores_energy)
     idx95_energy = np.argmin(np.abs(tpr_energy - 0.95))
     fpr95_energy = fpr_energy[idx95_energy]
-    
+
     # Detector 3: Combined Layered (Heuristic pre-filter + Energy)
     # If heuristic rejected, score is set to minimum
     scores_layered = scores_energy.copy()
@@ -176,12 +176,12 @@ def main():
     fpr_layered, tpr_layered, thresh_layered = roc_curve(y_true, scores_layered)
     idx95_layered = np.argmin(np.abs(tpr_layered - 0.95))
     fpr95_layered = fpr_layered[idx95_layered]
-    
+
     # Rejection of grey tile under each:
     grey_im = Image.new("RGB", (224, 224), (128, 128, 128))
     grey_valid, _, _ = check_image_heuristics(grey_im)
     grey_rejected_layered = (not grey_valid)
-    
+
     # Plot ROC Curves
     plt.figure(figsize=(8, 6))
     plt.plot(fpr_msp, tpr_msp, label=f"Max Softmax (AUROC = {auroc_msp:.3f}, FPR95 = {fpr95_msp:.1%})", color="orange", linestyle="--")
@@ -197,7 +197,7 @@ def main():
     roc_fig_path = figures_dir / "ood_roc_curves.png"
     plt.savefig(roc_fig_path, dpi=150)
     plt.close()
-    
+
     metrics = {
         "n_id": len(id_msp),
         "n_ood": len(ood_msp),
@@ -218,10 +218,10 @@ def main():
         },
         "grey_tile_rejected": bool(grey_rejected_layered)
     }
-    
+
     with open(root / "reports" / "ood_metrics.json", "w") as f:
         json.dump(metrics, f, indent=2)
-        
+
     # Write reports/ood_report.md
     report_md = f"""# Out-of-Distribution (OOD) Detection Evaluation Report
 
@@ -267,8 +267,8 @@ To resolve this fragility, we designed a **two-layer defensive input validation 
 """
     with open(root / "reports" / "ood_report.md", "w", encoding="utf-8") as f:
         f.write(report_md)
-        
-    print(f"OOD Benchmark Complete:")
+
+    print("OOD Benchmark Complete:")
     print(f"  Max Softmax AUROC: {auroc_msp:.4f} | FPR95: {fpr95_msp:.1%}")
     print(f"  Energy Score AUROC: {auroc_energy:.4f} | FPR95: {fpr95_energy:.1%}")
     print(f"  Layered AUROC:     {auroc_layered:.4f} | FPR95: {fpr95_layered:.1%}")

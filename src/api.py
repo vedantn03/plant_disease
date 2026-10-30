@@ -17,7 +17,6 @@ Model loading:
   we don't use the MLflow registry client here.
 """
 
-import base64
 import io
 import json
 import logging
@@ -41,7 +40,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from src.advisory_engine import AdvisoryEngine, DISCLAIMER
 from src.config_loader import load_config
 from src.model import GradCAM, build_model, heatmap_to_base64_png, preprocess_image
-from src.ood_detector import check_image_heuristics, compute_energy_score
+from src.ood_detector import check_image_heuristics
 from src.utils import ensure_dir, get_logger, parse_class_name
 
 log = get_logger("api", level=logging.INFO)
@@ -255,7 +254,6 @@ async def predict(
     model = _state["model"]
     device = _state["device"]
     idx_to_class = _state["idx_to_class"]
-    class_to_idx = _state["class_to_idx"]
     k = cfg.serving.top_k
     threshold = cfg.serving.confidence_threshold
 
@@ -267,7 +265,7 @@ async def predict(
 
     # ── Crop-Aware Filtering / Hierarchical Inference ─────────────────────────
     raw_probs = F.softmax(logits, dim=1).squeeze()  # (num_classes,)
-    
+
     # Calculate crop-level aggregate probabilities
     crop_probs = defaultdict(float)
     for idx, prob_val in enumerate(raw_probs.cpu().numpy()):
@@ -280,7 +278,7 @@ async def predict(
 
     # If specific crop is requested, mask out other classes
     target_crop = crop.strip().lower() if crop and crop.strip().lower() not in {"auto", "all", ""} else None
-    
+
     if target_crop and target_crop in _state["crop_to_classes"]:
         valid_classes = _state["crop_to_classes"][target_crop]
         masked_logits = logits.clone()
@@ -384,7 +382,7 @@ async def predict_batch(
     """Batch inference endpoint for processing multiple leaves in a single call."""
     t_start = time.perf_counter()
     batch_results = []
-    
+
     for f in files:
         raw = await f.read()
         try:
@@ -400,7 +398,7 @@ async def predict_batch(
                     "confidence": 0.0,
                 })
                 continue
-                
+
             input_tensor = preprocess_image(im, _state["cfg"].data.image_size).to(_state["device"])
             with torch.no_grad():
                 with torch.autocast(device_type=_state["device"] if _state["device"] != "cpu" else "cpu", dtype=torch.float16, enabled=(_state["device"] == "cuda")):
@@ -409,7 +407,7 @@ async def predict_batch(
             top_prob, top_idx = probs.max(dim=0)
             cls_name = _state["idx_to_class"][top_idx.item()]
             c, cond = parse_class_name(cls_name)
-            
+
             batch_results.append({
                 "filename": f.filename,
                 "status": "ok" if top_prob.item() >= 0.50 else "uncertain",
@@ -423,7 +421,7 @@ async def predict_batch(
                 "status": "error",
                 "error": str(e)
             })
-            
+
     total_latency_ms = (time.perf_counter() - t_start) * 1000
     return JSONResponse({
         "batch_size": len(files),

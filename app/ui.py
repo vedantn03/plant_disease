@@ -10,7 +10,6 @@ import io
 import json
 import os
 import sys
-import time
 from pathlib import Path
 
 # Ensure project root is in sys.path so `from src.model import ...` resolves
@@ -19,7 +18,6 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 import matplotlib.pyplot as plt
-import matplotlib.gridspec as gridspec
 import numpy as np
 import pandas as pd
 import requests
@@ -313,7 +311,8 @@ with tab_dx:
                             if st.session_state.get("shap_btn"):
                                 with st.spinner("Computing Shapley values (~5 s)..."):
                                     try:
-                                        import torch, shap as shap_lib
+                                        import torch
+                                        import shap as shap_lib
                                         from src.model import build_model, preprocess_image
                                         ckpt = torch.load(
                                             PROJECT_ROOT / "models" / "best_model.pth",
@@ -609,15 +608,15 @@ with tab_mlops:
         c1, c2 = st.columns([1, 1], gap="large")
         with c1:
             st.markdown("""
-**Source**  
-PlantVillage dataset — 87,000 images across 38 crop-disease combinations.  
+**Source**
+PlantVillage dataset — 87,000 images across 38 crop-disease combinations.
 Filtered to 26 agriculturally relevant classes for the Indian subcontinent.
 
-**Deduplication**  
+**Deduplication**
 SHA-256 hash comparison eliminates visually identical frames from multi-shot captures,
 preventing label leakage between train and test sets.
 
-**Group-aware stratified split**  
+**Group-aware stratified split**
 Images from the same plant capture session (identified by `<crop>::<session_id>`) are
 kept in the same split. This prevents the model from "memorising" a plant and
 inflating validation accuracy — a common flaw in leaf disease benchmarks.
@@ -627,7 +626,7 @@ validation suite.
 """)
         with c2:
             st.markdown("""
-**Data versioning (DVC)**  
+**Data versioning (DVC)**
 All pipeline stages — raw download, preprocessing, splits, model checkpoint — are
 tracked in `dvc.yaml` with SHA-256 checksums. Any change to input data or code is
 detected and only the affected stages re-run.
@@ -658,7 +657,7 @@ detected and only the affected stages re-run.
         c1, c2 = st.columns([1, 1], gap="large")
         with c1:
             st.markdown("""
-**MLflow experiment tracking**  
+**MLflow experiment tracking**
 Every training run logs:
 - Hyperparameters (learning rate, batch size, epochs, weight decay)
 - Per-epoch training loss and validation Macro-F1
@@ -668,7 +667,7 @@ Runs are stored in a local SQLite backend (`mlruns/`). The best run is promoted
 to the **MLflow Model Registry** with stage `Production`, making rollback to any
 prior version a single command.
 
-**Training details**  
+**Training details**
 - Architecture: ResNet-18, ImageNet pre-trained, last block fine-tuned
 - Automatic Mixed Precision (AMP) — 1.8× training speed on GPU
 - OneCycleLR scheduler — fast convergence in 15 epochs
@@ -736,7 +735,7 @@ The same test suite is available locally via `pytest tests/ -q`.
         c1, c2 = st.columns([1, 1], gap="large")
         with c1:
             st.markdown("""
-**FastAPI REST API** (`src/api.py`)  
+**FastAPI REST API** (`src/api.py`)
 Asynchronous inference endpoint at `POST /predict`.
 
 Request pipeline:
@@ -781,14 +780,14 @@ without rebuilding the image.
         c1, c2 = st.columns([1, 1], gap="large")
         with c1:
             st.markdown("""
-**Request telemetry** (Tab 2)  
+**Request telemetry** (Tab 2)
 Every inference is appended to `logs/requests.jsonl`:
 - Timestamp, predicted class, confidence score
 - Inference latency (ms)
 - Image blur score (Laplacian variance)
 - OOD filter decision and reason code
 
-**Drift detection**  
+**Drift detection**
 The KS-test (Kolmogorov-Smirnov) and PSI (Population Stability Index) compare
 the current window of blur scores against a reference baseline.
 
@@ -855,7 +854,7 @@ rather than background artefacts:
 Grad-CAM is used for real-time display (fastest). SHAP and LIME are available
 on-demand in the Diagnostic Screening tab.
 
-**Capture-bias attack** (robustness test)  
+**Capture-bias attack** (robustness test)
 The leaf foreground is extracted with Woebbecke ExG segmentation and placed on
 three unseen backgrounds (solid colour, natural photograph, synthetic gradient).
 Prediction swap rate = **91.0%** — confirming the model uses leaf tissue features,
@@ -902,7 +901,7 @@ definition — a JSON graph of managed steps:
 | Evaluation | `ProcessingStep` | `make evaluate` |
 | Model registration | `ModelStep` → Model Registry | MLflow Registry |
 
-**How to deploy to AWS**  
+**How to deploy to AWS**
 1. Upload data to S3 (`s3://your-bucket/plantvillage/`)
 2. Run `python pipelines/sagemaker_pipeline.py` — creates pipeline in SageMaker Studio
 3. Trigger from Studio UI or `pipeline.start()`

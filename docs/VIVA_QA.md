@@ -1,8 +1,8 @@
 # Comprehensive Viva & Evaluator Defense Guide (30 Questions)
 
-**Project**: Automated Crop Leaf Disease Identification and Precision Dosage Recommendation Pipeline  
-**Role**: Lead Machine Learning Engineer / Student Presenter  
-**Audience**: Syngenta Evaluators & University Examination Committee  
+**Project**: Automated Crop Leaf Disease Identification and Precision Dosage Recommendation Pipeline
+**Role**: Lead Machine Learning Engineer / Student Presenter
+**Audience**: Syngenta Evaluators & University Examination Committee
 
 ---
 
@@ -46,7 +46,7 @@ $$ExG = 2G - R - B$$
 Combined with saturation thresholding in HSV color space, binary morphological opening (`scipy.ndimage`), and largest connected component extraction, it isolates the green/chlorotic leaf lamina. Benchmarked across 40 random test leaves, it achieved **100% clean extraction (0% failure rate)**.
 
 #### Q9: What were the results of the background-randomization experiments (E0, E1, E2)?
-**Answer**: 
+**Answer**:
 - **E0 (Baseline)**: Clean accuracy = 56.50%, but collapsed to **31.50%** on background-swapped test images (a 25% drop). Center-masked reliance was 37.00%.
 - **E1 (Randomized 80%)**: Clean accuracy = 66.00%, Background-swapped = 60.00%.
 - **E2 (Mixed 40% clean / 60% randomized)**: Clean accuracy = 66.50%, Background-swapped = **60.50%** (**91.0% retention** under complete background shift), while center-masked spurious reliance dropped from 37% down to **25%**.
@@ -84,7 +84,7 @@ Unlike softmax, Energy does not constrain outputs to sum to 1. It is mathematica
 **Answer**: Potato (*Solanum tuberosum*) and Tomato (*Solanum lycopersicum*) belong to the same genus and share identical pathogens (e.g. *Alternaria solani*, *Phytophthora infestans*). Under global 38-class inference, visual similarity creates cross-genus confusion. Our API supports an optional `crop` parameter that applies **masked softmax renormalization**, restricting prediction strictly to candidate conditions within the specified crop.
 
 #### Q15: What are the structural gaps in PlantVillage, and how does the system handle them?
-**Answer**: 
+**Answer**:
 - **Disease-Only Gaps**: Orange and Squash contain only diseased classes; healthy leaves of these crops will be falsely diagnosed as diseased.
 - **Healthy-Only Gaps**: Blueberry, Raspberry, and Soybean contain only `healthy` classes; diseased leaves will be falsely classified as healthy.
 We codified these in `kb/coverage.yaml`. The API and UI explicitly display a **Structural Gap Notice**, warning the user of conditions the model cannot diagnose.

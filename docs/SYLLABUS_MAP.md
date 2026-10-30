@@ -1,8 +1,8 @@
 # University MLOps Course Syllabus Mapping
 
-**Course**: B.Tech Computer Science & Engineering (Specialization in AI & Machine Learning)  
-**Subject**: Machine Learning Operations (MLOps)  
-**Project**: Automated Crop Leaf Disease Identification and Precision Dosage Recommendation Pipeline  
+**Course**: B.Tech Computer Science & Engineering (Specialization in AI & Machine Learning)
+**Subject**: Machine Learning Operations (MLOps)
+**Project**: Automated Crop Leaf Disease Identification and Precision Dosage Recommendation Pipeline
 **Evaluation Partner**: Syngenta Professional & Academic Faculty Review
 
 ---

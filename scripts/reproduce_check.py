@@ -13,7 +13,6 @@ import sys
 from pathlib import Path
 import numpy as np
 import torch
-import torch.nn.functional as F
 from PIL import Image
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
@@ -62,7 +61,7 @@ def main():
     set_seed(42)
     pass1_logits = run_deterministic_pass(model, images, device)
 
-    log.info(f"Pass 2: Re-executing forward pass with reset seed=42...")
+    log.info("Pass 2: Re-executing forward pass with reset seed=42...")
     set_seed(42)
     pass2_logits = run_deterministic_pass(model, images, device)
 
@@ -74,7 +73,7 @@ def main():
     pass2_preds = pass2_logits.argmax(axis=-1)
     pred_agreement = float(np.mean(pass1_preds == pass2_preds))
 
-    log.info(f"Results:")
+    log.info("Results:")
     log.info(f"  Prediction Agreement: {pred_agreement:.2%}")
     log.info(f"  Max Absolute Logit Diff: {max_abs_diff:.2e}")
     log.info(f"  Mean Absolute Logit Diff: {mean_abs_diff:.2e}")

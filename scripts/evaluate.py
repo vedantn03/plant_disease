@@ -22,7 +22,6 @@ Outputs:
   - reports/EVALUATION_REPORT.md
 """
 
-import argparse
 import csv
 import io
 import json
@@ -45,7 +44,6 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from PIL import Image, ImageEnhance, ImageFilter
-from scipy import stats
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import (
     accuracy_score,
@@ -58,7 +56,7 @@ from tqdm import tqdm
 
 from src.config_loader import load_config
 from src.dataset import PlantVillageDataset, get_transforms
-from src.model import GradCAM, build_model, heatmap_to_base64_png, preprocess_image
+from src.model import GradCAM, build_model, preprocess_image
 from src.utils import ensure_dir, get_logger, parse_class_name, set_seed
 
 log = get_logger("evaluate")
@@ -461,7 +459,7 @@ def main():
             img_tensor, _ = test_ds[test_idx]
             raw_img_path = test_ds.samples[test_idx][0]
             pil_img = Image.open(raw_img_path).convert("RGB")
-            
+
             true_cls = idx_to_class[test_labels[test_idx]]
             pred_cls = idx_to_class[test_preds[test_idx]]
             conf_val = test_probs[test_idx][test_preds[test_idx]]
@@ -492,7 +490,7 @@ def main():
     # Sample 300 test images for quick corruption benchmarks
     rob_indices = np.random.default_rng(cfg.seed).choice(len(test_ds), size=min(300, len(test_ds)), replace=False)
     rob_labels = test_labels[rob_indices]
-    
+
     corruptions = {
         "Gaussian Blur": [1.0, 2.5, 4.0],
         "Darken": [0.7, 0.4, 0.2],
@@ -589,7 +587,7 @@ def main():
             logit = model(inp)
             p_cls = torch.argmax(logit, dim=1).item()
         center_masked_preds.append(p_cls)
-    
+
     masked_acc = accuracy_score([s[1] for s in sample_test_recs], center_masked_preds)
 
     chance_acc = 1.0 / num_classes
@@ -707,12 +705,13 @@ def main():
     model_size_mb = os.path.getsize(ckpt_path) / (1024 * 1024)
 
     dummy_input = torch.randn(1, 3, cfg.data.image_size, cfg.data.image_size)
-    
+
     # GPU latency
     gpu_times = []
     if device.type == "cuda":
         inp_gpu = dummy_input.to(device)
-        for _ in range(30): _ = model(inp_gpu) # warmup
+        for _ in range(30):
+            _ = model(inp_gpu)  # warmup
         for _ in range(200):
             t0 = time.perf_counter()
             _ = model(inp_gpu)
@@ -723,7 +722,8 @@ def main():
     model_cpu = build_model(num_classes=num_classes, pretrained=False)
     model_cpu.load_state_dict(ckpt["model_state_dict"])
     model_cpu.eval()
-    for _ in range(10): _ = model_cpu(dummy_input) # warmup
+    for _ in range(10):
+        _ = model_cpu(dummy_input)  # warmup
     cpu_times = []
     for _ in range(100):
         t0 = time.perf_counter()
@@ -764,9 +764,9 @@ def write_evaluation_report(m: dict):
 
     md = f"""# Plant Disease Diagnostic & Precision Advisory Pipeline: Evaluation Report
 
-**Academic Course Project** — B.Tech CSE-AI (Sponsored by Syngenta Evaluation Pilot)  
-**Evaluation Date**: 2026-10-14 | **Model**: ResNet-18 (Champion Version 1)  
-**Training Set Disclosure**: Baseline Subsample (~300 images/class, 10,967 actual images)  
+**Academic Course Project** — B.Tech CSE-AI (Sponsored by Syngenta Evaluation Pilot)
+**Evaluation Date**: 2026-10-14 | **Model**: ResNet-18 (Champion Version 1)
+**Training Set Disclosure**: Baseline Subsample (~300 images/class, 10,967 actual images)
 **Test Set**: 8,134 held-out images across 38 classes (Zero Group Leakage)
 
 ---
@@ -794,7 +794,7 @@ The per-class F1 distribution reveals that performance drops primarily on minori
     for cs in m["weakest_5_classes"]:
         md += f"- **{cs['class_name']}**: F1 = {cs['f1']*100:.2f}% (Precision: {cs['precision']*100:.1f}%, Recall: {cs['recall']*100:.1f}%, Test Support: {cs['support']})\n"
 
-    md += f"""
+    md += """
 ![Per Class F1](figures/fig_02_per_class_f1.png)
 
 ---

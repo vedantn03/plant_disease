@@ -1,5 +1,9 @@
 """Quick state verification — run before Phase 2 work begins."""
-import sys, json, pathlib, csv, torch
+import sys
+import json
+import pathlib
+import csv
+import torch
 from collections import Counter
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent.parent))
 

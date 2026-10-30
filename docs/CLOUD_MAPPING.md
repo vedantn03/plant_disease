@@ -1,7 +1,7 @@
 # Cloud Hyperscaler Architecture Mapping Guide
 
-**Project**: Automated Crop Leaf Disease Identification and Precision Dosage Recommendation Pipeline  
-**Course**: B.Tech CSE-AI (Sponsored by Syngenta MLOps Evaluation Pilot)  
+**Project**: Automated Crop Leaf Disease Identification and Precision Dosage Recommendation Pipeline
+**Course**: B.Tech CSE-AI (Sponsored by Syngenta MLOps Evaluation Pilot)
 **Objective**: Demonstrate how our local, zero-cost MLOps pipeline translates directly into enterprise hyperscaler cloud architectures across **Amazon Web Services (AWS)**, **Google Cloud Platform (GCP)**, and **Microsoft Azure**.
 
 ---

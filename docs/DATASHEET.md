@@ -1,9 +1,9 @@
 # Datasheet for Dataset: PlantVillage (Foliar Disease Subset)
 
-**Standard**: Gebru et al. (2021) *Datasheets for Datasets*, Communications of the ACM  
-**Project**: Automated Crop Leaf Disease Identification and Precision Dosage Recommendation Pipeline  
-**Dataset Name**: PlantVillage (Color Leaf Disease Dataset)  
-**Curators**: David P. Hughes and Marcel Salathé (Penn State University & EPFL)  
+**Standard**: Gebru et al. (2021) *Datasheets for Datasets*, Communications of the ACM
+**Project**: Automated Crop Leaf Disease Identification and Precision Dosage Recommendation Pipeline
+**Dataset Name**: PlantVillage (Color Leaf Disease Dataset)
+**Curators**: David P. Hughes and Marcel Salathé (Penn State University & EPFL)
 **Audit & Splitting Date**: October 2026
 
 ---

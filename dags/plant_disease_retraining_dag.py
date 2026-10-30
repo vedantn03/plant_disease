@@ -10,16 +10,14 @@ Architecture:
   CheckDriftSensor / Task -> AuditAndSplit -> TrainModel -> EvaluateModel -> PromotionGate -> DeployServing
 """
 
-from datetime import datetime, timedelta
-import os
-import sys
+from datetime import timedelta
 from pathlib import Path
 
 # Airflow imports with graceful fallback for environments where airflow is not installed locally
 try:
     from airflow import DAG
     from airflow.operators.bash import BashOperator
-    from airflow.operators.python import PythonOperator, BranchPythonOperator
+    from airflow.operators.python import PythonOperator, BranchPythonOperator  # noqa: F401 - Retained for conditional DAG branch expansion
     from airflow.utils.dates import days_ago
     AIRFLOW_AVAILABLE = True
 except ImportError:

@@ -24,24 +24,24 @@ log = get_logger("drift_trigger")
 
 def main():
     drift_json_path = PROJECT_ROOT / "reports" / "drift_metrics.json"
-    
+
     # If drift metrics json does not exist, run simulate_drift logic to create one
     if not drift_json_path.exists():
         log.info("No existing drift metrics file found; generating drift assessment...")
         import numpy as np
         from scipy import stats
-        
+
         # Simulate baseline vs drifted distribution comparison
         rng = np.random.default_rng(42)
         ref_blur = rng.normal(120.0, 25.0, 100)
         drift_blur = rng.normal(45.0, 15.0, 100)  # Heavy lens blur
-        
+
         ref_bright = rng.normal(135.0, 20.0, 100)
         drift_bright = rng.normal(90.0, 18.0, 100)  # Darker lighting
-        
+
         ks_blur = stats.ks_2samp(ref_blur, drift_blur)
         ks_bright = stats.ks_2samp(ref_bright, drift_bright)
-        
+
         drift_metrics = {
             "blur": {
                 "ks_statistic": round(float(ks_blur.statistic), 4),

@@ -1,8 +1,8 @@
 # Source Audit: Agricultural Advisory & Weather Rules Traceability Matrix
 
-**Project**: Automated Crop Leaf Disease Identification and Precision Dosage Recommendation Pipeline  
-**Course**: B.Tech CSE-AI (MLOps Course Project, Syngenta Evaluation Pilot)  
-**Audit Version**: 2.0 (Phase 3 Expanded Audit)  
+**Project**: Automated Crop Leaf Disease Identification and Precision Dosage Recommendation Pipeline
+**Course**: B.Tech CSE-AI (MLOps Course Project, Syngenta Evaluation Pilot)
+**Audit Version**: 2.0 (Phase 3 Expanded Audit)
 **Policy**: No agronomic statement, chemical active ingredient, or weather trigger is asserted unless supported by a verified university cooperative extension, ICAR national institute, or government agricultural authority. Specific dosage rates are omitted unless published in the official cited guide; otherwise, the interface explicitly advises that dosage rates must be retrieved from the registered product label or local extension authority.
 
 ---

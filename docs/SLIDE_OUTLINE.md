@@ -1,8 +1,8 @@
 # Evaluation Presentation Slide Deck Outline (12 Slides)
 
-**Project Title**: Automated Crop Leaf Disease Identification and Precision Dosage Recommendation Pipeline  
-**Presenter**: Lead Machine Learning Engineer / Student Presenter  
-**Context**: B.Tech CSE-AI Final Evaluation (Sponsored by Syngenta MLOps Pilot)  
+**Project Title**: Automated Crop Leaf Disease Identification and Precision Dosage Recommendation Pipeline
+**Presenter**: Lead Machine Learning Engineer / Student Presenter
+**Context**: B.Tech CSE-AI Final Evaluation (Sponsored by Syngenta MLOps Pilot)
 **Hardware Profile**: NVIDIA RTX 3050 Laptop GPU (6 GB VRAM) | Local Deterministic Execution
 
 ---

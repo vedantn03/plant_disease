@@ -35,7 +35,6 @@ import mlflow
 import numpy as np
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 from PIL import Image
 from torch.utils.data import DataLoader, Dataset
 from torchvision import transforms
@@ -46,7 +45,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from src.model import build_model, _IMAGENET_MEAN, _IMAGENET_STD
 from src.segmentation import segment_leaf, generate_synthetic_background
-from src.utils import set_seed, parse_class_name
+from src.utils import set_seed
 
 
 class CachedBiasDataset(Dataset):
@@ -65,14 +64,14 @@ class CachedBiasDataset(Dataset):
 
     def __getitem__(self, idx):
         img, mask, cls_name = self.items[idx]
-        
+
         if self.bg_random_prob > 0.0 and self.rng.random() < self.bg_random_prob:
             img_arr = np.array(img)
             h, w = img_arr.shape[:2]
             bg_arr = generate_synthetic_background(h, w, bg_type="random", rng=self.rng)
             composite_arr = np.where(mask[..., None], img_arr, bg_arr)
             img = Image.fromarray(composite_arr)
-            
+
         tensor = self.transform(img)
         label = self.class_to_idx[cls_name]
         return tensor, label
@@ -83,7 +82,7 @@ def train_model(train_loader, num_classes, epochs=4, device="cuda"):
     optimizer = torch.optim.Adam(model.parameters(), lr=0.001, weight_decay=1e-4)
     scaler = torch.amp.GradScaler('cuda', enabled=(device == "cuda"))
     criterion = nn.CrossEntropyLoss()
-    
+
     for epoch in range(1, epochs + 1):
         model.train()
         for images, labels in train_loader:
@@ -95,7 +94,7 @@ def train_model(train_loader, num_classes, epochs=4, device="cuda"):
             scaler.scale(loss).backward()
             scaler.step(optimizer)
             scaler.update()
-            
+
     model.eval()
     return model
 
@@ -119,37 +118,37 @@ def main():
     figures_dir = root / "reports" / "figures"
     figures_dir.mkdir(parents=True, exist_ok=True)
     device = "cuda" if torch.cuda.is_available() else "cpu"
-    
+
     train_csv = root / "data" / "splits" / "train.csv"
     test_csv = root / "data" / "splits" / "test.csv"
-    
+
     with open(train_csv, "r", encoding="utf-8") as f:
         train_records = list(csv.DictReader(f))
     with open(test_csv, "r", encoding="utf-8") as f:
         test_records = list(csv.DictReader(f))
-        
+
     classes = sorted(list({r["class_name"] for r in train_records}))
     class_to_idx = {c: i for i, c in enumerate(classes)}
     num_classes = len(classes)
-    
+
     # 15 samples per class = 570 training samples
     class_buckets = defaultdict(list)
     for r in train_records:
         class_buckets[r["class_name"]].append(r)
-        
+
     rng = np.random.default_rng(42)
     subsample_train_records = []
     for c, recs in class_buckets.items():
         chosen = rng.choice(recs, size=min(15, len(recs)), replace=False)
         subsample_train_records.extend(chosen)
-        
+
     print(f"Pre-loading and caching {len(subsample_train_records)} training images & masks...")
     cached_train_items = []
     for r in tqdm(subsample_train_records, desc="Pre-caching train"):
         im = Image.open(r["path"]).convert("RGB").resize((224, 224))
         mask = segment_leaf(im)
         cached_train_items.append((im, mask, r["class_name"]))
-        
+
     # Eval test subset: 200 test images
     test_sample = rng.choice(test_records, size=200, replace=False)
     print(f"Pre-loading and caching {len(test_sample)} test images & masks...")
@@ -158,23 +157,23 @@ def main():
         im = Image.open(r["path"]).convert("RGB").resize((224, 224))
         mask = segment_leaf(im)
         cached_test_items.append((im, mask, r["class_name"]))
-        
+
     train_transform = transforms.Compose([
         transforms.RandomHorizontalFlip(p=0.5),
         transforms.ColorJitter(brightness=0.15, contrast=0.15, saturation=0.15),
         transforms.ToTensor(),
         transforms.Normalize(_IMAGENET_MEAN, _IMAGENET_STD),
     ])
-    
+
     test_transform = transforms.Compose([
         transforms.ToTensor(),
         transforms.Normalize(_IMAGENET_MEAN, _IMAGENET_STD),
     ])
-    
+
     # ── Evaluation Datasets ───────────────────────────────────────────────────
     ds_test_clean = CachedBiasDataset(cached_test_items, class_to_idx, test_transform, bg_random_prob=0.0)
     ds_test_swapped = CachedBiasDataset(cached_test_items, class_to_idx, test_transform, bg_random_prob=1.0, seed=123)
-    
+
     # Center-masked dataset (central 60% masked)
     class CenterMaskedCachedDataset(Dataset):
         def __init__(self, items, class_to_idx, transform):
@@ -188,33 +187,33 @@ def main():
             arr[45:179, 45:179] = 128
             tensor = self.transform(Image.fromarray(arr))
             return tensor, self.class_to_idx[cls_name]
-            
+
     ds_test_center_masked = CenterMaskedCachedDataset(cached_test_items, class_to_idx, test_transform)
-    
+
     experiments = [
         {"name": "E0_baseline", "bg_prob": 0.0, "desc": "Clean PlantVillage (No Background Augmentation)"},
         {"name": "E1_randomized", "bg_prob": 0.8, "desc": "80% Background-Randomized Training (Soil/Noise/Gradients)"},
         {"name": "E2_mixed", "bg_prob": 0.4, "desc": "40% Randomized + 60% Clean Mixture"},
     ]
-    
+
     results = {}
     mlflow.set_tracking_uri("sqlite:///mlflow.db")
     mlflow.set_experiment("bias-ablation-study")
-    
+
     for exp in experiments:
         name = exp["name"]
         print(f"\nTraining {name} ({exp['desc']})...", flush=True)
         ds_train = CachedBiasDataset(cached_train_items, class_to_idx, train_transform, bg_random_prob=exp["bg_prob"], seed=42)
         loader_train = DataLoader(ds_train, batch_size=32, shuffle=True)
-        
+
         t0 = time.time()
         model = train_model(loader_train, num_classes=num_classes, epochs=4, device=device)
         train_sec = time.time() - t0
-        
+
         acc_clean = evaluate_on_dataset(model, ds_test_clean, device=device)
         acc_swapped = evaluate_on_dataset(model, ds_test_swapped, device=device)
         acc_center_masked = evaluate_on_dataset(model, ds_test_center_masked, device=device)
-        
+
         results[name] = {
             "desc": exp["desc"],
             "clean_test_acc": round(float(acc_clean), 4),
@@ -223,7 +222,7 @@ def main():
             "center_masked_reliance_acc": round(float(acc_center_masked), 4),
             "train_seconds": round(float(train_sec), 1),
         }
-        
+
         with mlflow.start_run(run_name=name):
             mlflow.log_params({"bg_prob": exp["bg_prob"], "epochs": 4, "n_train": len(cached_train_items)})
             mlflow.log_metrics({
@@ -232,25 +231,25 @@ def main():
                 "center_masked_acc": acc_center_masked,
                 "swap_retention": acc_swapped / acc_clean if acc_clean > 0 else 0.0,
             })
-            
+
         print(f"  Clean Test Acc:         {acc_clean:.2%}", flush=True)
         print(f"  Background-Swapped Acc: {acc_swapped:.2%}", flush=True)
         print(f"  Center-Masked Acc:      {acc_center_masked:.2%}", flush=True)
-        
+
     # Plot Comparison Chart
     exp_names = ["E0 (Baseline)", "E1 (Randomized)", "E2 (Mixed)"]
     clean_vals = [results["E0_baseline"]["clean_test_acc"] * 100, results["E1_randomized"]["clean_test_acc"] * 100, results["E2_mixed"]["clean_test_acc"] * 100]
     swapped_vals = [results["E0_baseline"]["bg_swapped_test_acc"] * 100, results["E1_randomized"]["bg_swapped_test_acc"] * 100, results["E2_mixed"]["bg_swapped_test_acc"] * 100]
     masked_vals = [results["E0_baseline"]["center_masked_reliance_acc"] * 100, results["E1_randomized"]["center_masked_reliance_acc"] * 100, results["E2_mixed"]["center_masked_reliance_acc"] * 100]
-    
+
     x = np.arange(len(exp_names))
     width = 0.25
-    
+
     plt.figure(figsize=(9, 5))
     plt.bar(x - width, clean_vals, width, label="Clean Test Acc (%)", color="#2563eb")
     plt.bar(x, swapped_vals, width, label="Background-Swapped Acc (%)", color="#16a34a")
     plt.bar(x + width, masked_vals, width, label="Center-Masked Bias Reliance (%)", color="#dc2626")
-    
+
     plt.ylabel("Accuracy (%)")
     plt.title("Ablation Study: Mitigating Background Capture Bias via Randomization", fontsize=11, fontweight="bold")
     plt.xticks(x, exp_names)
@@ -261,14 +260,14 @@ def main():
     chart_path = figures_dir / "bias_ablation_comparison.png"
     plt.savefig(chart_path, dpi=150)
     plt.close()
-    
+
     with open(root / "reports" / "bias_study_metrics.json", "w") as f:
         json.dump(results, f, indent=2)
-        
+
     e0 = results["E0_baseline"]
     e1 = results["E1_randomized"]
     e2 = results["E2_mixed"]
-    
+
     report_md = f"""# Capture Bias & Background Randomization Ablation Study
 
 Generated: 2026-10-28. Controlled ablation across E0/E1/E2 with matched seed=42 on RTX 3050 GPU. Logged to MLflow SQLite backend (`experiment=bias-ablation-study`).
@@ -307,8 +306,8 @@ To attack this capture bias, we trained and evaluated three controlled architect
 """
     with open(root / "reports" / "BIAS_STUDY.md", "w", encoding="utf-8") as f:
         f.write(report_md)
-        
-    print(f"\nBias Study Completed Successfully!", flush=True)
+
+    print("\nBias Study Completed Successfully!", flush=True)
     print(f"  Chart saved:  {chart_path}", flush=True)
     print(f"  Report saved: {root / 'reports' / 'BIAS_STUDY.md'}", flush=True)
 

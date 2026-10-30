@@ -1,8 +1,8 @@
 # 10-Minute Viva & Evaluation Presentation Script
 
-**Project**: Automated Crop Leaf Disease Identification and Precision Dosage Recommendation Pipeline  
-**Role**: Lead Machine Learning Engineer / Student Presenter  
-**Audience**: Syngenta Evaluators & University Examination Committee  
+**Project**: Automated Crop Leaf Disease Identification and Precision Dosage Recommendation Pipeline
+**Role**: Lead Machine Learning Engineer / Student Presenter
+**Audience**: Syngenta Evaluators & University Examination Committee
 **Total Allocated Time**: 10 Minutes (8 min presentation & demo + 2 min defense Q&A)
 
 ---

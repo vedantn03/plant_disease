@@ -13,11 +13,9 @@ Defines an enterprise-grade DAG executed on AWS SageMaker Pipelines:
     -> DeployStep (Deploy to SageMaker Real-Time Endpoint)
 """
 
-import os
-from pathlib import Path
 
 try:
-    import boto3
+    import boto3  # noqa: F401 - AWS SDK client check
     import sagemaker
     from sagemaker.inputs import TrainingInput
     from sagemaker.processing import ProcessingInput, ProcessingOutput, ScriptProcessor
@@ -25,7 +23,11 @@ try:
     from sagemaker.workflow.condition_step import ConditionStep
     from sagemaker.workflow.conditions import ConditionGreaterThanOrEqualTo
     from sagemaker.workflow.model_step import ModelStep
-    from sagemaker.workflow.parameters import ParameterFloat, ParameterInteger, ParameterString
+    from sagemaker.workflow.parameters import (
+        ParameterFloat,
+        ParameterInteger,  # noqa: F401 - Retained for integer hyperparam tuning
+        ParameterString,
+    )
     from sagemaker.workflow.pipeline import Pipeline
     from sagemaker.workflow.pipeline_context import PipelineSession
     from sagemaker.workflow.properties import PropertyFile

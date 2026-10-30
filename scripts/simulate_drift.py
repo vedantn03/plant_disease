@@ -20,9 +20,7 @@ Runs in < 1 minute on a few dozen images.
 
 import argparse
 import io
-import json
 import sys
-import time
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))

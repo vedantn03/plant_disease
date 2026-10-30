@@ -28,7 +28,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from src.model import build_model, preprocess_image, GradCAM
 from src.segmentation import segment_leaf
-from src.utils import set_seed, parse_class_name
+from src.utils import set_seed
 
 
 def main():
@@ -36,62 +36,62 @@ def main():
     root = Path(__file__).resolve().parent.parent
     figures_shap_dir = root / "reports" / "figures" / "shap"
     figures_shap_dir.mkdir(parents=True, exist_ok=True)
-    
+
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"Explainability Benchmark running on {device}...")
-    
+
     ckpt_path = root / "models" / "best_model.pth"
     ckpt = torch.load(ckpt_path, map_location=device, weights_only=False)
     class_to_idx = ckpt["class_to_idx"]
     idx_to_class = {v: k for k, v in class_to_idx.items()}
     num_classes = len(class_to_idx)
-    
+
     model = build_model(num_classes=num_classes, pretrained=False)
     model.load_state_dict(ckpt["model_state_dict"])
     model.to(device)
     model.eval()
-    
+
     grad_cam = GradCAM(model)
-    
+
     # ── 1. Create SHAP Background Set (50 training images) ───────────────────
     train_csv = root / "data" / "splits" / "train.csv"
     with open(train_csv, "r", encoding="utf-8") as f:
         train_records = list(csv.DictReader(f))
-        
+
     rng = np.random.default_rng(42)
     bg_sample = rng.choice(train_records, size=50, replace=False)
     bg_tensors = torch.cat([
         preprocess_image(Image.open(r["path"]).convert("RGB")) for r in bg_sample
     ], dim=0).to(device)
-    
+
     print("Initializing SHAP GradientExplainer with 50 background images...")
     explainer = shap.GradientExplainer(model, bg_tensors)
-    
+
     # ── 2. Select 20 Diverse Test Images for Visual Comparison ───────────────
     test_csv = root / "data" / "splits" / "test.csv"
     with open(test_csv, "r", encoding="utf-8") as f:
         test_records = list(csv.DictReader(f))
-        
+
     # Pick 20 images across diverse crops
     selected_20 = rng.choice(test_records, size=20, replace=False)
-    
+
     print("Generating side-by-side (Original | Mask | Grad-CAM | SHAP) for 20 images...")
     for idx, r in enumerate(tqdm(selected_20, desc="Visual 20")):
         im = Image.open(r["path"]).convert("RGB")
         im_arr = np.array(im.resize((224, 224)))
         mask = segment_leaf(im)
         mask_224 = np.array(Image.fromarray(mask).resize((224, 224), Image.NEAREST))
-        
+
         t = preprocess_image(im).to(device)
         with torch.no_grad():
             logits = model(t)
         pred_idx = logits.argmax(dim=1).item()
         pred_class = idx_to_class[pred_idx]
-        
+
         # 1. Grad-CAM
         cam_raw = grad_cam.generate(t.clone().requires_grad_(True), class_idx=pred_idx)
         cam_map = np.array(Image.fromarray((cam_raw * 255).astype(np.uint8)).resize((224, 224), Image.BILINEAR)) / 255.0
-        
+
         # 2. SHAP
         shap_vals, _ = explainer.shap_values(t, ranked_outputs=1)
         # shap_vals has shape (1, 3, 224, 224, 1) or list of arrays
@@ -103,61 +103,61 @@ def main():
         shap_map = np.abs(sv).mean(axis=0)  # Mean absolute attribution across RGB (224, 224)
         if shap_map.max() > 0:
             shap_map = shap_map / shap_map.max()
-            
+
         # Plot 4-panel comparison
         fig, axes = plt.subplots(1, 4, figsize=(16, 4))
-        
+
         # Panel 1: Original
         axes[0].imshow(im_arr)
         axes[0].set_title(f"Original: {pred_class.split('___')[-1][:18]}", fontsize=9)
         axes[0].axis("off")
-        
+
         # Panel 2: Ground Truth Leaf Mask
         axes[1].imshow(mask_224, cmap="gray")
-        axes[1].set_title(f"Lamina Mask (ExG)", fontsize=9)
+        axes[1].set_title("Lamina Mask (ExG)", fontsize=9)
         axes[1].axis("off")
-        
+
         # Panel 3: Grad-CAM Overlay
         axes[2].imshow(im_arr)
         axes[2].imshow(cam_map, cmap="jet", alpha=0.5)
         axes[2].set_title("Grad-CAM (Layer 4)", fontsize=9)
         axes[2].axis("off")
-        
+
         # Panel 4: SHAP Attribution
         axes[3].imshow(im_arr)
         axes[3].imshow(shap_map, cmap="hot", alpha=0.5)
         axes[3].set_title("SHAP (GradientExplainer)", fontsize=9)
         axes[3].axis("off")
-        
+
         plt.tight_layout()
         plt.savefig(figures_shap_dir / f"compare_{idx+1:02d}_{pred_class[:20]}.png", dpi=130)
         plt.close()
-        
+
     # ── 3. Quantitative Faithfulness: Attribution Mass & Deletion Curve ──────
     # Test on 100 test samples
     sample_100 = rng.choice(test_records, size=100, replace=False)
-    
+
     gradcam_leaf_masses = []
     gradcam_bg_masses = []
     shap_leaf_masses = []
     shap_bg_masses = []
-    
+
     deletion_fractions = [0.0, 0.1, 0.2, 0.3, 0.4, 0.5]
     deletion_probs_cam = {f: [] for f in deletion_fractions}
     deletion_probs_shap = {f: [] for f in deletion_fractions}
-    
+
     print("Computing quantitative attribution mass & deletion curves on 100 test images...")
     for r in tqdm(sample_100, desc="Quantitative 100"):
         im = Image.open(r["path"]).convert("RGB")
         mask = segment_leaf(im)
         mask_224 = np.array(Image.fromarray(mask).resize((224, 224), Image.NEAREST))
-        
+
         t = preprocess_image(im).to(device)
         with torch.no_grad():
             orig_logits = model(t)
         true_idx = class_to_idx[r["class_name"]]
         orig_prob = F.softmax(orig_logits, dim=1)[0, true_idx].item()
-        
+
         # Grad-CAM attribution
         cam_raw = grad_cam.generate(t.clone().requires_grad_(True), class_idx=true_idx)
         cam = np.array(Image.fromarray((cam_raw * 255).astype(np.uint8)).resize((224, 224), Image.BILINEAR)) / 255.0
@@ -167,7 +167,7 @@ def main():
         cam_on_bg = cam_pos[~mask_224].sum() / total_cam
         gradcam_leaf_masses.append(float(cam_on_leaf))
         gradcam_bg_masses.append(float(cam_on_bg))
-        
+
         # SHAP attribution
         shap_vals, _ = explainer.shap_values(t, ranked_outputs=1)
         if isinstance(shap_vals, list):
@@ -181,7 +181,7 @@ def main():
         shap_on_bg = shap_map[~mask_224].sum() / total_shap
         shap_leaf_masses.append(float(shap_on_leaf))
         shap_bg_masses.append(float(shap_on_bg))
-        
+
         # Deletion Curve: mask top X% attributed pixels with neutral gray
         for frac in deletion_fractions:
             if frac == 0.0:
@@ -197,7 +197,7 @@ def main():
                 with torch.no_grad():
                     prob_cam = F.softmax(model(t_del_cam), dim=1)[0, true_idx].item()
                 deletion_probs_cam[frac].append(prob_cam)
-                
+
                 # SHAP deletion
                 shap_top_thresh = np.partition(shap_map.flatten(), -k)[-k]
                 shap_del_mask = (shap_map >= shap_top_thresh)
@@ -206,11 +206,11 @@ def main():
                 with torch.no_grad():
                     prob_shap = F.softmax(model(t_del_shap), dim=1)[0, true_idx].item()
                 deletion_probs_shap[frac].append(prob_shap)
-                
+
     # Plot Deletion Fidelity Curve
     del_cam_mean = [np.mean(deletion_probs_cam[f]) for f in deletion_fractions]
     del_shap_mean = [np.mean(deletion_probs_shap[f]) for f in deletion_fractions]
-    
+
     plt.figure(figsize=(7, 5))
     x_pct = [int(f * 100) for f in deletion_fractions]
     plt.plot(x_pct, del_cam_mean, marker="o", label="Grad-CAM Deletion", color="blue", linewidth=2)
@@ -224,7 +224,7 @@ def main():
     del_fig_path = root / "reports" / "figures" / "explain_deletion_curve.png"
     plt.savefig(del_fig_path, dpi=150)
     plt.close()
-    
+
     metrics = {
         "n_samples": 100,
         "gradcam": {
@@ -245,10 +245,10 @@ def main():
             "shap_probs": [round(float(v), 4) for v in del_shap_mean],
         }
     }
-    
+
     with open(root / "reports" / "explain_metrics.json", "w") as f:
         json.dump(metrics, f, indent=2)
-        
+
     report_md = f"""# Visual Explainability & Faithfulness Evaluation Report
 
 Generated: 2026-10-28. Evaluated on champion ResNet-18 model across held-out test split using SHAP (`GradientExplainer`) and Grad-CAM (`layer4`).
@@ -299,8 +299,8 @@ This steep drop confirms that both methods identify genuinely critical decision 
 """
     with open(root / "reports" / "EXPLAINABILITY.md", "w", encoding="utf-8") as f:
         f.write(report_md)
-        
-    print(f"Explainability Benchmark Complete:")
+
+    print("Explainability Benchmark Complete:")
     print(f"  Grad-CAM Leaf Mass: {metrics['gradcam']['leaf_mass_mean']:.1%}")
     print(f"  SHAP Leaf Mass:     {metrics['shap']['leaf_mass_mean']:.1%}")
     print(f"  Saved 20 comparison figures to {figures_shap_dir}")

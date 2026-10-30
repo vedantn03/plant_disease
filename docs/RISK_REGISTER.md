@@ -1,8 +1,8 @@
 # MLOps Risk Register & Mitigation Audit
 
-**Project**: Automated Crop Leaf Disease Identification and Precision Dosage Recommendation Pipeline  
-**Course**: B.Tech CSE-AI (Sponsored by Syngenta MLOps Evaluation Pilot)  
-**Governance Standard**: ISO/IEC 23894 (AI Risk Management) & Good MLOps Practice  
+**Project**: Automated Crop Leaf Disease Identification and Precision Dosage Recommendation Pipeline
+**Course**: B.Tech CSE-AI (Sponsored by Syngenta MLOps Evaluation Pilot)
+**Governance Standard**: ISO/IEC 23894 (AI Risk Management) & Good MLOps Practice
 **Date**: October 2026
 
 ---

@@ -1,0 +1,14 @@
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+# Select standard rules but ignore E501 (line length enforced by formatter/soft wrap)
+select = ["E", "F", "W"]
+ignore = ["E501"]
+
+[tool.ruff.lint.per-file-ignores]
+# Scripts and Streamlit UI need sys.path bootstraps before local src/ imports
+"scripts/*" = ["E402"]
+"app/*" = ["E402"]
+"dags/*" = ["E402"]

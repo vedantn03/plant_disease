@@ -175,7 +175,7 @@ ENRICHMENTS = {
 # Update all advisories
 for entry in advisories:
     key = (entry["crop"].lower(), entry["condition"].lower())
-    
+
     # Default Schema v2 fields
     if "region" not in entry:
         entry["region"] = "US-Extension (Legacy baseline)" if entry.get("status") == "VERIFIED" else "global"

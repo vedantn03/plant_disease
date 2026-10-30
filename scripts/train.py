@@ -245,7 +245,7 @@ def main() -> None:
     # ── Compute class weights for weighted loss ────────────────────────────────
     if cfg.model.imbalance_strategy == "weighted_loss":
         class_weights = train_loader.dataset.class_weights().to(device)
-        log.info(f"Using weighted CE loss (strategy=weighted_loss)")
+        log.info("Using weighted CE loss (strategy=weighted_loss)")
     else:
         class_weights = None
         log.info("Using standard CE loss")
@@ -407,7 +407,7 @@ def main() -> None:
         log.info(f"Alias '{cfg.mlflow.champion_alias}' set to version {mv.version}")
 
         log.info(f"\n{'='*60}")
-        log.info(f"TRAINING COMPLETE")
+        log.info("TRAINING COMPLETE")
         log.info(f"  Test macro-F1: {test_macro_f1:.4f}")
         log.info(f"  Test accuracy:  {test_acc:.4f}")
         log.info(f"  Best checkpoint: {best_checkpoint}")

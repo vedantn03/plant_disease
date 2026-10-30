@@ -161,7 +161,6 @@ def heatmap_to_base64_png(
     import matplotlib
     matplotlib.use("Agg")  # non-interactive backend
     import matplotlib.pyplot as plt
-    import matplotlib.cm as cm
 
     # Resize heatmap to original image size
     h, w = original_image.size[1], original_image.size[0]

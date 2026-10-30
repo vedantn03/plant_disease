@@ -13,10 +13,8 @@ Usage:
 
 import argparse
 import csv
-import io
 import time
 from pathlib import Path
-import numpy as np
 import torch
 import torch.nn.functional as F
 from PIL import Image
@@ -32,12 +30,12 @@ from src.utils import parse_class_name
 def run_batch_inference(image_paths, model, idx_to_class, batch_size=32, device="cuda"):
     results = []
     t_start = time.perf_counter()
-    
+
     for i in range(0, len(image_paths), batch_size):
         chunk_paths = image_paths[i : i + batch_size]
         tensors = []
         valid_indices = []
-        
+
         for idx_in_chunk, p in enumerate(chunk_paths):
             try:
                 im = Image.open(p).convert("RGB")
@@ -63,7 +61,7 @@ def run_batch_inference(image_paths, model, idx_to_class, batch_size=32, device=
                     "confidence": 0.0,
                     "reason": str(e),
                 })
-                
+
         if tensors:
             batch_t = torch.cat(tensors, dim=0).to(device)
             with torch.no_grad():
@@ -71,7 +69,7 @@ def run_batch_inference(image_paths, model, idx_to_class, batch_size=32, device=
                     logits = model(batch_t)
             probs = F.softmax(logits, dim=1)
             top_probs, top_idxs = probs.max(dim=1)
-            
+
             for j, (_, fname) in enumerate(valid_indices):
                 prob = top_probs[j].item()
                 cls_name = idx_to_class[top_idxs[j].item()]
@@ -87,7 +85,7 @@ def run_batch_inference(image_paths, model, idx_to_class, batch_size=32, device=
                     "confidence": round(prob, 4),
                     "reason": "high_confidence" if prob >= 0.50 else "low_confidence",
                 })
-                
+
     elapsed = time.perf_counter() - t_start
     return results, elapsed
 
@@ -124,19 +122,19 @@ def main():
         print("\n=== Throughput Benchmark (Single vs. Batches of 16 and 64) ===")
         # Replicate sample paths to test 128 images
         bench_paths = (img_paths * (128 // len(img_paths) + 1))[:128]
-        
+
         # Batch size 1
         _, t1 = run_batch_inference(bench_paths, model, idx_to_class, batch_size=1, device=device)
         fps1 = len(bench_paths) / t1
-        
+
         # Batch size 16
         _, t16 = run_batch_inference(bench_paths, model, idx_to_class, batch_size=16, device=device)
         fps16 = len(bench_paths) / t16
-        
+
         # Batch size 64
         _, t64 = run_batch_inference(bench_paths, model, idx_to_class, batch_size=64, device=device)
         fps64 = len(bench_paths) / t64
-        
+
         bench_md = f"""# Batch vs. Real-Time Inference Architectural Benchmark
 
 | Mode | Batch Size | Latency per 100 images | Throughput (images/sec) | Typical Deployment Use Case |

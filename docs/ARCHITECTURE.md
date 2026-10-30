@@ -1,7 +1,7 @@
 # System Architecture & Technical Specification
 
-**Project**: Automated Crop Leaf Disease Identification and Precision Dosage Recommendation Pipeline  
-**Course**: B.Tech CSE-AI (Sponsored by Syngenta MLOps Evaluation Pilot)  
+**Project**: Automated Crop Leaf Disease Identification and Precision Dosage Recommendation Pipeline
+**Course**: B.Tech CSE-AI (Sponsored by Syngenta MLOps Evaluation Pilot)
 **Status**: Prototype Engineering Pipeline (Phase 3 Expanded Evaluation-Grade)
 
 ---
@@ -32,28 +32,28 @@ flowchart TD
     subgraph Serving_Layer["3. Multi-Layer Serving & Explainability"]
         Registry -.-> PthCheck["models/best_model.pth\n(Mounted Checkpoint)"]
         PthCheck --> API["src/api.py\nFastAPI Serving (:8000)"]
-        
+
         InputImg["Inbound Image Query"] --> L1PreCheck{"Layer 1: Heuristic Pre-Check\n(Min 64x64, std >= 8.0,\nVeg/Lesion Color Ratio)"}
         L1PreCheck -- Fail --> RejL1["Status: rejected_not_a_leaf\n(Code: NOT_A_LEAF_COLOR / FLAT)"]
-        
+
         L1PreCheck -- Pass --> L2Energy{"Layer 2: Free Energy Score\nE(x) = -T * logsumexp(z/T)\nThreshold = -12.44"}
         L2Energy -- Out-of-Dist --> RejL2["Status: rejected_not_a_leaf\n(Code: OOD_ENERGY_SCORE)"]
-        
+
         L2Energy -- In-Dist --> CropSelect{"Hierarchical Mode\n(Crop specified?)"}
         CropSelect -- Yes --> MaskedSoftmax["Masked Softmax\nRenormalize over Crop Classes"]
         CropSelect -- No (Auto) --> GlobalSoftmax["Global 38-Class Softmax"]
-        
+
         MaskedSoftmax --> ConfCheck{"In-Crop Confidence\n>= 0.50?"}
         GlobalSoftmax --> ConfCheck
-        
+
         ConfCheck -- High Conf --> OkResp["Status: OK\nTop-5 Predictions"]
         ConfCheck -- Low Conf --> UncertResp["Status: UNCERTAIN\nConfidence < 0.50"]
-        
+
         OkResp --> AdvEngine["src/advisory_engine.py\n(Schema v2 + Weather Rules)"]
         AdvEngine --> AdvCard["Advisory Payload:\nCultural, Chemical, PPE, PHI, Weather Risk"]
-        
+
         OkResp --> Explainers["Explainability Suite:\n- Grad-CAM (Layer 4 Hooks)\n- SHAP GradientExplainer"]
-        
+
         API --> JSONL["logs/requests.jsonl\n(Latency, Brightness, Blur, Class)"]
         API --> Prom["GET /metrics\nPrometheus Metric Instrumentation"]
     end
