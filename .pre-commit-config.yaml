@@ -1,0 +1,20 @@
+# Pre-commit configuration for plant_disease
+# Enforces code hygiene, secret scanning, and file size boundaries.
+
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.6.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+        args: [--unsafe]
+      - id: check-json
+      - id: check-added-large-files
+        args: ['--maxkb=5120'] # Block files larger than 5 MB (e.g. weights, raw datasets)
+
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.4.4
+    hooks:
+      - id: ruff
+        args: [--fix, --line-length=100]

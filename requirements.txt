@@ -1,0 +1,49 @@
+# Plant Disease Pipeline — Python Dependencies
+# Install with:
+#   pip install -r requirements.txt --index-url https://download.pytorch.org/whl/cu128
+#
+# PyTorch must be installed first (CUDA wheel):
+#   pip install torch==2.11.0+cu128 torchvision==0.26.0+cu128 \
+#       --index-url https://download.pytorch.org/whl/cu128
+#
+# Then install the rest:
+#   pip install -r requirements.txt
+#
+# Hardware: NVIDIA RTX 3050 (6 GB VRAM), CUDA 12.8, Python 3.14.7, Windows.
+# Verified install: 2026-10-14.
+
+# ── Core ML ────────────────────────────────────────────────────────────────────
+torch==2.11.0+cu128
+torchvision==0.26.0+cu128
+
+# ── Data / Image ───────────────────────────────────────────────────────────────
+numpy>=2.5.0
+pillow>=12.0.0
+pandas>=3.0.0
+scikit-learn>=1.6.0
+scipy>=1.14.0
+imagehash>=4.3.1
+
+# ── MLflow ─────────────────────────────────────────────────────────────────────
+mlflow>=2.22.0
+
+# ── FastAPI serving ────────────────────────────────────────────────────────────
+fastapi>=0.115.0
+uvicorn[standard]>=0.34.0
+python-multipart>=0.0.20
+
+# ── Config / env ──────────────────────────────────────────────────────────────
+pyyaml>=6.0
+python-dotenv>=1.0.0
+
+# ── Plotting / reporting ──────────────────────────────────────────────────────
+matplotlib>=3.10.0
+seaborn>=0.13.0
+
+# ── Testing ────────────────────────────────────────────────────────────────────
+pytest>=9.0.0
+httpx>=0.28.0          # async test client for FastAPI
+
+# ── Utilities ─────────────────────────────────────────────────────────────────
+tqdm>=4.67.0
+requests>=2.32.0

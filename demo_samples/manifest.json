@@ -1,0 +1,66 @@
+[
+  {
+    "filename": "Tomato___Early_blight.jpg",
+    "class_name": "Tomato___Early_blight",
+    "crop": "tomato",
+    "condition": "early_blight",
+    "is_leaf": true,
+    "source_path": "D:\\VIT\\SEM_5\\MLOps\\CP\\archive\\plantvillage dataset\\color\\Tomato___Early_blight\\0012b9d2-2130-4a06-a834-b1f3af34f57e___RS_Erly.B 8389.JPG"
+  },
+  {
+    "filename": "Apple___Apple_scab.jpg",
+    "class_name": "Apple___Apple_scab",
+    "crop": "apple",
+    "condition": "apple_scab",
+    "is_leaf": true,
+    "source_path": "D:\\VIT\\SEM_5\\MLOps\\CP\\archive\\plantvillage dataset\\color\\Apple___Apple_scab\\029424b0-0ef5-491b-9ef5-069190d24d8f___FREC_Scab 3504.JPG"
+  },
+  {
+    "filename": "Corn_(maize)___Common_rust_.jpg",
+    "class_name": "Corn_(maize)___Common_rust_",
+    "crop": "corn_(maize)",
+    "condition": "common_rust_",
+    "is_leaf": true,
+    "source_path": "D:\\VIT\\SEM_5\\MLOps\\CP\\archive\\plantvillage dataset\\color\\Corn_(maize)___Common_rust_\\RS_Rust 1580.JPG"
+  },
+  {
+    "filename": "Potato___Late_blight.jpg",
+    "class_name": "Potato___Late_blight",
+    "crop": "potato",
+    "condition": "late_blight",
+    "is_leaf": true,
+    "source_path": "D:\\VIT\\SEM_5\\MLOps\\CP\\archive\\plantvillage dataset\\color\\Potato___Late_blight\\00695906-210d-4a9d-822e-986a17384115___RS_LB 4026.JPG"
+  },
+  {
+    "filename": "Strawberry___Leaf_scorch.jpg",
+    "class_name": "Strawberry___Leaf_scorch",
+    "crop": "strawberry",
+    "condition": "leaf_scorch",
+    "is_leaf": true,
+    "source_path": "D:\\VIT\\SEM_5\\MLOps\\CP\\archive\\plantvillage dataset\\color\\Strawberry___Leaf_scorch\\0024203d-6e4c-490f-b9a8-e5926df0b76e___RS_L.Scorch 0795.JPG"
+  },
+  {
+    "filename": "Pepper,_bell___healthy.jpg",
+    "class_name": "Pepper,_bell___healthy",
+    "crop": "pepper,_bell",
+    "condition": "healthy",
+    "is_leaf": true,
+    "source_path": "D:\\VIT\\SEM_5\\MLOps\\CP\\archive\\plantvillage dataset\\color\\Pepper,_bell___healthy\\00208a93-7687-4e8c-b79e-3138687e0f38___JR_HL 7955.JPG"
+  },
+  {
+    "filename": "Orange___Haunglongbing_(Citrus_greening).jpg",
+    "class_name": "Orange___Haunglongbing_(Citrus_greening)",
+    "crop": "orange",
+    "condition": "haunglongbing_(citrus_greening)",
+    "is_leaf": true,
+    "source_path": "D:\\VIT\\SEM_5\\MLOps\\CP\\archive\\plantvillage dataset\\color\\Orange___Haunglongbing_(Citrus_greening)\\00b7a0ba-9d00-4b6d-8673-aa24c716724b___UF.Citrus_HLB_Lab 0728.JPG"
+  },
+  {
+    "filename": "non_leaf_sample.jpg",
+    "class_name": "Non-Leaf / Out-Of-Distribution",
+    "crop": "none",
+    "condition": "non_leaf",
+    "is_leaf": false,
+    "source_path": "synthetic_grey"
+  }
+]

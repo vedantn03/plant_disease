@@ -1,0 +1,61 @@
+# ── Environment & secrets ──────────────────────────────────
+.env
+*.env.local
+
+# ── Python ─────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+*.egg
+.eggs/
+
+# ── Virtual environments ────────────────────────────────────
+.venv/
+venv/
+env/
+
+# ── Data & model artifacts (never commit) ──────────────────
+data/splits/*.csv
+models/
+*.pth
+*.pt
+*.onnx
+mlruns/
+mlflow.db
+mlartifacts/
+
+# ── Logs & reports (generated) ─────────────────────────────
+logs/
+reports/*.png
+reports/*.html
+reports/*.json
+reports/*.csv
+reports/*.md
+# Keep the reports dir itself
+!reports/.gitkeep
+
+# ── Jupyter ─────────────────────────────────────────────────
+.ipynb_checkpoints/
+*.ipynb
+
+# ── OS ──────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ── IDEs ────────────────────────────────────────────────────
+.idea/
+.vscode/
+*.code-workspace
+
+# ── Test & coverage ─────────────────────────────────────────
+.pytest_cache/
+.coverage
+htmlcov/
+reports/figures/segmentation_40_grid.png
+scratch/

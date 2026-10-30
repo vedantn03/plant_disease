@@ -1,0 +1,150 @@
+# kb/coverage.yaml
+# Structural Gap Matrix for PlantVillage Dataset (38 Classes across 14 Crops)
+# Machine-readable specification of dataset coverage, available conditions,
+# and inherent structural blind spots.
+
+metadata:
+  total_crops: 14
+  total_classes: 38
+  notes: >
+    In PlantVillage, several crops have asymmetric class distributions.
+    Specifically, 5 crops (accounting for ~26.4% of total images) have only
+    healthy or only diseased states. For these crops, the model cannot distinguish
+    between healthy and infected tissue.
+
+crops:
+  Apple:
+    classes:
+      - Apple___Apple_scab
+      - Apple___Black_rot
+      - Apple___Cedar_apple_rust
+      - Apple___healthy
+    has_healthy_class: true
+    disease_classes_count: 3
+    coverage_status: COMPLETE_SPECTRUM
+    caveat: null
+
+  Blueberry:
+    classes:
+      - Blueberry___healthy
+    has_healthy_class: true
+    disease_classes_count: 0
+    coverage_status: HEALTHY_ONLY_BLINDSPOT
+    caveat: "The dataset contains ONLY healthy blueberry leaves. The model cannot identify any blueberry diseases."
+
+  Cherry_(including_sour):
+    classes:
+      - Cherry_(including_sour)___Powdery_mildew
+      - Cherry_(including_sour)___healthy
+    has_healthy_class: true
+    disease_classes_count: 1
+    coverage_status: COMPLETE_SPECTRUM
+    caveat: null
+
+  Corn_(maize):
+    classes:
+      - Corn_(maize)___Cercospora_leaf_spot Gray_leaf_spot
+      - Corn_(maize)___Common_rust_
+      - Corn_(maize)___Northern_Leaf_Blight
+      - Corn_(maize)___healthy
+    has_healthy_class: true
+    disease_classes_count: 3
+    coverage_status: COMPLETE_SPECTRUM
+    caveat: null
+
+  Grape:
+    classes:
+      - Grape___Black_rot
+      - Grape___Esca_(Black_Measles)
+      - Grape___Leaf_blight_(Isariopsis_Leaf_Spot)
+      - Grape___healthy
+    has_healthy_class: true
+    disease_classes_count: 3
+    coverage_status: COMPLETE_SPECTRUM
+    caveat: null
+
+  Orange:
+    classes:
+      - Orange___Haunglongbing_(Citrus_greening)
+    has_healthy_class: false
+    disease_classes_count: 1
+    coverage_status: DISEASE_ONLY_BLINDSPOT
+    caveat: "The model has never seen a healthy Orange leaf. It CANNOT rule out a healthy plant and will always diagnose Huanglongbing (Citrus Greening)."
+
+  Peach:
+    classes:
+      - Peach___Bacterial_spot
+      - Peach___healthy
+    has_healthy_class: true
+    disease_classes_count: 1
+    coverage_status: COMPLETE_SPECTRUM
+    caveat: null
+
+  Pepper,_bell:
+    classes:
+      - Pepper,_bell___Bacterial_spot
+      - Pepper,_bell___healthy
+    has_healthy_class: true
+    disease_classes_count: 1
+    coverage_status: COMPLETE_SPECTRUM
+    caveat: null
+
+  Potato:
+    classes:
+      - Potato___Early_blight
+      - Potato___Late_blight
+      - Potato___healthy
+    has_healthy_class: true
+    disease_classes_count: 2
+    coverage_status: COMPLETE_SPECTRUM
+    caveat: "Morphologically and pathogen-similar to Tomato (Solanaceae family). Early/Late Blight lesions look identical in close-up."
+
+  Raspberry:
+    classes:
+      - Raspberry___healthy
+    has_healthy_class: true
+    disease_classes_count: 0
+    coverage_status: HEALTHY_ONLY_BLINDSPOT
+    caveat: "The dataset contains ONLY healthy raspberry leaves. The model cannot identify any raspberry diseases."
+
+  Soybean:
+    classes:
+      - Soybean___healthy
+    has_healthy_class: true
+    disease_classes_count: 0
+    coverage_status: HEALTHY_ONLY_BLINDSPOT
+    caveat: "The dataset contains ONLY healthy soybean leaves. The model cannot identify any soybean diseases."
+
+  Squash:
+    classes:
+      - Squash___Powdery_mildew
+    has_healthy_class: false
+    disease_classes_count: 1
+    coverage_status: DISEASE_ONLY_BLINDSPOT
+    caveat: "The model has never seen a healthy Squash leaf. It CANNOT rule out a healthy plant and will always diagnose Powdery Mildew."
+
+  Strawberry:
+    classes:
+      - Strawberry___Leaf_scorch
+      - Strawberry___healthy
+    has_healthy_class: true
+    disease_classes_count: 1
+    coverage_status: COMPLETE_SPECTRUM
+    caveat: null
+
+  Tomato:
+    classes:
+      - Tomato___Bacterial_spot
+      - Tomato___Early_blight
+      - Tomato___Late_blight
+      - Tomato___Leaf_Mold
+      - Tomato___Septoria_leaf_spot
+      - Tomato___Spider_mites Two-spotted_spider_mite
+      - Tomato___Target_Spot
+      - Tomato___Tomato_Yellow_Leaf_Curl_Virus
+      - Tomato___Tomato_mosaic_virus
+      - Tomato___healthy
+    has_healthy_class: true
+    disease_classes_count: 9
+    coverage_status: COMPLETE_SPECTRUM
+    caveat: "Shares pathogens and leaf morphology with Potato."

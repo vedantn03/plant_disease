@@ -1,0 +1,36 @@
+name: CI Pipeline
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
+          pip install pytest pyyaml fastapi uvicorn pillow requests python-dotenv httpx pydantic scipy
+
+      - name: Run Full Test Suite (Unit, Integration & OOD)
+        run: |
+          cd plant_disease
+          pytest tests/ -v
+
+      - name: Verify Knowledge Base Schema & YAML Parsing
+        run: |
+          python -c "import yaml; d = yaml.safe_load(open('plant_disease/kb/advisories.yaml', encoding='utf-8')); assert len(d['advisories']) == 38, 'Expected 38 classes'"
+          python -c "import yaml; w = yaml.safe_load(open('plant_disease/kb/weather_rules.yaml', encoding='utf-8')); assert len(w['rules']) >= 6, 'Expected at least 6 weather rules'"
+          python -c "import yaml; c = yaml.safe_load(open('plant_disease/kb/coverage.yaml', encoding='utf-8')); assert len(c['crops']) == 14, 'Expected 14 crops'"

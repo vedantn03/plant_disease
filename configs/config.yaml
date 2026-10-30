@@ -1,0 +1,72 @@
+# ============================================================
+# Plant Disease Pipeline – Central Configuration
+# ============================================================
+# All paths are relative to the project root (plant_disease/).
+# DATA_ROOT env-var overrides data.root.
+
+project:
+  name: plant-disease-pipeline
+  version: "0.1.0"
+
+seed: 42
+
+data:
+  root: ""          # overridden by DATA_ROOT env-var at runtime
+  image_size: 224   # resize to this before model input
+  # Subsample cap per class for fast training runs.
+  # Set to null for full-data training on all 38,002 images.
+  subsample_per_class: null
+
+split:
+  train: 0.70
+  val: 0.15
+  test: 0.15
+  manifest_dir: "data/splits"
+
+model:
+  arch: "resnet18"
+  pretrained: true
+  num_classes: 38
+  # Imbalance strategy: "weighted_loss" | "weighted_sampler"
+  imbalance_strategy: "weighted_loss"
+
+training:
+  epochs: 8
+  batch_size: 64        # batch 64 on RTX 3050 6GB with AMP
+  lr: 0.001
+  weight_decay: 0.0001
+  amp: true             # automatic mixed precision
+  num_workers: 0
+
+augmentation:
+  hflip_prob: 0.5
+  vflip_prob: 0.0
+  rotation_degrees: 15
+  color_jitter:
+    brightness: 0.2
+    contrast: 0.2
+    saturation: 0.2
+    hue: 0.05
+
+mlflow:
+  tracking_uri: "sqlite:///mlflow.db"
+  experiment_name: "plant-disease-baseline"
+  registered_model_name: "PlantDiseaseClassifier"
+  champion_alias: "champion"
+
+serving:
+  # Confidence below this → status="uncertain"
+  confidence_threshold: 0.50
+  max_upload_bytes: 10485760   # 10 MB
+  top_k: 5
+  port: 8000
+  log_file: "logs/requests.jsonl"
+
+drift:
+  blur_sigma: 3.0          # Gaussian blur sigma for drift simulation
+  brightness_factor: 0.6   # multiply pixel values by this
+  ks_alpha: 0.05            # KS test significance level
+
+evaluation:
+  # Macro-F1 drop allowed for promotion gate (make retrain)
+  promotion_margin: 0.03

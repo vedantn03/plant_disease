@@ -1,0 +1,91 @@
+stages:
+  audit_and_split:
+    cmd: python scripts/audit_and_split.py
+    deps:
+      - scripts/audit_and_split.py
+      - configs/config.yaml
+    outs:
+      - data/splits/train.csv
+      - data/splits/val.csv
+      - data/splits/test.csv
+      - reports/audit_report.md
+
+  train:
+    cmd: python scripts/train.py
+    deps:
+      - scripts/train.py
+      - src/model.py
+      - configs/config.yaml
+      - data/splits/train.csv
+      - data/splits/val.csv
+    outs:
+      - models/best_model.pth
+
+  evaluate:
+    cmd: python scripts/evaluate.py
+    deps:
+      - scripts/evaluate.py
+      - models/best_model.pth
+      - data/splits/test.csv
+    outs:
+      - reports/metrics.json
+
+  segment_benchmark:
+    cmd: python scripts/benchmark_segmentation.py
+    deps:
+      - scripts/benchmark_segmentation.py
+      - src/segmentation.py
+    outs:
+      - reports/segmentation_quality.json
+
+  bias_study:
+    cmd: python scripts/run_bias_experiments.py
+    deps:
+      - scripts/run_bias_experiments.py
+      - src/segmentation.py
+    outs:
+      - reports/bias_study_metrics.json
+
+  ood_evaluate:
+    cmd: python scripts/evaluate_ood.py
+    deps:
+      - scripts/evaluate_ood.py
+      - src/ood_detector.py
+      - models/best_model.pth
+    outs:
+      - reports/ood_metrics.json
+
+  hierarchy_evaluate:
+    cmd: python scripts/evaluate_hierarchy.py
+    deps:
+      - scripts/evaluate_hierarchy.py
+      - kb/coverage.yaml
+      - models/best_model.pth
+    outs:
+      - reports/hierarchy_metrics.json
+
+  explainability:
+    cmd: python scripts/run_explainability.py
+    deps:
+      - scripts/run_explainability.py
+      - models/best_model.pth
+    outs:
+      - reports/explain_metrics.json
+
+  promote:
+    cmd: python scripts/promote.py
+    deps:
+      - scripts/promote.py
+      - reports/metrics.json
+      - reports/bias_study_metrics.json
+      - reports/ood_metrics.json
+    outs:
+      - reports/promotion_log.json
+
+  reproduce_check:
+    cmd: python scripts/reproduce_check.py
+    deps:
+      - scripts/reproduce_check.py
+      - models/best_model.pth
+    outs:
+      - reports/reproduce_check.json

@@ -1,0 +1,73 @@
+# kb/weather_rules.yaml
+# Weather-Driven Foliar Epidemiological Risk Rules
+# Rules apply only verified university extension and plant pathology trial findings.
+# Input: temperature (°C), relative humidity (%).
+# Output: contextual risk note + urgency level (low | elevated).
+# Dose modification via weather rules is STRICTLY PROHIBITED.
+
+rules:
+  - id: "tomato_late_blight_conducive"
+    crop: "tomato"
+    condition: "late_blight"
+    temp_min: 15.0
+    temp_max: 24.0
+    humidity_min: 80.0
+    urgency: "elevated"
+    note: "Elevated risk: Moderate temperatures (15-24°C) combined with sustained relative humidity (>80%) provide optimal conditions for Phytophthora infestans sporangia germination and rapid secondary cycling."
+    source_id: "uc_ipm_tomato_late_blight"
+    source_citation: "University of California Statewide Integrated Pest Management Program (UC IPM) - Late Blight on Tomato"
+
+  - id: "potato_late_blight_conducive"
+    crop: "potato"
+    condition: "late_blight"
+    temp_min: 15.0
+    temp_max: 22.0
+    humidity_min: 80.0
+    urgency: "elevated"
+    note: "Elevated risk: Phytophthora infestans foliar infection occurs rapidly when leaf wetness persists for 8+ hours at 15-22°C."
+    source_id: "cornell_potato_late_blight"
+    source_citation: "Cornell Cooperative Extension - Potato Late Blight Management"
+
+  - id: "tomato_early_blight_warm_humid"
+    crop: "tomato"
+    condition: "early_blight"
+    temp_min: 24.0
+    temp_max: 30.0
+    humidity_min: 75.0
+    urgency: "elevated"
+    note: "Elevated risk: Alternaria solani conidiophore sporulation is heavily favored by warm temperatures (24-30°C) and alternating wet/dry cycles."
+    source_id: "uc_ipm_tomato_early_blight"
+    source_citation: "UC IPM - Early Blight on Tomato"
+
+  - id: "apple_scab_mills_period"
+    crop: "apple"
+    condition: "apple_scab"
+    temp_min: 13.0
+    temp_max: 24.0
+    humidity_min: 85.0
+    urgency: "elevated"
+    note: "Elevated risk: Venturia inaequalis ascospore discharge and primary infection are favored by temperatures of 13-24°C under prolonged leaf wetness (Mills Period criteria)."
+    source_id: "psu_apple_scab"
+    source_citation: "Penn State Extension - Apple Scab Disease Profile"
+
+  - id: "grape_black_rot_warm_wet"
+    crop: "grape"
+    condition: "black_rot"
+    temp_min: 20.0
+    temp_max: 28.0
+    humidity_min: 80.0
+    urgency: "elevated"
+    note: "Elevated risk: Guignardia bidwellii ascospores require 6-7 hours of continuous leaf moisture at 20-28°C for successful tissue penetration."
+    source_id: "cornell_grape_black_rot"
+    source_citation: "Cornell Fruit Resources - Grape Black Rot Management Guidelines"
+
+  - id: "corn_common_rust_cool_humid"
+    crop: "corn_(maize)"
+    condition: "common_rust_"
+    temp_min: 16.0
+    temp_max: 25.0
+    humidity_min: 85.0
+    urgency: "elevated"
+    note: "Elevated risk: Puccinia sorghi urediniospores germinate optimally during cool, humid nights (16-25°C) with prolonged dew periods."
+    source_id: "purdue_corn_common_rust"
+    source_citation: "Purdue Extension - Common and Southern Rust of Corn"
