@@ -44,3 +44,17 @@ This document mirrors all `🛑 MANUAL ACTION REQUIRED` blocks raised during the
      ```
 - **Expect**: `Server:` section outputs details without `failed to connect to docker API`.
 - **Send me**: Confirmation that `docker info` runs without daemon errors.
+
+---
+
+## Utility: Large Figure Regeneration
+
+### Regenerating `reports/figures/segmentation_40_grid.png`
+- **File**: `reports/figures/segmentation_40_grid.png` (~15.2 MB, untracked by `.gitignore` due to the 5 MB repository limit).
+- **Command to regenerate deterministically**:
+  ```powershell
+  d:
+  cd "D:\VIT\Hackathons\SIH'26\Airafare-proj\plant_disease"
+  ..\.venv\Scripts\python.exe scripts/benchmark_segmentation.py
+  ```
+- **Output**: Writes `reports/figures/segmentation_40_grid.png` and `reports/segmentation_quality.json`. Verified reproducible with 0% failure across 40 benchmark samples.

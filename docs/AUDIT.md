@@ -73,3 +73,26 @@ Tested via in-process ASGI runner (`src.api:app`):
 - `scripts/audit_and_split.py:231`: Hardcoded `SIZE_SAMPLE_MAX = 200`.
 - `configs/config.yaml:70`: `confidence_threshold: 0.50` (raw uncalibrated threshold).
 - `kb/advisories.yaml:97, 102`: Hardcoded invalid URL `https://plantdisease.net/tomato_late_blight`.
+
+---
+
+## 5. Addendum: Files Found After T0
+
+Classification of additional operational scripts, pipelines, and documentation against Master Plan v2:
+
+| File / Component | State | Real Implementation / Replacement Task in Master Plan v2 | Evidence & Source Analysis |
+| :--- | :--- | :--- | :--- |
+| `scripts/run_airflow_simulation.py` & `dags/plant_disease_retraining_dag.py` | **Simulated** | Replaced by **T16 (Airflow Orchestration in Container)** | Source shows DAG is executed via local mocked executor without live Airflow server (`scripts/run_airflow_simulation.py`). Airflow daemon is not running on host. T16 runs containerized Airflow with DAG import tests. |
+| `pipelines/sagemaker_pipeline.py` & `scripts/compile_sagemaker_pipeline.py` | **Docs-only / Compile-only** | Replaced / documented by **T20 (Cloud Path Docs)** | Compiles pipeline definition to local JSON without AWS credentials (`scripts/compile_sagemaker_pipeline.py`). Consistent with AGENTS.md rule: local-first, zero paid cloud services. |
+| `scripts/check_drift_and_trigger.py` | **Simulated** | Replaced by **T12 (Drift Monitor on Real Logs + Alert Rule)** | Currently reads `reports/drift_report.json` which was generated on synthetic 25-vs-25 images. T12 replaces this with genuine sliding-window KS/PSI over live API requests in `logs/requests.jsonl`. |
+| `scripts/reproduce_check.py` | **Working** | Preserved & integrated in **T5 (Honest Evaluation & Verification)** | Forward pass test runs on GPU/CPU with seed 42; verified 100% agreement and zero logit delta. |
+| `scripts/verify_state.py` | **Working** | Used for environment state validation | Standalone sanity script verifying class distributions, GPU, and paths. |
+| `dvc.yaml` | **Partial** | Upgraded in **T3 (DVC Pipeline)** | Tracks stages `audit_split`, `train`, `evaluate`, `report`. Needs local remote configuration, stage expansion (`robustness`, `register`), and `dvc.lock` synchronization. |
+| `.github/workflows/ci.yml` | **Working** | Upgraded in **T14 (CI GitHub Actions)** | Real GitHub Actions workflow running ruff linting, pytest, and safety checks on push/PR. |
+| `src/segmentation.py` & `scripts/benchmark_segmentation.py` | **Working** | Integrated in **T6 (Shortcut-Robustness Suite)** | Woebbecke ExG leaf segmentation verified functional across 40 benchmark samples; generated `reports/segmentation_quality.json`. |
+| `src/ood_detector.py` & `scripts/evaluate_ood.py` | **Working** | Refactored in **T8 (Calibration, OOD, Quality, Abstention)** | Layer 1 optical heuristics + Layer 2 Helmholtz Energy score benchmarked with AUROC 0.9548 in `reports/ood_report.md`. |
+| `scripts/evaluate_hierarchy.py` | **Working** | Integrated in **T5 & T8** | Evaluates masked softmax crop constraint; eliminates Solanaceae cross-genus confusion. |
+| `scripts/run_bias_experiments.py` | **Working** | Integrated in **T6 (Shortcut-Robustness Suite)** | Evaluates background swap retention (E0/E1/E2); recorded in `reports/BIAS_STUDY.md`. |
+| `docs/DATASHEET.md`, `docs/RISK_REGISTER.md` | **Docs-only (Accurate)** | Preserved in **T21 (Viva & Governance Pack)** | Documentation aligned with Gebru datasheet format and ISO/IEC 23894 Risk Register. |
+| `docs/CLOUD_MAPPING.md`, `docs/SYLLABUS_MAP.md` | **Docs-only (Accurate)** | Preserved in **T20 & T21** | Aligned with VIT AY 2026-27 MLOps syllabus Units I-VI. |
+| `docs/VIVA_QA.md`, `docs/SLIDE_OUTLINE.md`, `docs/DEMO_SCRIPT.md` | **Docs-only** | Refreshed in **T21 & T22 (Demo Rehearsal)** | Scripts and presentation materials for examination defense. |

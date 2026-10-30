@@ -61,3 +61,9 @@ All decisions are recorded here. Format: `[YYYY-MM-DD] Decision | Reason`
 [2026-10-28] Built Apache Airflow Simulation Runner & SageMaker Cloud Compiler (Unit-III & Unit-VI) | scripts/run_airflow_simulation.py executes all DAG tasks with live logging (SUCCESS); scripts/compile_sagemaker_pipeline.py generates verified AWS SageMaker Pipeline Workflow JSON in reports/sagemaker_pipeline_definition.json.
 
 [2026-10-28] Upgraded UI Tab 5 into VIT MLOps Curriculum & Governance Hub | Tab 5 now features interactive accordions for Units I to VI with one-click buttons to execute reproducibility checks, data validation, Airflow retraining simulations, and view SageMaker definitions.
+
+[2026-10-31] Untrack scratch/ and large figure files | `scratch/` directory and `reports/figures/segmentation_40_grid.png` (~15 MB, exceeding the 5 MB repository limit) are untracked and added to `.gitignore`. The figure can be regenerated deterministically via `python scripts/benchmark_segmentation.py`.
+
+[2026-10-31] Retain demo_samples and SHAP figures with licence review disclaimer | `demo_samples/*.jpg` (~300 KB each) and SHAP figures in `reports/figures/shap/` (~1 MB each) are kept in the repository for offline test suite & demonstration capability. PlantVillage licence must be checked before public redistribution.
+
+[2026-10-31] Retain FastAPI @app.on_event until Task T9 serving overhaul | FastAPI `@app.on_event("startup")` and `"shutdown"` emit deprecation warnings in favor of lifespan handlers. Migrating to lifespan handlers is deferred to Task T9 (registry-backed serving refactor) to maintain atomic, clean task boundaries.

@@ -1,0 +1,44 @@
+Client:
+ Version:           29.8.0
+ API version:       1.56
+ Go version:        go1.26.8
+ Git commit:        88096ef
+ Built:             Thu Sep  3 21:53:38 2026
+ OS/Arch:           windows/amd64
+ Context:           desktop-linux
+
+Server: Docker Desktop 4.91.0 (239619)
+ Engine:
+  Version:          29.8.0
+  API version:      1.56 (minimum version 1.40)
+  Go version:       go1.26.8
+  Git commit:       3ce5872
+  Built:            Thu Sep  3 21:51:20 2026
+  OS/Arch:          linux/amd64
+  Experimental:     false
+ containerd:
+  Version:          v2.3.4
+  GitCommit:        db8809540e1a7a9da5d518876894933ff55692ab
+ runc:
+  Version:          1.4.3
+  GitCommit:        v1.4.3-0-gbb14dabe
+ docker-init:
+  Version:          0.19.0
+  GitCommit:        de40ad0
+
+Docker Hello-World Test:
+Hello from Docker!
+This message shows that your installation appears to be working correctly.
+
+============================================================
+ Plant Disease MLOps Pipeline - System Preflight Check
+============================================================
+[PASS] Git: git version 2.55.0.windows.5
+[PASS] Python: v3.14.7 (D:\VIT\Hackathons\SIH'26\Airafare-proj\plant_disease\scripts\..\..\.venv\Scripts\python.exe)
+[PASS] Docker: CLI installed & Daemon RUNNING (Docker version 29.8.0, build 88096ef)
+[PASS] GPU: NVIDIA GeForce RTX 3050 6GB Laptop GPU, 6144 MiB
+[PASS] Host RAM: Total = 23.71 GB | Available = 13.00 GB
+[PASS] Required Ports: All free (5000, 8000, 8501, 9090, 3000, 8080, 9000)
+============================================================
+ Preflight Summary Complete
+============================================================

@@ -4,7 +4,7 @@
 | :--- | :--- | :--- | :--- | :--- |
 | **T0** | Repository Audit & Baseline Truth Table | DONE | DONE (Verified by User) | `docs/AUDIT.md` |
 | **T1** | Config Centralization & Single Source of Truth | DONE | DONE | `configs/config.yaml`, `docs/AUDIT.md` |
-| **T2** | Preflight, Runner, Hooks & Resource Budget | DONE | **BLOCKED-ON-USER (Step M2.1 / M2.2)** | `scripts/preflight.ps1`, `tasks.ps1`, `docs/RESOURCE_BUDGET.md`, `docs/evidence/preflight/` |
+| **T2** | Preflight, Runner, Hooks & Resource Budget | DONE | DONE (M2.1 & M2.2 Completed) | `scripts/preflight.ps1`, `tasks.ps1`, `docs/RESOURCE_BUDGET.md`, `docs/evidence/preflight/` |
 | **T3** | DVC Data Pipeline & Versioning | TODO | TODO (M3.1) | `dvc.yaml`, `dvc.lock`, `docs/evidence/dvc/` |
 | **T4** | MinIO Object Store (S3-Compatible) | TODO | TODO | `docker-compose.yml`, `docs/evidence/minio/` |
 | **T5** | Honest Evaluation Suite & Confused Pairs | TODO | N/A | `reports/eval_summary.json` |
