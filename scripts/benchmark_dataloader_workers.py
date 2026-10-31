@@ -38,10 +38,13 @@ def measure_workers(workers: int, batches: int, cfg, split_path: Path) -> dict:
         labels.extend(batch_labels.tolist())
         if index + 1 >= batches:
             break
+    elapsed = time.perf_counter() - start
     return {
         "workers": workers,
-        "seconds": round(time.perf_counter() - start, 3),
+        "seconds": round(elapsed, 3),
         "batches": min(batches, len(loader)),
+        "images": len(labels),
+        "images_per_second": round(len(labels) / max(elapsed, 1e-9), 3),
         "first_labels": labels[:16],
     }
 

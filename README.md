@@ -51,8 +51,9 @@ copy .env.example .env
 ### Step 3 — Train (Full data, 8 epochs)
 ```powershell
 ..\\.venv\\Scripts\\python.exe scripts\\train.py
-# Output: models/best_model.pth, reports/confusion_matrix.png,
-#         reports/per_class_metrics.csv, MLflow run logged
+# Output: models/candidates/<run_id>.pth, reports/<run artifacts>,
+#         and an MLflow candidate run. This command never overwrites
+#         models/best_model.pth; promotion is a separate dry-run gate.
 ```
 
 ### MLflow UI

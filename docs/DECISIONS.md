@@ -113,3 +113,13 @@ end-of-file-fixer, YAML/JSON validation, large-file checking, and Ruff. They do 
 The claim was corrected in `.pre-commit-config.yaml` and `docs/MANUAL_STEPS.md` rather than adding
 an unverified third-party hook. GitHub secret scanning and the requested history checks remain
 separate manual checks.
+
+[2026-10-31] Plain train command is candidate-only | `scripts/train.py` writes the best checkpoint
+to `models/candidates/<run_id>.pth` even when invoked without `--candidate`; the flag is retained
+as documentation. This safer default prevents accidental overwrite of `models/best_model.pth`.
+Promotion remains a separate dry-run gate. The DVC train output declaration is currently
+inconsistent and must be resolved before any real `dvc repro`.
+
+[2026-10-31] DVC champion-output mismatch options | Before enabling real reproduction, choose one:
+(a) declare a candidate output path; (b) remove the train output declaration; or (c) add a
+separate explicitly approved champion-producing stage. No option is implemented here.

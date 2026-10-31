@@ -71,7 +71,7 @@ switch ($Target.ToLower()) {
         & $PYTHON scripts/audit_and_split.py
     }
     "train" {
-        Write-Host "Starting model training..." -ForegroundColor Cyan
+        Write-Host "Starting candidate training; models\best_model.pth is protected..." -ForegroundColor Cyan
         & $PYTHON scripts/train.py
     }
     "candidate" {

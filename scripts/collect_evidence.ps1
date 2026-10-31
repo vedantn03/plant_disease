@@ -59,7 +59,7 @@ Invoke-Captured "05_secret_like_patterns" {
 }
 
 Invoke-Captured "06_dvc_status" {
-    dvc status -c
+    & "..\.venv\Scripts\dvc.exe" status -c
 }
 
 Invoke-Captured "07_champion_md5" {
