@@ -69,7 +69,9 @@ three-fill protocol, and ECE. Batch inference and drift artifacts remain separat
 
 [2026-10-31] Retain demo_samples and SHAP figures with licence review disclaimer | `demo_samples/*.jpg` (~300 KB each) and SHAP figures in `reports/figures/shap/` (~1 MB each) are kept in the repository for offline test suite & demonstration capability. PlantVillage licence must be checked before public redistribution.
 
-[2026-10-31] Retain FastAPI @app.on_event until Task T9 serving overhaul | FastAPI `@app.on_event("startup")` and `"shutdown"` emit deprecation warnings in favor of lifespan handlers. Migrating to lifespan handlers is deferred to Task T9 (registry-backed serving refactor) to maintain atomic, clean task boundaries.
+[2026-10-31] Use FastAPI lifespan for serving lifecycle | T9 replaces deprecated
+`@app.on_event("startup")` and `"shutdown"` handlers with one lifespan context.
+The lifecycle change is independent of model source selection.
 
 [2026-10-31] Make registry-backed serving opt-in | Local `models/best_model.pth` remains the default
 serving source. Setting `serving.model_source: registry` resolves the configured MLflow

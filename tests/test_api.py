@@ -160,6 +160,15 @@ def test_serving_confidence_is_unscaled_softmax():
     assert p_soft[0, 0] < p[0, 0]  # T>1 would change confidence; serving must not
 
 
+def test_api_uses_lifespan_handlers():
+    """Serving lifecycle is managed by FastAPI lifespan, not deprecated events."""
+    src = (Path(__file__).resolve().parent.parent / "src" / "api.py").read_text(
+        encoding="utf-8"
+    )
+    assert "@app.on_event" not in src
+    assert "lifespan=lifespan" in src
+
+
 def test_predict_disclaimer_always_present(client):
     """Disclaimer must appear in every response."""
     jpeg_bytes = _make_jpeg_bytes()

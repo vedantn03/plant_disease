@@ -21,6 +21,7 @@ import io
 import json
 import logging
 import time
+from contextlib import asynccontextmanager
 from collections import defaultdict
 from pathlib import Path
 from typing import Optional
@@ -51,16 +52,6 @@ log = get_logger("api", level=logging.INFO)
 # App init & model loading
 # ─────────────────────────────────────────────────────────────────────────────
 
-app = FastAPI(
-    title="Plant Disease Advisory API",
-    description=(
-        "Classifies leaf images into PlantVillage classes and returns a "
-        "treatment advisory from a cited knowledge base. "
-        "NOT a field-ready diagnostic tool. See /docs for full schema."
-    ),
-    version="0.1.0",
-)
-
 # State (loaded on startup)
 _state: dict = {
     "model": None,
@@ -80,7 +71,6 @@ _state: dict = {
 }
 
 
-@app.on_event("startup")
 async def startup() -> None:
     """Load model, config, coverage matrix, and advisory engine on startup."""
     project_root = Path(__file__).resolve().parent.parent
@@ -145,12 +135,32 @@ async def startup() -> None:
     log.info(f"Request log: {log_path}")
 
 
-@app.on_event("shutdown")
 async def shutdown() -> None:
     if _state["log_file"]:
         _state["log_file"].close()
     if _state["grad_cam"]:
         _state["grad_cam"].remove_hooks()
+
+
+@asynccontextmanager
+async def lifespan(_app: FastAPI):
+    await startup()
+    try:
+        yield
+    finally:
+        await shutdown()
+
+
+app = FastAPI(
+    title="Plant Disease Advisory API",
+    description=(
+        "Classifies leaf images into PlantVillage classes and returns a "
+        "treatment advisory from a cited knowledge base. "
+        "NOT a field-ready diagnostic tool. See /docs for full schema."
+    ),
+    version="0.1.0",
+    lifespan=lifespan,
+)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
