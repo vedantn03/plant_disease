@@ -7,7 +7,7 @@ This document mirrors all `🛑 MANUAL ACTION REQUIRED` blocks raised during the
 ## Task T2 — Preflight, Runner, Hooks & Resource Budget
 
 ### Step M2.1: Pre-commit Installation & Preflight Execution
-- **Why**: Verifies preflight diagnostics directly on your active PowerShell console and activates git pre-commit hooks to block large files (>5MB) and secrets from ever entering git history.
+- **Why**: Verifies preflight diagnostics directly on your active PowerShell console and activates git pre-commit hooks to block large files (>5MB). Secret scanning is not provided by the currently pinned hooks.
 - **Do**:
   1. Open PowerShell and navigate to the project directory:
      ```powershell
@@ -86,18 +86,18 @@ This document mirrors all `🛑 MANUAL ACTION REQUIRED` blocks raised during the
 ## Task T7 — Registry Lifecycle, Trust Gate & Rollback
 
 ### Step M7.1: Candidate Promotion Check & Alias Verification
-- **Why**: Proves that the MLflow model registry strictly enforces the 4-criterion trust gate: a candidate model cannot become `champion` simply by having high raw accuracy; it must pass macro-F1 retention, background shortcut limits (`bg_drop <= 0.08`), calibration (`ECE <= 0.05`), and recall floor (`>= 0.85`).
+- **Why**: Proves that the MLflow model registry strictly enforces the four-criterion trust gate: a candidate must retain within-crop VAL macro-F1, stay within the champion-relative bg_drop margin under the agreed fill protocol, meet the ECE ceiling, and meet the recall floor.
 - **Do**:
   1. Open PowerShell in `plant_disease`:
      ```powershell
      d:
      cd "D:\VIT\Hackathons\SIH'26\Airafare-proj\plant_disease"
      ```
-  2. Run the promotion script to register champion v2 with alias `@champion`:
+  2. Run the promotion script in dry-run mode to evaluate the candidate:
      ```powershell
-     ..\.venv\Scripts\python.exe scripts\promote.py
+     ..\.venv\Scripts\python.exe scripts\promote.py --dry-run
      ```
-  3. Verify the logged decisions in `reports/promotion_log.json` and registry state.
+  3. Verify the logged decisions in `reports/promotion_log.jsonl`; no alias moves while thresholds are provisional.
 - **Expect**:
   - Model is evaluated against gate criteria.
   - Decision is logged with full transparency.
@@ -115,4 +115,32 @@ This document mirrors all `🛑 MANUAL ACTION REQUIRED` blocks raised during the
   cd "D:\VIT\Hackathons\SIH'26\Airafare-proj\plant_disease"
   ..\.venv\Scripts\python.exe scripts/benchmark_segmentation.py
   ```
+
+  ## T10/T11 Heads-Up — Docker and Monitoring
+
+  Docker Desktop is ready for the planned container work when the daemon is running.
+  The current Compose file provides only `api` and `ui`; it has no `core` profile,
+  MLflow tracking service, Prometheus service, Grafana service, monitoring
+  configuration, or metrics endpoint wiring. The API image also needs a readable
+  model checkpoint at `models/best_model.pth`, which is intentionally not committed.
+
+  Before T10, manually build and start the core services, verify `/health` and the
+  Streamlit health endpoint, then capture `docker compose ps` and service logs.
+  Before T11, add and review Prometheus scrape configuration, expose application
+  metrics, add Grafana provisioning/dashboards, start the monitoring profile, and
+  capture `curl`/browser evidence. No Docker build or monitoring startup is part of
+  the current task.
+
+  ## DataLoader Worker Probe
+
+  To compare Windows worker counts without training, run:
+
+  ```powershell
+  ..\.venv\Scripts\python.exe scripts\benchmark_dataloader_workers.py --workers 0 1 2 --batches 8
+  ```
+
+  The output reports elapsed time and whether the first labels are deterministic
+  across two runs. Keep `training.num_workers: 0` for the champion until this
+  probe shows a stable improvement; worker processes add Windows spawn overhead and
+  can complicate reproducibility.
 - **Output**: Writes `reports/figures/segmentation_40_grid.png` and `reports/segmentation_quality.json`. Verified reproducible with 0% failure across 40 benchmark samples.

@@ -31,7 +31,7 @@
 **Answer**: Evaluated across 8,134 held-out test images with 1,000 non-parametric bootstrap iterations:
 - **Test Accuracy**: **99.30%** [95% CI: 99.13%, 99.47%]
 - **Macro-F1**: **0.9903** [95% CI: 98.71%, 99.31%]
-- **Expected Calibration Error (ECE)**: **0.0050** before scaling, reduced via temperature scaling ($T=1.25$).
+- **Expected Calibration Error (ECE)**: use the reproducible unscaled VAL/TEST artifact values; temperature scaling is diagnostic only and is not applied at serving unless a current VAL refit improves VAL NLL.
 
 ---
 

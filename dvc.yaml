@@ -21,6 +21,7 @@ stages:
     cmd: python scripts/train.py
     deps:
       - scripts/train.py
+      - src/registry.py
       - src/model.py
       - src/dataset.py
       - configs/config.yaml

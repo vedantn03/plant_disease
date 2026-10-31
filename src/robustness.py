@@ -21,6 +21,7 @@ Methodology:
      Validates mask fidelity, corner activity, and failure rate across benchmark samples.
 """
 
+from collections.abc import Callable
 from typing import Any, Dict, List, Tuple
 import numpy as np
 from PIL import Image
@@ -33,11 +34,35 @@ from src.model import GradCAM, preprocess_image, _IMAGENET_MEAN, _IMAGENET_STD
 from src.segmentation import segment_leaf
 
 
-def mask_background(image: Image.Image, fill: tuple[int, int, int] = (0, 0, 0)) -> Image.Image:
-    """Zero (or fill) pixels classified as laboratory background by ExG segmentation."""
+FillSpec = tuple[int, int, int] | str | Callable[[Image.Image, np.ndarray], tuple[int, int, int]]
+
+
+def _resolve_fill(
+    image: Image.Image,
+    mask: np.ndarray,
+    fill: FillSpec,
+) -> tuple[int, int, int]:
+    if callable(fill):
+        return tuple(int(np.clip(v, 0, 255)) for v in fill(image, mask))
+    if isinstance(fill, str):
+        if fill == "black":
+            return (0, 0, 0)
+        if fill == "mid_grey":
+            return (128, 128, 128)
+        if fill == "per_image_mean":
+            arr = np.asarray(image.convert("RGB"), dtype=np.float32)
+            background = arr[~mask]
+            values = background if len(background) else arr.reshape(-1, 3)
+            return tuple(int(np.clip(round(v), 0, 255)) for v in values.mean(axis=0))
+        raise ValueError(f"Unknown background fill: {fill!r}")
+    return fill
+
+
+def mask_background(image: Image.Image, fill: FillSpec = (0, 0, 0)) -> Image.Image:
+    """Mask ExG background pixels with a fixed or per-image fill colour."""
     mask = segment_leaf(image)
     arr = np.array(image.convert("RGB"))
-    arr[~mask] = np.array(fill, dtype=np.uint8)
+    arr[~mask] = np.array(_resolve_fill(image, mask, fill), dtype=np.uint8)
     return Image.fromarray(arr)
 
 
@@ -47,14 +72,15 @@ def evaluate_masked_background(
     device: torch.device,
     image_size: int = 224,
     batch_size: int = 32,
-    fill: tuple[int, int, int] = (0, 0, 0),
+    fill: FillSpec = (0, 0, 0),
+    fill_name: str | None = None,
 ) -> Dict[str, Any]:
     """
     Clean vs background-masked macro-F1 on a provided split.
 
-    Fill is black (0,0,0) then the standard Resize(256)+CenterCrop(224)+ImageNet
-    normalise pipeline. bg_drop mixes true background reliance with the
-    distribution shift induced by the mask itself.
+    The standard Resize(256)+CenterCrop(224)+ImageNet normalise pipeline is used.
+    ``bg_drop`` mixes true background reliance with the distribution shift induced
+    by the mask itself.
     """
     model.eval()
     transform = transforms.Compose([
@@ -101,11 +127,40 @@ def evaluate_masked_background(
     retention = (masked_f1 / clean_f1) if clean_f1 > 0 else 0.0
     return {
         "n": int(len(samples)),
-        "fill": list(fill),
+        "fill": fill_name or list(fill) if not isinstance(fill, str) else fill,
         "clean_macro_f1": round(clean_f1, 4),
         "masked_macro_f1": round(masked_f1, 4),
         "bg_drop": round(bg_drop, 4),
         "retention_rate": round(retention, 4),
+    }
+
+
+MASK_FILL_PROTOCOL: dict[str, FillSpec] = {
+    "black": "black",
+    "mid_grey": "mid_grey",
+    "per_image_mean": "per_image_mean",
+}
+
+
+def evaluate_mask_fill_protocol(
+    model: torch.nn.Module,
+    samples: List[Tuple[str, int]],
+    device: torch.device,
+    image_size: int = 224,
+    batch_size: int = 32,
+) -> dict[str, dict[str, Any]]:
+    """Evaluate the agreed three-fill masking protocol."""
+    return {
+        name: evaluate_masked_background(
+            model,
+            samples,
+            device,
+            image_size=image_size,
+            batch_size=batch_size,
+            fill=fill,
+            fill_name=name,
+        )
+        for name, fill in MASK_FILL_PROTOCOL.items()
     }
 
 

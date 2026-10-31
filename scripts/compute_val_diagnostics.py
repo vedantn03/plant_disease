@@ -38,7 +38,7 @@ from src.config_loader import load_config
 from src.dataset import PlantVillageDataset, get_transforms
 from src.gates import one_extra_error_recall, wilson_lower_bound
 from src.model import build_model
-from src.robustness import evaluate_masked_background
+from src.robustness import evaluate_mask_fill_protocol
 from src.utils import get_logger, parse_class_name, set_seed
 
 log = get_logger("val_diagnostics")
@@ -207,14 +207,10 @@ def main() -> int:
     # A1 temperature refit on the SAME VAL logits used below
     log.info("Fitting temperature on saved VAL logits...")
     fit = fit_temperature(val_logits.to(device), val_labels_t.to(device))
-    t_old = 1.3199
-    fit["historical_reported_T"] = t_old
     fit["historical_source"] = (
-        "scripts/evaluate.py TemperatureScaler init T=1.5, LBFGS lr=0.01 "
-        "max_iter=50, logits/T; stored in reports/metrics.json temperature_scale"
-    )
-    fit["nll_at_historical_T_on_these_val_logits"] = round(
-        nll_at_temperature(val_np, val_labels, t_old), 5
+        "Earlier scripts/evaluate.py used a non-unit LBFGS initialization and "
+        "stored a softened diagnostic fit; the value was not accepted as a "
+        "serving calibration."
     )
     fit["checkpoint"] = {
         "path": "models/best_model.pth",
@@ -232,11 +228,9 @@ def main() -> int:
     ):
         pre = softmax_np(logits_np, 1.0)
         post = softmax_np(logits_np, t_star)
-        post_old = softmax_np(logits_np, t_old)
         splits_cal[split_name] = {
             "before_T1": calibration_bundle(pre, labels),
             "after_optimal_T": calibration_bundle(post, labels),
-            "after_historical_T_1_3199": calibration_bundle(post_old, labels),
         }
     fit["metrics"] = splits_cal
 
@@ -278,18 +272,22 @@ def main() -> int:
         json.dumps(tiny, indent=2), encoding="utf-8"
     )
 
-    log.info("VAL masked-background eval (ExG mask, black fill)...")
+    log.info("VAL/TEST masked-background eval (ExG mask, three-fill protocol)...")
     t0 = time.perf_counter()
-    masked = evaluate_masked_background(
+    val_masked = evaluate_mask_fill_protocol(
         model, val_ds.samples, device, image_size=cfg.data.image_size, batch_size=32
     )
+    test_masked = evaluate_mask_fill_protocol(
+        model, test_ds.samples, device, image_size=cfg.data.image_size, batch_size=32
+    )
     masked_s = time.perf_counter() - t0
-    masked["split"] = "val"
-    masked["seconds"] = round(masked_s, 1)
-    masked["command"] = "python scripts/compute_val_diagnostics.py"
+    for result in (val_masked, test_masked):
+        for fill_result in result.values():
+            fill_result["command"] = "python scripts/compute_val_diagnostics.py"
     log.info(
-        f"VAL clean_f1={masked['clean_macro_f1']} masked_f1={masked['masked_macro_f1']} "
-        f"bg_drop={masked['bg_drop']} ({masked_s:.1f}s)"
+        "VAL bg_drop by fill: "
+        + ", ".join(f"{name}={value['bg_drop']}" for name, value in val_masked.items())
+        + f" ({masked_s:.1f}s)"
     )
 
     val_ece = splits_cal["val"]["before_T1"]["ece"]
@@ -303,7 +301,9 @@ def main() -> int:
             "within_crop_macro_f1_excluding_single_class_crops"
         ],
         "per_crop": crop_block["per_crop"],
-        "masked_background": masked,
+        "masked_background": val_masked["black"],
+        "masked_background_by_fill": val_masked,
+        "masked_background_test_by_fill": test_masked,
         "min_recall": {
             "value": min_info["recall"],
             "class": min_name,
@@ -326,9 +326,9 @@ def main() -> int:
         "source": "scripts/diagnose_calibration_and_crops.py",
         "included_real_data_loading": False,
         "description": (
-            "20 training steps on torch.randn(64,3,224,224) tensors already on GPU; "
-            "no JPEG decode, no DataLoader, num_workers irrelevant. "
-            "Reported 141.85 ms/step was GPU forward+backward only."
+        "The historical benchmark used torch.randn tensors already on GPU; "
+        "it was not a real data-loading benchmark. The measured champion run "
+        "was 287.6 seconds per epoch and 2321.9 seconds wall-clock for 8 epochs."
         ),
         "val_jpeg_inference_seconds_this_run": round(val_infer_s, 1),
         "test_jpeg_inference_seconds_this_run": round(test_infer_s, 1),
@@ -345,8 +345,8 @@ def main() -> int:
         "A1_val_nll_T1": fit["val_nll_at_T1"],
         "A1_val_nll_optimal": fit["val_nll_at_optimal_T"],
         "A3_val_clean_macro_f1": baselines["clean_macro_f1"],
-        "A3_val_masked_macro_f1": masked["masked_macro_f1"],
-        "A3_val_bg_drop": masked["bg_drop"],
+        "A3_val_masked_macro_f1_black": val_masked["black"]["masked_macro_f1"],
+        "A3_val_bg_drop_black": val_masked["black"]["bg_drop"],
         "A3_val_within_crop_macro_f1": baselines["within_crop_macro_f1_excluding_single_class_crops"],
         "A5_mean_epoch_seconds": mlflow_info.get("mean_epoch_seconds"),
         "A5_run_duration_seconds": mlflow_info.get("run_duration_seconds"),

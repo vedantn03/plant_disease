@@ -131,3 +131,18 @@ def test_no_double_tracked_files():
             if out_str in forbidden:
                 violations.append(f"{stage_name}: '{out_str}' is git-tracked but also a DVC out")
     assert not violations, "Double-tracked files found:\n" + "\n".join(violations)
+
+
+def test_promotion_stage_is_dry_run_only():
+    """The DVC promotion stage must never move the champion alias."""
+    data = _load_dvc_yaml()
+    promote_cmd = data["stages"]["promote"]["cmd"]
+    assert "--dry-run" in promote_cmd
+    assert "--apply" not in promote_cmd
+
+
+def test_candidate_training_path_never_targets_champion_checkpoint():
+    """Candidate training must write below models/candidates only."""
+    source = (PROJECT_ROOT / "scripts" / "train.py").read_text(encoding="utf-8")
+    assert "candidate_checkpoint = candidates_dir / f\"{run_id}.pth\"" in source
+    assert "models/best_model.pth" not in source

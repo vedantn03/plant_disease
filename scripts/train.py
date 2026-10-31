@@ -7,7 +7,8 @@ MLflow tracking:
   - Parameters: seed, arch, epochs, lr, batch_size, subsample_per_class, imbalance_strategy
   - Per-epoch: train_loss, train_acc, val_loss, val_acc, val_macro_f1
   - Artifacts: confusion matrix PNG, per-class metrics CSV, model checkpoint, model card
-  - Model registry: registered under cfg.mlflow.registered_model_name with alias "champion"
+  - Model registry: registered under cfg.mlflow.registered_model_name as a candidate;
+    alias movement is handled separately by scripts/promote.py
 
 Usage:
   python scripts/train.py
@@ -40,6 +41,12 @@ from tqdm import tqdm
 from src.config_loader import load_config
 from src.dataset import make_dataloaders
 from src.model import build_model
+from src.registry import (
+    config_hash,
+    dvc_data_hash,
+    git_commit,
+    register_candidate_version,
+)
 from src.utils import ensure_dir, get_logger, parse_class_name, set_seed
 
 log = get_logger("train")
@@ -215,9 +222,22 @@ def compute_per_crop_metrics(
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--config", default=None, help="Path to config YAML")
+    parser.add_argument(
+        "--seed",
+        type=int,
+        default=None,
+        help="Override config seed for this run and all data sampling",
+    )
+    parser.add_argument(
+        "--candidate",
+        action="store_true",
+        help="Explicitly run in candidate mode (the default output mode)",
+    )
     args = parser.parse_args()
 
     cfg = load_config(args.config)
+    if args.seed is not None:
+        cfg.seed = args.seed
     set_seed(cfg.seed)
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -276,6 +296,8 @@ def main() -> None:
     with mlflow.start_run() as run:
         run_id = run.info.run_id
         log.info(f"MLflow run ID: {run_id}")
+        mlflow.set_tag("model_role", "candidate")
+        mlflow.set_tag("candidate", "true")
 
         # Log parameters
         mlflow.log_params({
@@ -292,11 +314,14 @@ def main() -> None:
             "subsample_per_class": subsample,
             "train_manifest_hash": manifest_hash,
             "device": str(device),
+            "git_commit": git_commit(),
+            "config_hash": config_hash(),
+            "dvc_data_hash": dvc_data_hash(),
         })
 
         # ── Training loop ──────────────────────────────────────────────────────
         # SAFETY RULE (Master Plan v2 / Task T7):
-        # train.py writes ONLY to models/candidates/<run_id>.pth and NEVER overwrites models/best_model.pth.
+        # Candidate mode writes only to models/candidates/<run_id>.pth.
         # Promotion to champion is exclusively governed by the 4-criterion trust gate in scripts/promote.py.
         best_val_f1 = 0.0
         candidates_dir = models_dir / "candidates"
@@ -341,6 +366,11 @@ def main() -> None:
                     "val_macro_f1": val_f1,
                     "class_to_idx": class_to_idx,
                     "cfg": dict(cfg),
+                    "seed": cfg.seed,
+                    "git_commit": git_commit(),
+                    "config_hash": config_hash(),
+                    "dvc_data_hash": dvc_data_hash(),
+                    "model_role": "candidate",
                 }, candidate_checkpoint)
                 log.info(f"  → Candidate model saved to {candidate_checkpoint} (val_macro_f1={val_f1:.4f})")
 
@@ -392,19 +422,15 @@ def main() -> None:
 
         # ── Register model in MLflow Model Registry as Candidate ───────────────
         log.info(f"Registering candidate model: {cfg.mlflow.registered_model_name}")
-        client = mlflow.tracking.MlflowClient()
-        try:
-            client.create_registered_model(cfg.mlflow.registered_model_name)
-        except Exception:
-            pass  # already exists
-
         artifact_uri = run.info.artifact_uri
         source = f"{artifact_uri}/model"
-        mv = client.create_model_version(
-            name=cfg.mlflow.registered_model_name,
+        mv = register_candidate_version(
             source=source,
             run_id=run_id,
-            tags={"status": "candidate", "val_macro_f1": f"{best_val_f1:.4f}"},
+            tags={
+                "val_macro_f1": f"{best_val_f1:.4f}",
+                "split": "val",
+            },
         )
         log.info(f"Registered candidate version: {mv.version} (Promotion to champion is governed by scripts/promote.py)")
 

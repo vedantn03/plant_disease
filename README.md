@@ -175,7 +175,7 @@ Capture the following 4 screenshots during your live demo for report/slide submi
 | :--- | :--- |
 | **Data Versioning / Validation** | `scripts/audit_and_split.py` — SHA-256 deduplication (21 copies removed), group-aware split with `<crop>::<id>` scoping, zero group leakage unit-asserted. |
 | **Experiment Tracking** | MLflow with persistent SQLite backend (`sqlite:///mlflow.db`) logging parameters, epoch metrics, confusion matrix, and per-class reports. |
-| **Model Registry & Gate** | `PlantDiseaseClassifier` registered in MLflow with `champion` alias (v1). Gated deployment logic in `scripts/promote.py`. |
+| **Model Registry & Gate** | MLflow registration and the `champion` alias are implemented in `src/registry.py` and `scripts/promote.py`; registry state is runtime-local and must be verified from MLflow artifacts. |
 | **Inference Serving** | FastAPI (`src/api.py`) with automatic input validation, Grad-CAM attribution, confidence thresholding (0.50), and JSON lines request logging. |
 | **Interactive Dashboard** | Streamlit single-page application (`app/ui.py`) with Diagnose, Monitoring, and Model & Evidence tabs. |
 | **Drift Monitoring** | `scripts/simulate_drift.py` applying Kolmogorov-Smirnov (KS) tests and Population Stability Index (PSI) to detect optical distribution shifts. |

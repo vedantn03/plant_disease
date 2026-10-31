@@ -26,7 +26,7 @@ flowchart TD
         BiasExp["scripts/run_bias_experiments.py\n(E0 vs E1 vs E2 Background Ablation)"] --> Gate["scripts/promote.py\n(4-Criterion Promotion Gate)"]
         OODEval["scripts/evaluate_ood.py\n(Energy AUROC >= 0.85)"] --> Gate
         Eval --> Gate
-        Gate --> Registry["MLflow Model Registry\nAlias: 'champion' (v2)"]
+        Gate --> Registry["MLflow Model Registry\nAlias: 'champion' after approved gate"]
     end
 
     subgraph Serving_Layer["3. Multi-Layer Serving & Explainability"]
@@ -80,7 +80,7 @@ flowchart TD
 | **Out-of-Distribution Detector** | `src/ood_detector.py` | Multi-layered rejection engine: Layer 1 heuristic optical filtering + Layer 2 Helmholtz free energy score $E(x) = -T \cdot \log \sum \exp(z_i / T)$ preventing confident non-leaf misclassifications. |
 | **Hierarchical Inference** | `src/api.py` (`/predict`) | Evaluates optional crop guidance; restricts prediction to genus/species candidate classes via masked softmax renormalization, resolving Potato vs. Tomato confusion. |
 | **Explainability Suite** | `scripts/run_explainability.py` | Produces dual Grad-CAM and SHAP attribution heatmaps, calculates attribution mass on leaf foreground, and validates faithfulness via greedy pixel deletion curves. |
-| **Model Registry & Gate** | `scripts/promote.py` | Enforces a 4-criterion gate (Macro-F1, per-class recall floor, OOD AUROC $\ge 0.85$, and background retention $\ge 75\%$) before promoting a candidate checkpoint to `champion`. |
+| **Model Registry & Gate** | `scripts/promote.py` | Enforces a provisional four-criterion gate: within-crop VAL macro-F1 retention, per-class recall floor, champion-relative masked-background drop, and ECE. |
 | **Advisory Engine v2** | `src/advisory_engine.py` | Matches Schema v2 advisories from `kb/advisories.yaml` and foliar epidemiological risk from `kb/weather_rules.yaml` with negative constraint checks. |
 | **Batch Inference Engine** | `scripts/batch_infer.py` | High-throughput batch inference engine processing image manifests via mini-batched tensors (110.5 fps single, 317.4 fps batch-64). |
 | **Telemetry & Drift Engine** | `scripts/simulate_drift.py` & `check_drift_and_trigger.py` | Logs incoming query features (blur, brightness, latency), runs two-sample KS and PSI tests, and issues automated retraining trigger manifests upon drift breach. |

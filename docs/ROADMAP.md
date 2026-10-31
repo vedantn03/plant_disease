@@ -25,7 +25,7 @@ This document is the merged single-source engineering plan for the Plant Disease
 ## Phase 2: Lifecycle Core & Trust Governance (CURRENT)
 - **T7 — Registry Lifecycle, 4-Criterion Trust Gate & Rollback**
   - *Agent*: Build `configs/gates/gate_thresholds.yaml`, `src/registry.py`, `scripts/promote.py`, `tasks.ps1 rollback`, unit tests for gate rejection/first-model/rollback.
-  - *Manual (M7.1)*: Run `python scripts/promote.py` to register champion v2 with alias `@champion`; run real 1-epoch weak candidate training to prove rejection in terminal and MLflow UI.
+  - *Manual (M7.1)*: Run `python scripts/promote.py --dry-run` to evaluate a candidate; run real training only after confirmation and approve thresholds before any alias move.
   - *Artifacts*: `reports/promotion_log.jsonl`, SQLite `mlflow.db` (`@champion` alias).
 - **T8 — Calibration, OOD, Quality & Abstention Engine**
   - *Agent*: Extend `src/ood_detector.py` and calibration into unified serving abstention engine (`src/abstention.py`): Layer 1 (blur/brightness quality heuristic), Layer 2 (Helmholtz Energy Score OOD), Layer 3 (selective prediction confidence threshold 0.50).
@@ -67,7 +67,7 @@ This document is the merged single-source engineering plan for the Plant Disease
 ## Phase 5: Challenger Models & Chaos Testing
 - **Challenger Model — Shortcut-Resistant Candidate (E2 Mixture)**
   - *Agent*: Candidate training configuration with 40% randomized background compositing.
-  - *Manual*: Execute training run on RTX 3050 (~11 minutes for 8 epochs); run `scripts/promote.py` to evaluate whether challenger displaces champion v2.
+  - *Manual*: Execute the confirmed training run on RTX 3050; run `scripts/promote.py --dry-run` to evaluate whether the challenger is eligible.
   - *Artifacts*: `models/candidates/challenger_e2.pth`.
 - **Chaos Testing & Shadow Deployment**
   - *Agent*: `scripts/replay_traffic.py --degrade` introducing blur, darkening, and OOD non-leaf inputs to test real-time alerting.

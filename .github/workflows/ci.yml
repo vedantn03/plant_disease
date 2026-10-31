@@ -22,15 +22,14 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
-          pip install pytest pyyaml fastapi uvicorn pillow requests python-dotenv httpx pydantic scipy
+          pip install pytest pyyaml fastapi uvicorn pillow requests python-dotenv httpx pydantic scipy scikit-learn python-multipart
 
       - name: Run Full Test Suite (Unit, Integration & OOD)
         run: |
-          cd plant_disease
           pytest tests/ -v
 
       - name: Verify Knowledge Base Schema & YAML Parsing
         run: |
-          python -c "import yaml; d = yaml.safe_load(open('plant_disease/kb/advisories.yaml', encoding='utf-8')); assert len(d['advisories']) == 38, 'Expected 38 classes'"
-          python -c "import yaml; w = yaml.safe_load(open('plant_disease/kb/weather_rules.yaml', encoding='utf-8')); assert len(w['rules']) >= 6, 'Expected at least 6 weather rules'"
-          python -c "import yaml; c = yaml.safe_load(open('plant_disease/kb/coverage.yaml', encoding='utf-8')); assert len(c['crops']) == 14, 'Expected 14 crops'"
+          python -c "import yaml; d = yaml.safe_load(open('kb/advisories.yaml', encoding='utf-8')); assert len(d['advisories']) == 38, 'Expected 38 classes'"
+          python -c "import yaml; w = yaml.safe_load(open('kb/weather_rules.yaml', encoding='utf-8')); assert len(w['rules']) >= 6, 'Expected at least 6 weather rules'"
+          python -c "import yaml; c = yaml.safe_load(open('kb/coverage.yaml', encoding='utf-8')); assert len(c['crops']) == 14, 'Expected 14 crops'"

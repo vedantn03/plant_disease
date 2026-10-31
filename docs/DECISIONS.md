@@ -48,7 +48,10 @@ All decisions are recorded here. Format: `[YYYY-MM-DD] Decision | Reason`
 
 [2026-10-28] Upgraded Schema v2 advisories and foliar epidemiological weather rules | Integrated verified university extension guidelines (UC IPM, Cornell, Penn State) and Indian national institutes (ICAR-CPRI, ICAR-IIHR, ICAR-NRCG, TNAU) in kb/advisories.yaml with 6 weather risk rules in kb/weather_rules.yaml; prohibited dose modification.
 
-[2026-10-28] 4-Criterion promotion gate, batch inference benchmark, and automated drift retraining trigger | Champion promotion requires Macro-F1 delta >= -0.005, recall floor >= 0.85, OOD AUROC >= 0.85, and background retention >= 75%. Batch inference achieves 317.4 fps on batch-64. Drift monitor writes retraining_trigger.json upon KS/PSI breach.
+[2026-10-28] Initial promotion-gate proposal superseded | The earlier gate proposal used an
+absolute background-retention ceiling and an OOD criterion. The current provisional gate uses
+within-crop VAL macro-F1, per-class recall, champion-relative masked-background drop under the
+three-fill protocol, and ECE. Batch inference and drift artifacts remain separate evaluations.
 
 [2026-10-28] 5-Tab Streamlit governance dashboard | UI enhanced with tabs for Diagnostic Screening, Service Logs & Telemetry, Model Evidence & Bias Study, Coverage & Structural Gaps, and MLOps Lifecycle & Governance.
 
@@ -74,6 +77,33 @@ All decisions are recorded here. Format: `[YYYY-MM-DD] Decision | Reason`
 
 [2026-10-31] manifest_hashes.json stays git-tracked, not DVC-tracked | The file is a tiny (<1 KB) hash-of-hashes manifest for the raw dataset. Git-tracking it gives a single-command diff (`git diff`) to detect dataset drift between sessions. DVC would add indirection with no space saving. Ref: https://dvc.org/doc/user-guide/data-management/remote-storage
 
-[2026-10-31] Temperature scaling not applied at serving time | Evaluated with identical 15-bin partitioning on both VAL and TEST. Pre-scale ECE is 0.0011 (VAL) and 0.0020 (TEST); post-scale ECE with T=1.3199 rises to 0.0053 (VAL) and 0.0050 (TEST). NLL worsens from 0.0225 to 0.0248 and Brier score worsens from 0.0110 to 0.0114. Because the model has 99.30% raw accuracy, softening logits with T=1.32 creates an artificial underconfidence gap relative to empirical accuracy. Standard uncalibrated softmax is already better calibrated; T is preserved only as an optional diagnostic in config.
+[2026-10-31] Temperature scaling not applied at serving time | The current champion refit on the saved VAL logits found optimal T=0.9759, with VAL NLL 0.01920 at T=1 and 0.01919 at the optimum. The improvement is negligible, so serving remains unscaled (T=1). The sign is divide: `scaled_logits = logits / T`.
 
 [2026-10-31] Fix per-crop macro-F1 computation via scoped labels | Naive sklearn `f1_score(ct, cp, average='macro')` on per-crop subsets treated out-of-crop false positives as extra classes with 0 support, artificially collapsing Potato macro-F1 to 73.71% and Tomato to 82.10%. Scoping evaluation via `labels=np.unique(ct)` yields true in-domain macro-F1 of 98.27% for Potato and 98.52% for Tomato, matching the actual 99.03% model performance.
+
+[2026-10-31] A1-A7 artifact audit and serving decision | The refit uses the current champion
+checkpoint, the same VAL preprocessing, and the same saved VAL logits used for evaluation.
+The earlier diagnostic fit came from the old evaluator's non-unit initialization; it was not a
+valid serving value. The current implementation starts at T=1, includes T=1 in its search, and
+selects the lowest VAL NLL. Serving uses `temperature=1.0` in `src/api.py:269` and `:408`.
+
+[2026-10-31] A4 bootstrap ECE note | The percentile bootstrap mean/interval for ECE is not a
+confidence interval for the point estimate and can be shifted upward because ECE is a nonlinear,
+absolute-value, data-adaptive statistic. The project keeps the existing percentile bootstrap as a
+descriptive uncertainty summary and records this upward-bias caveat; it does not treat the interval
+as evidence that must contain the point estimate.
+
+[2026-10-31] A5 speed benchmark scope | The old step benchmark used pre-generated tensors and
+excluded DataLoader/JPEG work. The measured champion run took 287.6 seconds per epoch and
+2321.9 seconds wall-clock for 8 epochs (about 39 minutes).
+
+[2026-10-31] A7 champion-version wording | The checkout contains no MLflow registry database or
+registered-version artifacts, so the identity and safety of “Champion v1” cannot be verified.
+Documentation must not claim v1 is registered or use it as a rollback target. Rollback now selects
+only older versions tagged `gate_verdict=PASS`; otherwise it refuses the move.
+
+[2026-10-31] Secret scanning claim corrected | The pinned pre-commit hooks are trailing-whitespace,
+end-of-file-fixer, YAML/JSON validation, large-file checking, and Ruff. They do not scan secrets.
+The claim was corrected in `.pre-commit-config.yaml` and `docs/MANUAL_STEPS.md` rather than adding
+an unverified third-party hook. GitHub secret scanning and the requested history checks remain
+separate manual checks.

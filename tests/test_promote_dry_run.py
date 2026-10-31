@@ -3,15 +3,28 @@
 import json
 
 from src.gates import GateMetrics, evaluate_gate, load_gate_thresholds
-from src.registry import append_promotion_log, promote_alias
+from src.registry import append_promotion_log, promote_alias, register_candidate_version
 
 
 class _FakeClient:
     def __init__(self) -> None:
         self.aliases: dict[tuple[str, str], str] = {}
+        self.registered: list[dict] = []
 
     def set_registered_model_alias(self, name, alias, version):
         self.aliases[(name, alias)] = str(version)
+
+    def create_registered_model(self, name):
+        return {"name": name}
+
+    def create_model_version(self, name, source, run_id, tags):
+        self.registered.append({
+            "name": name,
+            "source": source,
+            "run_id": run_id,
+            "tags": tags,
+        })
+        return type("ModelVersion", (), {"version": "1"})()
 
 
 def test_dry_run_does_not_call_set_alias(monkeypatch):
@@ -29,6 +42,24 @@ def test_apply_would_set_alias_on_fake_client():
     result = promote_alias("3", alias="champion", dry_run=False, client=fake)
     assert result["moved"] is True
     assert list(fake.aliases.values()) == ["3"]
+
+
+def test_candidate_registration_has_provenance_and_pending_gate_tags():
+    fake = _FakeClient()
+    version = register_candidate_version(
+        source="runs:/run-1/model",
+        run_id="run-1",
+        tags={"split": "val"},
+        client=fake,
+    )
+    assert version.version == "1"
+    tags = fake.registered[0]["tags"]
+    assert tags["status"] == "candidate"
+    assert tags["gate_verdict"] == "PENDING"
+    assert tags["robustness_metrics"] == "not_computed"
+    assert "dvc_data_hash" in tags
+    assert "git_commit" in tags
+    assert "config_hash" in tags
 
 
 def test_provisional_gate_blocks_live_promotion_policy():

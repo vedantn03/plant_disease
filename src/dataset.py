@@ -195,6 +195,7 @@ def make_dataloaders(
         num_workers=cfg.training.num_workers,
         pin_memory=True,
         persistent_workers=cfg.training.num_workers > 0,
+        generator=torch.Generator().manual_seed(seed),
     )
     val_loader = DataLoader(
         val_ds,
