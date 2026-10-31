@@ -22,7 +22,7 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
-          pip install pytest pyyaml fastapi uvicorn pillow requests python-dotenv httpx pydantic scipy scikit-learn python-multipart
+          pip install pytest pyyaml fastapi uvicorn pillow requests python-dotenv httpx pydantic scipy scikit-learn python-multipart mlflow
 
       - name: Run Full Test Suite (Unit, Integration & OOD)
         run: |

@@ -32,6 +32,9 @@ except ImportError:
 def client():
     if not CLIENT_AVAILABLE:
         pytest.skip("FastAPI/httpx not available")
+    project_root = Path(__file__).resolve().parent.parent
+    if not (project_root / "models" / "best_model.pth").exists():
+        pytest.skip("Model artifact unavailable; API integration tests require local weights")
     with TestClient(app) as c:
         yield c
 
