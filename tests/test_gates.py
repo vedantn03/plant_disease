@@ -57,6 +57,8 @@ def test_bg_drop_is_relative_to_champion():
     cand = _ok(bg_drop=0.185)
     verdict = evaluate_gate(cand, champ, _thresholds())
     assert "bg_drop" not in verdict["failures"]
+    bg = next(c for c in verdict["criteria"] if c["name"] == "bg_drop")
+    assert bg["threshold"] == 0.20
 
 
 def test_within_crop_f1_is_gate_metric_when_available():

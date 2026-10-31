@@ -150,10 +150,10 @@ def evaluate_gate(
     # 3. Background-mask drop (upper bound on shortcut + masking artifacts)
     bg_cfg = criteria_cfg["bg_drop"]
     bg_margin = float(bg_cfg["margin"])
-    bg_floor = candidate.bg_drop if first_model else champion.bg_drop + bg_margin
-    bg_pass = first_model or candidate.bg_drop <= bg_floor
+    bg_ceiling = candidate.bg_drop if first_model else champion.bg_drop + bg_margin
+    bg_pass = first_model or candidate.bg_drop <= bg_ceiling
     bg_reason = (
-        f"VAL bg_drop {candidate.bg_drop:.4f} vs champion-relative ceiling {bg_floor:.4f} "
+        f"VAL bg_drop {candidate.bg_drop:.4f} vs champion-relative ceiling {bg_ceiling:.4f} "
         f"(margin {bg_margin:.4f}; absolute informational value "
         f"{bg_cfg.get('absolute_informational_max', 'not set')}; "
         "drop mixes background reliance with masking artifacts)"
@@ -163,7 +163,7 @@ def evaluate_gate(
         passed=bg_pass,
         provisional=bool(bg_cfg.get("provisional", True)),
         observed=candidate.bg_drop,
-        threshold=bg_max,
+        threshold=bg_ceiling,
         reason=bg_reason if bg_pass else f"FAIL: {bg_reason}",
     ))
 
