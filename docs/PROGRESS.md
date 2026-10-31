@@ -5,10 +5,10 @@
 | **T0** | Repository Audit & Baseline Truth Table | DONE | DONE (Verified by User) | `docs/AUDIT.md` |
 | **T1** | Config Centralization & Single Source of Truth | DONE | DONE | `configs/config.yaml`, `docs/AUDIT.md` |
 | **T2** | Preflight, Runner, Hooks & Resource Budget | DONE | DONE (M2.1 & M2.2 Completed) | `scripts/preflight.ps1`, `tasks.ps1`, `docs/RESOURCE_BUDGET.md`, `docs/evidence/preflight/` |
-| **T3** | DVC Data Pipeline & Versioning | DONE (agent) | BLOCKED-ON-USER (M3.1 — dvc push, restore proof) | `dvc.yaml`, `dvc.lock`, `docs/evidence/dvc/` |
+| **T3** | DVC Data Pipeline & Versioning | DONE | DONE (Verified: 20 objects in D:\dvc_remote, test passed) | `dvc.yaml`, `dvc.lock`, `docs/evidence/dvc/` |
 | **T4** | MinIO Object Store (S3-Compatible) | DEFERRED | DEFERRED | See DECISIONS.md 2026-10-31 |
-| **T5** | Honest Evaluation Suite & Confused Pairs | TODO | N/A | `reports/eval_summary.json` |
-| **T6** | Shortcut-Robustness Suite (Novelty) | TODO | N/A | `src/robustness.py`, `reports/robustness_report.md` |
+| **T5** | Honest Evaluation Suite & Confused Pairs | DONE | DONE (Agent-only) | `reports/eval_summary.json` |
+| **T6** | Shortcut-Robustness Suite (Novelty) | DONE | DONE (Agent-only) | `src/robustness.py`, `reports/robustness_report.md` |
 | **T7** | Registry Lifecycle + Trust Gate + Rollback | TODO | TODO (M7.1) | `src/registry.py`, `reports/promotion_log.jsonl` |
 | **T8** | Calibration, OOD, Quality & Abstention | TODO | TODO (M8.1) | `src/calibration.py`, `src/ood.py` |
 | **T9** | Registry-Backed Serving (`models:/...@champion`) | TODO | N/A | `src/model_loader.py` |

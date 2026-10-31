@@ -57,6 +57,7 @@ stages:
           - data.image_size
     outs:
       - reports/metrics.json
+      - reports/eval_summary.json
       - reports/per_class_metrics.csv
       - reports/per_crop_metrics.json
       - reports/EVALUATION_REPORT.md
@@ -85,6 +86,19 @@ stages:
     outs:
       - reports/bias_study_metrics.json
       - reports/BIAS_STUDY.md
+
+  robustness_eval:
+    cmd: python scripts/robustness_eval.py
+    deps:
+      - scripts/robustness_eval.py
+      - src/robustness.py
+      - reports/metrics.json
+      - reports/bias_study_metrics.json
+      - reports/explain_metrics.json
+      - reports/segmentation_quality.json
+    outs:
+      - reports/robustness_metrics.json
+      - reports/robustness_report.md
 
   ood_evaluate:
     cmd: python scripts/evaluate_ood.py

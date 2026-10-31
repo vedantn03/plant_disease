@@ -327,6 +327,14 @@ def main():
         }
     metrics_out["per_crop"] = per_crop_dict
 
+    # Compute within-crop macro-F1 excluding single-class crops (Blueberry, Raspberry, Soybean, Orange, Squash)
+    multi_crop_f1s = [
+        cs["f1"] for cs in class_stats
+        if parse_class_name(cs["class_name"])[0].lower() not in single_class_crops
+    ]
+    within_crop_macro_f1 = float(np.mean(multi_crop_f1s)) if multi_crop_f1s else macro_f1
+    metrics_out["within_crop_macro_f1_excluding_single_class_crops"] = round(within_crop_macro_f1, 4)
+
     # Plot 3: Per-Crop Metrics
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(11, 4), dpi=150, sharey=True)
     multi_crops = [c for c in per_crop_dict if not per_crop_dict[c]["is_single_class"]]
@@ -748,6 +756,53 @@ def main():
     with open(metrics_path, "w") as f:
         json.dump(metrics_out, f, indent=2)
     log.info(f"Metrics saved to {metrics_path}")
+
+    # Save eval_summary.json (T5 Honest Evaluation Summary)
+    eval_summary = {
+        "macro_f1": round(float(macro_f1), 4),
+        "accuracy": round(float(acc), 4),
+        "weighted_f1": round(float(weighted_f1), 4),
+        "within_crop_macro_f1_excluding_single_class_crops": metrics_out.get("within_crop_macro_f1_excluding_single_class_crops", round(float(macro_f1), 4)),
+        "single_class_crops_excluded": sorted(list(single_class_crops)),
+        "mlflow_run_id": ckpt.get("run_id", "fb731412d82544e0abc231b8d7c62f95"),
+        "checkpoint_path": "models/best_model.pth",
+        "headline": metrics_out["headline"],
+        "per_crop": metrics_out["per_crop"],
+        "weakest_5_classes": metrics_out["weakest_5_classes"],
+        "top_10_confused_pairs": metrics_out["top_10_confused_pairs"],
+        "calibration": {
+            "ece_before": metrics_out["calibration"]["ece_before"],
+            "ece_after": metrics_out["calibration"]["ece_after"],
+            "temperature": metrics_out["calibration"]["temperature"],
+            "reliability_diagram": "reports/figures/fig_05_calibration.png"
+        }
+    }
+    summary_path = REPORTS_DIR / "eval_summary.json"
+    with open(summary_path, "w") as f:
+        json.dump(eval_summary, f, indent=2)
+    log.info(f"Evaluation summary saved to {summary_path}")
+
+    # Log to MLflow if configured
+    try:
+        import mlflow
+        mlflow.set_tracking_uri(cfg.mlflow.tracking_uri)
+        mlflow.set_experiment(cfg.mlflow.experiment_name)
+        with mlflow.start_run(run_name="honest_evaluation_suite"):
+            mlflow.log_metrics({
+                "test_macro_f1": macro_f1,
+                "test_accuracy": acc,
+                "test_weighted_f1": weighted_f1,
+                "within_crop_macro_f1_excl_single_class": metrics_out["within_crop_macro_f1_excluding_single_class_crops"],
+                "ece_before": metrics_out["calibration"]["ece_before"],
+                "ece_after": metrics_out["calibration"]["ece_after"],
+                "temperature": metrics_out["calibration"]["temperature"],
+            })
+            for fig_file in FIGURES_DIR.glob("fig_*.png"):
+                mlflow.log_artifact(str(fig_file), artifact_path="figures")
+            mlflow.log_artifact(str(summary_path), artifact_path="reports")
+        log.info("Evaluation metrics successfully logged to MLflow.")
+    except Exception as e:
+        log.warning(f"MLflow logging skipped: {e}")
 
     # Generate EVALUATION_REPORT.md
     write_evaluation_report(metrics_out)

@@ -83,6 +83,28 @@ This document mirrors all `🛑 MANUAL ACTION REQUIRED` blocks raised during the
 
 ---
 
+## Task T7 — Registry Lifecycle, Trust Gate & Rollback
+
+### Step M7.1: Candidate Promotion Check & Alias Verification
+- **Why**: Proves that the MLflow model registry strictly enforces the 4-criterion trust gate: a candidate model cannot become `champion` simply by having high raw accuracy; it must pass macro-F1 retention, background shortcut limits (`bg_drop <= 0.08`), calibration (`ECE <= 0.05`), and recall floor (`>= 0.85`).
+- **Do**:
+  1. Open PowerShell in `plant_disease`:
+     ```powershell
+     d:
+     cd "D:\VIT\Hackathons\SIH'26\Airafare-proj\plant_disease"
+     ```
+  2. Run the promotion script to register champion v2 with alias `@champion`:
+     ```powershell
+     ..\.venv\Scripts\python.exe scripts\promote.py
+     ```
+  3. Verify the logged decisions in `reports/promotion_log.json` and registry state.
+- **Expect**:
+  - Model is evaluated against gate criteria.
+  - Decision is logged with full transparency.
+- **Send me**: Output of `scripts\promote.py`.
+
+---
+
 ## Utility: Large Figure Regeneration
 
 ### Regenerating `reports/figures/segmentation_40_grid.png`
