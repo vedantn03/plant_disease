@@ -150,7 +150,11 @@ def evaluate_gate(
     # 3. Background-mask drop (upper bound on shortcut + masking artifacts)
     bg_cfg = criteria_cfg["bg_drop"]
     bg_margin = float(bg_cfg["margin"])
-    bg_ceiling = candidate.bg_drop if first_model else champion.bg_drop + bg_margin
+    bg_ceiling = (
+        candidate.bg_drop
+        if first_model
+        else round(champion.bg_drop + bg_margin, 10)
+    )
     bg_pass = first_model or candidate.bg_drop <= bg_ceiling
     bg_reason = (
         f"VAL bg_drop {candidate.bg_drop:.4f} vs champion-relative ceiling {bg_ceiling:.4f} "

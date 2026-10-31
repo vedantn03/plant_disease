@@ -40,7 +40,7 @@ def resolve_serving_checkpoint(cfg: Any, project_root: Path) -> tuple[Path, dict
     source = str(getattr(cfg.serving, "model_source", "local")).lower()
     if source == "local":
         path = project_root / "models" / "best_model.pth"
-        return path, {"model_source": "local", "model_uri": str(path)}
+        return path, {"model_source": "local", "model_uri": path.as_posix()}
 
     if source != "registry":
         raise ValueError(f"Unsupported serving.model_source={source!r}; use 'local' or 'registry'.")

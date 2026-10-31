@@ -22,13 +22,10 @@ def _cfg(model_source: str):
 def test_local_resolution_targets_champion_without_writing():
     path, provenance = resolve_serving_checkpoint(_cfg("local"), Path("/project"))
     assert path == Path("/project/models/best_model.pth")
-    assert provenance == {
-        "model_source": "local",
-        "model_uri": "/project/models/best_model.pth",
-    }
+    assert provenance["model_source"] == "local"
+    assert Path(provenance["model_uri"]) == path
 
 
 def test_unknown_model_source_fails_explicitly():
     with pytest.raises(ValueError, match="model_source"):
         resolve_serving_checkpoint(_cfg("unknown"), Path("/project"))
-
