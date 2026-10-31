@@ -141,6 +141,22 @@ def test_predict_with_weather_params(client):
     assert resp.status_code in (200, 503)  # 503 = no model; 200 = success
 
 
+def test_serving_confidence_is_unscaled_softmax():
+    """A2: stored temperature is not applied; T=1 softmax only (src/api.py)."""
+    from src.calibration import probs_from_logits
+    import torch
+
+    src = (Path(__file__).resolve().parent.parent / "src" / "api.py").read_text(encoding="utf-8")
+    assert "TemperatureScaler" not in src
+    assert "temperature_scale" not in src
+    assert "probs_from_logits(logits, temperature=1.0)" in src
+    logits = torch.tensor([[4.0, 0.0, 0.0]])
+    p = probs_from_logits(logits, temperature=1.0)
+    assert torch.allclose(p, torch.softmax(logits, dim=1))
+    p_soft = probs_from_logits(logits, temperature=1.32)
+    assert p_soft[0, 0] < p[0, 0]  # T>1 would change confidence; serving must not
+
+
 def test_predict_disclaimer_always_present(client):
     """Disclaimer must appear in every response."""
     jpeg_bytes = _make_jpeg_bytes()

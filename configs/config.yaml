@@ -70,3 +70,5 @@ drift:
 evaluation:
   # Macro-F1 drop allowed for promotion gate (make retrain)
   promotion_margin: 0.03
+  # Authoritative (still PROVISIONAL) 4-criterion floors live here:
+  gate_thresholds_path: configs/gates/gate_thresholds.yaml

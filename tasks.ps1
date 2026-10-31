@@ -85,8 +85,8 @@ switch ($Target.ToLower()) {
         & $PYTHON scripts/evaluate.py
     }
     "promote" {
-        Write-Host "Evaluating promotion gate..." -ForegroundColor Cyan
-        & $PYTHON scripts/promote.py
+        Write-Host "Evaluating promotion gate (dry-run; provisional thresholds)..." -ForegroundColor Cyan
+        & $PYTHON scripts/promote.py --dry-run
     }
     "rollback" {
         Write-Host "Executing model rollback..." -ForegroundColor Cyan

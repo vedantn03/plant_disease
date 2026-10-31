@@ -16,12 +16,12 @@ import csv
 import time
 from pathlib import Path
 import torch
-import torch.nn.functional as F
 from PIL import Image
 
 import sys
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
+from src.calibration import probs_from_logits
 from src.model import build_model, preprocess_image
 from src.ood_detector import check_image_heuristics
 from src.utils import parse_class_name
@@ -67,7 +67,7 @@ def run_batch_inference(image_paths, model, idx_to_class, batch_size=32, device=
             with torch.no_grad():
                 with torch.autocast(device_type=device if device != "cpu" else "cpu", dtype=torch.float16, enabled=(device == "cuda")):
                     logits = model(batch_t)
-            probs = F.softmax(logits, dim=1)
+            probs = probs_from_logits(logits, temperature=1.0)
             top_probs, top_idxs = probs.max(dim=1)
 
             for j, (_, fname) in enumerate(valid_indices):

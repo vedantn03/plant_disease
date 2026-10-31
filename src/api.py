@@ -38,6 +38,7 @@ import sys
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from src.advisory_engine import AdvisoryEngine, DISCLAIMER
+from src.calibration import probs_from_logits
 from src.config_loader import load_config
 from src.model import GradCAM, build_model, heatmap_to_base64_png, preprocess_image
 from src.ood_detector import check_image_heuristics
@@ -263,8 +264,9 @@ async def predict(
         with torch.autocast(device_type=device if device != "cpu" else "cpu", dtype=torch.float16, enabled=(device == "cuda")):
             logits = model(input_tensor)
 
+    # Unscaled softmax (T=1). Stored temperature is NOT applied at serving.
     # ── Crop-Aware Filtering / Hierarchical Inference ─────────────────────────
-    raw_probs = F.softmax(logits, dim=1).squeeze()  # (num_classes,)
+    raw_probs = probs_from_logits(logits, temperature=1.0).squeeze()  # (num_classes,)
 
     # Calculate crop-level aggregate probabilities
     crop_probs = defaultdict(float)
@@ -403,7 +405,7 @@ async def predict_batch(
             with torch.no_grad():
                 with torch.autocast(device_type=_state["device"] if _state["device"] != "cpu" else "cpu", dtype=torch.float16, enabled=(_state["device"] == "cuda")):
                     logits = _state["model"](input_tensor)
-            probs = F.softmax(logits, dim=1).squeeze()
+            probs = probs_from_logits(logits, temperature=1.0).squeeze()
             top_prob, top_idx = probs.max(dim=0)
             cls_name = _state["idx_to_class"][top_idx.item()]
             c, cond = parse_class_name(cls_name)

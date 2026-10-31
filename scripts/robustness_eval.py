@@ -63,10 +63,23 @@ def generate_robustness_artifacts():
         "mean_fg_ratio": 0.5090,
     }
 
-    # Masked background drop for champion model:
-    # Clean macro-F1: 0.9903, Masked macro-F1: 0.9240 -> bg_drop = 0.0663
-    clean_macro_f1 = metrics_data.get("headline", {}).get("macro_f1", 0.9903)
-    masked_macro_f1 = 0.9240
+    # Prefer VAL baselines computed by scripts/compute_val_diagnostics.py.
+    # Do not silently copy TEST bg_drop onto VAL.
+    val_base_path = reports_dir / "gate_baselines_val.json"
+    val_base = json.loads(val_base_path.read_text()) if val_base_path.exists() else None
+    if val_base and "masked_background" in val_base:
+        clean_macro_f1 = val_base["masked_background"]["clean_macro_f1"]
+        masked_macro_f1 = val_base["masked_background"]["masked_macro_f1"]
+        split_label = "VAL"
+    else:
+        clean_macro_f1 = metrics_data.get("headline", {}).get("macro_f1")
+        masked_macro_f1 = None
+        split_label = "TEST (legacy; VAL baselines missing)"
+        if clean_macro_f1 is None or masked_macro_f1 is None:
+            raise RuntimeError(
+                "VAL masked-background metrics not found. Run "
+                "python scripts/compute_val_diagnostics.py"
+            )
     bg_drop = round(clean_macro_f1 - masked_macro_f1, 4)
 
     robustness_out = {
@@ -101,7 +114,7 @@ def generate_robustness_artifacts():
     # 3. Write markdown report
     report_md = f"""# Shortcut-Robustness & Capture Bias Evaluation Report
 
-**Task T6 Deliverable** | Model: Champion ResNet-18 | Test Split: N=8,134 Held-Out Images
+**Task T6 Deliverable** | Model: Champion ResNet-18 | Split: {split_label}
 
 ---
 
@@ -117,10 +130,10 @@ When background pixels identified by Woebbecke Excess-Green segmentation are mas
 
 | Evaluation Mode | Macro-F1 | Retention Rate | Drop from Clean Baseline |
 | :--- | :---: | :---: | :---: |
-| **Clean In-Domain Test Split** | **{clean_macro_f1*100:.2f}%** | 100.0% | Baseline |
-| **Masked-Background Test Split** | **{masked_macro_f1*100:.2f}%** | **{robustness_out['masked_background']['retention_rate']*100:.2f}%** | **{bg_drop*100:.2f}% (bg_drop)** |
+| **Clean in-domain ({split_label})** | **{clean_macro_f1*100:.2f}%** | 100.0% | Baseline |
+| **Masked-background ({split_label})** | **{masked_macro_f1*100:.2f}%** | **{robustness_out['masked_background']['retention_rate']*100:.2f}%** | **{bg_drop*100:.2f}% (bg_drop)** |
 
-> **Interpretation**: The champion model retains **{robustness_out['masked_background']['retention_rate']*100:.1f}%** of its diagnostic capacity when the background is masked out entirely. The measured background drop (`bg_drop = {bg_drop:.4f}`) serves as the baseline constraint for Task T7 promotion gating.
+> **Interpretation**: The model retains **{robustness_out['masked_background']['retention_rate']*100:.1f}%** of clean macro-F1 when the background is masked; the drop mixes background reliance with masking artifacts. `bg_drop = {bg_drop:.4f}` is the T7 gate baseline (PROVISIONAL).
 
 ---
 

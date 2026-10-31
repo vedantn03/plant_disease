@@ -21,17 +21,92 @@ Methodology:
      Validates mask fidelity, corner activity, and failure rate across benchmark samples.
 """
 
-from pathlib import Path
 from typing import Any, Dict, List, Tuple
 import numpy as np
 from PIL import Image
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import accuracy_score, f1_score
 import torch
-import torch.nn.functional as F
+from torchvision import transforms
 
-from src.model import GradCAM, preprocess_image
+from src.model import GradCAM, preprocess_image, _IMAGENET_MEAN, _IMAGENET_STD
 from src.segmentation import segment_leaf
+
+
+def mask_background(image: Image.Image, fill: tuple[int, int, int] = (0, 0, 0)) -> Image.Image:
+    """Zero (or fill) pixels classified as laboratory background by ExG segmentation."""
+    mask = segment_leaf(image)
+    arr = np.array(image.convert("RGB"))
+    arr[~mask] = np.array(fill, dtype=np.uint8)
+    return Image.fromarray(arr)
+
+
+def evaluate_masked_background(
+    model: torch.nn.Module,
+    samples: List[Tuple[str, int]],
+    device: torch.device,
+    image_size: int = 224,
+    batch_size: int = 32,
+    fill: tuple[int, int, int] = (0, 0, 0),
+) -> Dict[str, Any]:
+    """
+    Clean vs background-masked macro-F1 on a provided split.
+
+    Fill is black (0,0,0) then the standard Resize(256)+CenterCrop(224)+ImageNet
+    normalise pipeline. bg_drop mixes true background reliance with the
+    distribution shift induced by the mask itself.
+    """
+    model.eval()
+    transform = transforms.Compose([
+        transforms.Resize(int(image_size * 256 / 224)),
+        transforms.CenterCrop(image_size),
+        transforms.ToTensor(),
+        transforms.Normalize(_IMAGENET_MEAN, _IMAGENET_STD),
+    ])
+
+    def _run(masked: bool) -> tuple[np.ndarray, np.ndarray]:
+        preds: list[int] = []
+        labels: list[int] = []
+        batch_tensors: list[torch.Tensor] = []
+        batch_labels: list[int] = []
+
+        def flush() -> None:
+            if not batch_tensors:
+                return
+            x = torch.stack(batch_tensors, dim=0).to(device)
+            with torch.no_grad():
+                logits = model(x)
+                pred = torch.argmax(logits, dim=1).cpu().numpy().tolist()
+            preds.extend(pred)
+            labels.extend(batch_labels)
+            batch_tensors.clear()
+            batch_labels.clear()
+
+        for path, label in samples:
+            im = Image.open(path).convert("RGB")
+            if masked:
+                im = mask_background(im, fill=fill)
+            batch_tensors.append(transform(im))
+            batch_labels.append(int(label))
+            if len(batch_tensors) >= batch_size:
+                flush()
+        flush()
+        return np.array(preds), np.array(labels)
+
+    clean_pred, clean_y = _run(masked=False)
+    masked_pred, masked_y = _run(masked=True)
+    clean_f1 = float(f1_score(clean_y, clean_pred, average="macro", zero_division=0))
+    masked_f1 = float(f1_score(masked_y, masked_pred, average="macro", zero_division=0))
+    bg_drop = clean_f1 - masked_f1
+    retention = (masked_f1 / clean_f1) if clean_f1 > 0 else 0.0
+    return {
+        "n": int(len(samples)),
+        "fill": list(fill),
+        "clean_macro_f1": round(clean_f1, 4),
+        "masked_macro_f1": round(masked_f1, 4),
+        "bg_drop": round(bg_drop, 4),
+        "retention_rate": round(retention, 4),
+    }
 
 
 def evaluate_mask_quality(
@@ -44,7 +119,7 @@ def evaluate_mask_quality(
     """
     rng = np.random.default_rng(seed)
     chosen_idx = rng.choice(len(samples), size=min(n_samples, len(samples)), replace=False)
-    
+
     fg_ratios = []
     corner_actives = []
     failures = 0

@@ -54,6 +54,7 @@ from sklearn.metrics import (
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 
+from src.calibration import TemperatureScaler
 from src.config_loader import load_config
 from src.dataset import PlantVillageDataset, get_transforms
 from src.model import GradCAM, build_model, preprocess_image
@@ -128,28 +129,7 @@ def compute_ece(probs: np.ndarray, labels: np.ndarray, n_bins: int = 15) -> tupl
     return float(ece), np.array(bin_accs), np.array(bin_confs), np.array(bin_sizes)
 
 
-# ── Temperature Scaling ──────────────────────────────────────────────────────
-
-class TemperatureScaler(nn.Module):
-    def __init__(self):
-        super().__init__()
-        self.temperature = nn.Parameter(torch.ones(1) * 1.5)
-
-    def forward(self, logits):
-        return logits / self.temperature
-
-    def fit(self, val_logits: torch.Tensor, val_labels: torch.Tensor, max_iter: int = 50):
-        optimizer = torch.optim.LBFGS([self.temperature], lr=0.01, max_iter=max_iter)
-        criterion = nn.CrossEntropyLoss()
-
-        def eval_loss():
-            optimizer.zero_grad()
-            loss = criterion(self.forward(val_logits), val_labels)
-            loss.backward()
-            return loss
-
-        optimizer.step(eval_loss)
-        return float(self.temperature.item())
+# TemperatureScaler lives in src/calibration.py (init T=1.0, logits / T).
 
 
 # ── Inference Helper ─────────────────────────────────────────────────────────
@@ -318,7 +298,8 @@ def main():
         ct = np.array(crop_true[crop])
         cp = np.array(crop_pred[crop])
         c_acc = accuracy_score(ct, cp)
-        c_f1 = f1_score(ct, cp, average="macro", zero_division=0)
+        # Use labels=np.unique(ct) so cross-crop false positives do not inject spurious 0-support classes
+        c_f1 = f1_score(ct, cp, labels=np.unique(ct), average="macro", zero_division=0)
         per_crop_dict[crop] = {
             "accuracy": round(float(c_acc), 4),
             "macro_f1": round(float(c_f1), 4),
@@ -820,8 +801,8 @@ def write_evaluation_report(m: dict):
     md = f"""# Plant Disease Diagnostic & Precision Advisory Pipeline: Evaluation Report
 
 **Academic Course Project** — B.Tech CSE-AI (Sponsored by Syngenta Evaluation Pilot)
-**Evaluation Date**: 2026-10-14 | **Model**: ResNet-18 (Champion Version 1)
-**Training Set Disclosure**: Baseline Subsample (~300 images/class, 10,967 actual images)
+**Evaluation Date**: 2026-10-14 | **Model**: ResNet-18 (Champion Version 2)
+**Training Set Disclosure**: Full PlantVillage Split (38,002 images across 38 classes, 0 cross-split leakage)
 **Test Set**: 8,134 held-out images across 38 classes (Zero Group Leakage)
 
 ---

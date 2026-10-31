@@ -1,0 +1,64 @@
+# Promotion-gate thresholds. ALL four criteria are PROVISIONAL until seed-variance
+# margins are approved. scripts/promote.py defaults to --dry-run and refuses to
+# move @champion while any criterion has provisional: true.
+#
+# Derivation notes cite measured artifacts, not invented product claims.
+# Relative rules use the current champion's VAL baseline; the first registered
+# model is bootstrapped from its own VAL numbers (see src/gates.py).
+
+schema_version: 1
+
+champion_reference:
+  checkpoint: models/best_model.pth
+  mlflow_run_id: fb731412d82544e0abc231b8d7c62f95
+  split: val
+  note: >
+    Do not overwrite models/best_model.pth. Candidate weights go to
+    models/candidates/<run_id>.pth. Serving still loads the local checkpoint
+    until Task T9.
+
+criteria:
+  macro_f1:
+    provisional: true
+    rule: candidate_val_macro_f1 >= champion_val_macro_f1 - margin
+    margin: 0.005
+    derivation: >
+      Copied from the 2026-10-28 4-criterion note in docs/DECISIONS.md
+      (Macro-F1 delta >= -0.005). PROVISIONAL: replace with observed
+      seed-variance spread after C1/C2. First model compares against itself.
+
+  min_recall:
+    provisional: true
+    rule: min_over_classes(val_recall) >= floor  (point estimate)
+    floor: 0.85
+    tiny_class_rule: pending_approval
+    tiny_class_n_example: 23
+    derivation: >
+      Floor 0.85 copied from docs/MANUAL_STEPS.md Task T7. Tiny classes
+      (e.g. Potato___healthy TEST support 23) move 1/n ≈ 0.0435 recall per
+      extra error. Proposed alternatives (not applied until approved):
+      (a) Wilson lower bound of recall vs floor; (b) skip classes with
+      n_val < n_min. See reports/tiny_class_recall_analysis.json after
+      scripts/compute_val_diagnostics.py.
+
+  bg_drop:
+    provisional: true
+    rule: val_clean_macro_f1 - val_masked_macro_f1 <= max_drop
+    max_drop: 0.08
+    derivation: >
+      Ceiling 0.08 copied from docs/MANUAL_STEPS.md Task T7. Interpretation:
+      the model retains (1 - bg_drop) of clean macro-F1 when the background
+      is masked; the drop mixes background reliance with masking artifacts.
+      Must be recomputed on VAL, not copied from TEST.
+
+  ece:
+    provisional: true
+    rule: val_ece_15bin <= max_ece
+    max_ece: 0.05
+    n_bins: 15
+    temperature_scaling: not_applied_at_serving
+    derivation: >
+      Ceiling 0.05 copied from docs/MANUAL_STEPS.md Task T7. ECE is the
+      unscaled (T=1) 15-bin value on VAL. Bootstrap percentile CIs for ECE
+      are known to be upward-biased; the point estimate can fall outside
+      its own bootstrap CI (see docs/DECISIONS.md).

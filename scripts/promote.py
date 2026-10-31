@@ -1,17 +1,19 @@
 """
 scripts/promote.py
 ==================
-Promotion Gate for candidate models in the MLflow Model Registry.
-Multi-criteria governance evaluation:
-  Rule 1: Candidate Macro-F1 must be within margin (default 0.01) of the champion.
-  Rule 2: Minimum per-class recall must exceed the floor (default 0.45).
-  Rule 3: OOD AUROC on calibration/test sets must exceed floor (default 0.85).
-  Rule 4: Background-swapped retention rate must meet stability floor (default 0.80).
+Evaluate a candidate against the 4-criterion VAL trust gate and (optionally)
+move the MLflow alias @champion.
 
-Outputs:
-  - reports/promotion_log.json
-  - Updates MLflow alias 'champion' if promoted.
+Until gate thresholds are approved, every run is dry: the verdict is appended
+to reports/promotion_log.jsonl and @champion is never moved.
+
+Usage:
+  python scripts/promote.py --dry-run
+  python scripts/promote.py --candidate-metrics reports/gate_baselines_val.json
+  python scripts/promote.py --apply   # refused while criteria are provisional
 """
+
+from __future__ import annotations
 
 import argparse
 import json
@@ -21,121 +23,160 @@ from pathlib import Path
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
-import mlflow
-from mlflow.tracking import MlflowClient
-
 from src.config_loader import load_config
+from src.gates import GateMetrics, evaluate_gate, load_gate_thresholds
+from src.registry import (
+    append_promotion_log,
+    default_tags,
+    get_client,
+    promote_alias,
+    set_version_tags,
+)
 from src.utils import get_logger
 
 log = get_logger("promote")
 
 
-def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--candidate-metrics", default="reports/metrics.json", help="Path to evaluation metrics JSON")
-    parser.add_argument("--f1-margin", type=float, default=0.01, help="Allowed macro-F1 delta below champion")
-    parser.add_argument("--min-recall-floor", type=float, default=0.45, help="Absolute minimum per-class recall floor")
-    parser.add_argument("--min-ood-auroc", type=float, default=0.85, help="Minimum OOD AUROC floor")
-    parser.add_argument("--mock-degraded", action="store_true", help="Simulate a degraded candidate for gate validation")
-    args = parser.parse_args()
+def _metrics_from_payload(payload: dict) -> GateMetrics:
+    """Accept either a flat gate-baselines file or a nested metrics dump."""
+    if "masked_background" in payload:
+        mb = payload["masked_background"]
+        rec = payload.get("min_recall", {})
+        cal = payload.get("calibration", {})
+        return GateMetrics(
+            macro_f1=float(payload.get("clean_macro_f1", mb.get("clean_macro_f1"))),
+            min_recall=float(rec.get("value", rec) if isinstance(rec, dict) else rec),
+            bg_drop=float(mb["bg_drop"]),
+            ece=float(cal.get("ece_before", cal.get("ece", payload.get("ece")))),
+            min_recall_class=rec.get("class") if isinstance(rec, dict) else None,
+            min_recall_n=rec.get("n") if isinstance(rec, dict) else None,
+            min_recall_wilson_lower=rec.get("wilson_lower") if isinstance(rec, dict) else None,
+        )
+    headline = payload.get("headline", payload)
+    weakest = payload.get("weakest_5_classes", [])
+    min_rec = min((c["recall"] for c in weakest), default=payload.get("min_recall"))
+    min_cls = None
+    min_n = None
+    if weakest:
+        worst = min(weakest, key=lambda c: c["recall"])
+        min_cls = worst.get("class_name")
+        min_n = worst.get("support")
+    bg = payload.get("masked_background", {})
+    cal = payload.get("calibration", {})
+    return GateMetrics(
+        macro_f1=float(headline.get("macro_f1", payload["macro_f1"])),
+        min_recall=float(min_rec),
+        bg_drop=float(bg.get("bg_drop", payload["bg_drop"])),
+        ece=float(cal.get("ece_before", payload.get("ece"))),
+        min_recall_class=min_cls,
+        min_recall_n=min_n,
+    )
 
-    cfg = load_config()
-    metrics_path = PROJECT_ROOT / args.candidate_metrics
-    if not metrics_path.exists():
-        log.error(f"Metrics file not found at {metrics_path}. Run evaluate.py first.")
+
+def _load_champion_metrics(path: Path | None) -> GateMetrics | None:
+    if path is None or not path.exists():
+        return None
+    return _metrics_from_payload(json.loads(path.read_text(encoding="utf-8")))
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--candidate-metrics",
+        default="reports/gate_baselines_val.json",
+        help="JSON with VAL gate metrics for the candidate",
+    )
+    parser.add_argument(
+        "--champion-metrics",
+        default="reports/gate_baselines_val.json",
+        help="JSON with VAL gate metrics for the current champion (omit/missing = first-model)",
+    )
+    parser.add_argument(
+        "--candidate-is-champion-baseline",
+        action="store_true",
+        help="Force first-model bootstrap even if champion-metrics exists",
+    )
+    parser.add_argument("--version", default=None, help="MLflow model version to tag / alias")
+    parser.add_argument("--dry-run", action="store_true", default=True)
+    parser.add_argument(
+        "--apply",
+        action="store_true",
+        help="Attempt to move @champion (refused while thresholds are provisional)",
+    )
+    args = parser.parse_args()
+    dry_run = not args.apply
+
+    cand_path = PROJECT_ROOT / args.candidate_metrics
+    if not cand_path.exists():
+        log.error(f"Candidate metrics not found: {cand_path}")
         sys.exit(1)
 
-    with open(metrics_path, "r", encoding="utf-8") as f:
-        metrics = json.load(f)
+    candidate = _metrics_from_payload(json.loads(cand_path.read_text(encoding="utf-8")))
+    champ_path = PROJECT_ROOT / args.champion_metrics if args.champion_metrics else None
+    champion = None
+    if not args.candidate_is_champion_baseline:
+        if champ_path is not None and champ_path.exists() and champ_path.resolve() != cand_path.resolve():
+            champion = _load_champion_metrics(champ_path)
 
-    cand_f1 = metrics["headline"]["macro_f1"]
-    weakest_recalls = [cs["recall"] for cs in metrics["weakest_5_classes"]]
-    min_recall = min(weakest_recalls)
+    thresholds = load_gate_thresholds()
+    verdict = evaluate_gate(candidate, champion, thresholds)
 
-    # Read OOD AUROC if available
-    ood_path = PROJECT_ROOT / "reports" / "ood_metrics.json"
-    if ood_path.exists():
-        with open(ood_path, "r", encoding="utf-8") as f:
-            ood_data = json.load(f)
-        ood_auroc = ood_data.get("detectors", {}).get("layered_prefilter_energy", {}).get("auroc", 0.95)
-    else:
-        ood_auroc = 0.90
+    cfg = load_config()
+    tags = default_tags({
+        "gate_verdict": verdict["verdict"],
+        "val_macro_f1": f"{candidate.macro_f1:.4f}",
+        "val_min_recall": f"{candidate.min_recall:.4f}",
+        "val_bg_drop": f"{candidate.bg_drop:.4f}",
+        "val_ece": f"{candidate.ece:.5f}",
+        "gate_provisional": str(verdict["any_provisional"]).lower(),
+    })
 
-    # Read Bias study retention if available
-    bias_path = PROJECT_ROOT / "reports" / "bias_study_metrics.json"
-    if bias_path.exists():
-        with open(bias_path, "r", encoding="utf-8") as f:
-            bias_data = json.load(f)
-        swap_retention = bias_data.get("E2_mixed", {}).get("swap_retention_rate", 0.90)
-    else:
-        swap_retention = 0.88
-
-    if args.mock_degraded:
-        log.info("Simulating deliberately degraded candidate model for gate testing...")
-        cand_f1 = 0.7200
-        min_recall = 0.2800
-        ood_auroc = 0.6500
-
-    log.info(f"Candidate Evaluation: Macro-F1={cand_f1:.4f} | Min Recall={min_recall:.4f} | OOD AUROC={ood_auroc:.4f}")
-
-    mlflow.set_tracking_uri(cfg.mlflow.tracking_uri)
-    client = MlflowClient()
-
-    model_name = cfg.mlflow.registered_model_name
-    champion_alias = cfg.mlflow.champion_alias
-
-    champion_f1 = 0.9500
-    try:
-        champ_mv = client.get_model_version_by_alias(model_name, champion_alias)
-        log.info(f"Current champion model version: {champ_mv.version}")
-    except Exception:
-        log.info("No prior champion found; establishing initial champion baseline.")
-
-    # Multi-criteria rules
-    pass_f1 = cand_f1 >= (champion_f1 - args.f1_margin)
-    pass_recall = min_recall >= args.min_recall_floor
-    pass_ood = ood_auroc >= args.min_ood_auroc
-    pass_bias = swap_retention >= 0.75
-
-    promoted = pass_f1 and pass_recall and pass_ood and pass_bias
-
-    reason = []
-    if not pass_f1:
-        reason.append(f"Macro-F1 {cand_f1:.4f} is below champion threshold ({champion_f1 - args.f1_margin:.4f})")
-    if not pass_recall:
-        reason.append(f"Minimum recall {min_recall:.4f} is below safety floor ({args.min_recall_floor:.4f})")
-    if not pass_ood:
-        reason.append(f"OOD AUROC {ood_auroc:.4f} is below security floor ({args.min_ood_auroc:.4f})")
-    if not pass_bias:
-        reason.append(f"Background swap retention {swap_retention:.1%} is below stability floor (75%)")
-    if promoted:
-        reason.append("All 4 governance criteria met.")
-
-    decision = {
-        "candidate_macro_f1": cand_f1,
-        "champion_macro_f1": champion_f1,
-        "min_class_recall": min_recall,
-        "min_recall_floor": args.min_recall_floor,
-        "ood_auroc": ood_auroc,
-        "min_ood_auroc": args.min_ood_auroc,
-        "swap_retention": swap_retention,
-        "pass_f1_rule": pass_f1,
-        "pass_recall_rule": pass_recall,
-        "pass_ood_rule": pass_ood,
-        "pass_bias_rule": pass_bias,
-        "promoted": promoted,
-        "decision_summary": "PROMOTED_TO_CHAMPION" if promoted else "REJECTED_AT_GATE",
-        "notes": "; ".join(reason),
+    record = {
+        "action": "promote",
+        "dry_run": dry_run,
+        "model": cfg.mlflow.registered_model_name,
+        "alias": cfg.mlflow.champion_alias,
+        "version": args.version,
+        "tags": tags,
+        "verdict": verdict,
+        "alias_moved": False,
+        "notes": (
+            "Thresholds are provisional; @champion was not moved."
+            if verdict["any_provisional"]
+            else ""
+        ),
     }
 
-    log_path = PROJECT_ROOT / "reports" / "promotion_log.json"
-    with open(log_path, "w", encoding="utf-8") as f:
-        json.dump(decision, f, indent=2)
+    if args.apply and verdict["any_provisional"]:
+        log.error(
+            "Refusing --apply: one or more gate thresholds are still provisional. "
+            "Re-run without --apply (dry-run)."
+        )
+        record["alias_moved"] = False
+        record["refuse_reason"] = "provisional_thresholds"
+        append_promotion_log(record)
+        print(json.dumps(record, indent=2))
+        return 2
 
-    log.info(f"Promotion decision: {decision['decision_summary']}")
-    log.info(f"Decision saved to {log_path}")
-    print(json.dumps(decision, indent=2))
+    if args.apply and verdict["all_passed"] and args.version:
+        client = get_client()
+        set_version_tags(cfg.mlflow.registered_model_name, str(args.version), tags, client)
+        move = promote_alias(str(args.version), dry_run=False, client=client)
+        record["alias_moved"] = move["moved"]
+    else:
+        log.info("[dry-run] gate verdict logged; alias not moved")
+        if args.version:
+            try:
+                client = get_client()
+                set_version_tags(cfg.mlflow.registered_model_name, str(args.version), tags, client)
+            except Exception as exc:
+                log.warning(f"Could not write MLflow tags in dry-run: {exc}")
+
+    append_promotion_log(record)
+    log.info(f"Decision: {verdict['verdict']} failures={verdict['failures']}")
+    print(json.dumps(record, indent=2))
+    return 0 if verdict["all_passed"] else 1
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())

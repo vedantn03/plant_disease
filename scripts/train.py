@@ -295,8 +295,13 @@ def main() -> None:
         })
 
         # ── Training loop ──────────────────────────────────────────────────────
+        # SAFETY RULE (Master Plan v2 / Task T7):
+        # train.py writes ONLY to models/candidates/<run_id>.pth and NEVER overwrites models/best_model.pth.
+        # Promotion to champion is exclusively governed by the 4-criterion trust gate in scripts/promote.py.
         best_val_f1 = 0.0
-        best_checkpoint = models_dir / "best_model.pth"
+        candidates_dir = models_dir / "candidates"
+        candidates_dir.mkdir(parents=True, exist_ok=True)
+        candidate_checkpoint = candidates_dir / f"{run_id}.pth"
 
         for epoch in range(1, cfg.training.epochs + 1):
             t0 = time.time()
@@ -325,22 +330,23 @@ def main() -> None:
                 "epoch_seconds": elapsed,
             }, step=epoch)
 
-            # Save best checkpoint based on val macro-F1
+            # Save best candidate checkpoint based on val macro-F1
             if val_f1 > best_val_f1:
                 best_val_f1 = val_f1
                 torch.save({
+                    "run_id": run_id,
                     "epoch": epoch,
                     "model_state_dict": model.state_dict(),
                     "optimizer_state_dict": optimizer.state_dict(),
                     "val_macro_f1": val_f1,
                     "class_to_idx": class_to_idx,
                     "cfg": dict(cfg),
-                }, best_checkpoint)
-                log.info(f"  → New best model saved (val_macro_f1={val_f1:.4f})")
+                }, candidate_checkpoint)
+                log.info(f"  → Candidate model saved to {candidate_checkpoint} (val_macro_f1={val_f1:.4f})")
 
         # ── Test evaluation (ONE TIME, at the very end) ────────────────────────
-        log.info("Loading best checkpoint for final test evaluation...")
-        checkpoint = torch.load(best_checkpoint, map_location=device, weights_only=False)
+        log.info("Loading candidate checkpoint for final test evaluation...")
+        checkpoint = torch.load(candidate_checkpoint, map_location=device, weights_only=False)
         model.load_state_dict(checkpoint["model_state_dict"])
 
         test_loss, test_acc, test_preds, test_labels = evaluate(
@@ -358,31 +364,34 @@ def main() -> None:
         })
 
         # ── Artifacts ─────────────────────────────────────────────────────────
-        cm_path = reports_dir / "confusion_matrix.png"
+        cm_path = reports_dir / f"confusion_matrix_{run_id[:8]}.png"
         save_confusion_matrix(test_labels, test_preds, class_names, cm_path)
         mlflow.log_artifact(str(cm_path))
 
-        per_class_path = reports_dir / "per_class_metrics.csv"
+        per_class_path = reports_dir / f"per_class_metrics_{run_id[:8]}.csv"
         save_per_class_metrics(test_labels, test_preds, class_names, per_class_path, idx_to_class)
         mlflow.log_artifact(str(per_class_path))
 
-        per_crop = compute_per_crop_metrics(test_labels, test_preds, idx_to_class)
-        per_crop_path = reports_dir / "per_crop_metrics.json"
-        per_crop_path.write_text(json.dumps(per_crop, indent=2))
+        candidate_per_crop = compute_per_crop_metrics(test_labels, test_preds, idx_to_class)
+        per_crop_path = reports_dir / f"per_crop_metrics_{run_id[:8]}.json"
+        per_crop_path.write_text(json.dumps(candidate_per_crop, indent=2))
         mlflow.log_artifact(str(per_crop_path))
 
-        # Save best metrics for downstream (promotion gate)
-        (models_dir / "best_metrics.json").write_text(json.dumps({
+        # Save candidate metrics for downstream (promotion gate)
+        candidate_metrics_file = candidates_dir / f"{run_id}_metrics.json"
+        candidate_metrics_file.write_text(json.dumps({
+            "val_macro_f1": float(best_val_f1),
             "test_macro_f1": float(test_macro_f1),
             "test_acc": float(test_acc),
             "run_id": run_id,
+            "checkpoint_path": str(candidate_checkpoint),
         }, indent=2))
 
-        # Log model checkpoint as artifact
-        mlflow.log_artifact(str(best_checkpoint), artifact_path="model")
+        # Log candidate checkpoint as artifact
+        mlflow.log_artifact(str(candidate_checkpoint), artifact_path="model")
 
-        # ── Register model in MLflow Model Registry ────────────────────────────
-        log.info(f"Registering model: {cfg.mlflow.registered_model_name}")
+        # ── Register model in MLflow Model Registry as Candidate ───────────────
+        log.info(f"Registering candidate model: {cfg.mlflow.registered_model_name}")
         client = mlflow.tracking.MlflowClient()
         try:
             client.create_registered_model(cfg.mlflow.registered_model_name)
@@ -395,29 +404,22 @@ def main() -> None:
             name=cfg.mlflow.registered_model_name,
             source=source,
             run_id=run_id,
+            tags={"status": "candidate", "val_macro_f1": f"{best_val_f1:.4f}"},
         )
-        log.info(f"Registered model version: {mv.version}")
-
-        # Set alias "champion" on the newly registered version
-        client.set_registered_model_alias(
-            name=cfg.mlflow.registered_model_name,
-            alias=cfg.mlflow.champion_alias,
-            version=mv.version,
-        )
-        log.info(f"Alias '{cfg.mlflow.champion_alias}' set to version {mv.version}")
+        log.info(f"Registered candidate version: {mv.version} (Promotion to champion is governed by scripts/promote.py)")
 
         log.info(f"\n{'='*60}")
-        log.info("TRAINING COMPLETE")
+        log.info("TRAINING COMPLETE (CANDIDATE SAVED)")
         log.info(f"  Test macro-F1: {test_macro_f1:.4f}")
         log.info(f"  Test accuracy:  {test_acc:.4f}")
-        log.info(f"  Best checkpoint: {best_checkpoint}")
+        log.info(f"  Candidate checkpoint: {candidate_checkpoint}")
         log.info(f"  MLflow run: {run_id}")
-        log.info(f"  Registry alias: '{cfg.mlflow.champion_alias}' -> v{mv.version}")
+        log.info(f"  Registered version: v{mv.version} (Candidate)")
         log.info(f"{'='*60}")
 
         # Print per-crop summary
         log.info("\nPer-crop test macro-F1:")
-        for crop, m in per_crop.items():
+        for crop, m in candidate_per_crop.items():
             log.info(f"  {crop:<40} F1={m['macro_f1']:.4f}  acc={m['accuracy']:.4f}  n={m['n']}")
 
 

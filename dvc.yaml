@@ -144,20 +144,22 @@ stages:
       - reports/EXPLAINABILITY.md
 
   promote:
-    cmd: python scripts/promote.py
+    cmd: python scripts/promote.py --dry-run --candidate-is-champion-baseline --candidate-metrics reports/gate_baselines_val.json
     deps:
       - scripts/promote.py
-      - reports/metrics.json
-      - reports/bias_study_metrics.json
-      - reports/ood_metrics.json
+      - src/gates.py
+      - src/registry.py
       - configs/config.yaml
+      - configs/gates/gate_thresholds.yaml
+      - reports/gate_baselines_val.json
     params:
       - configs/config.yaml:
           - evaluation.promotion_margin
+          - evaluation.gate_thresholds_path
           - mlflow.registered_model_name
           - mlflow.champion_alias
     outs:
-      - reports/promotion_log.json
+      - reports/promotion_log.jsonl
 
   reproduce_check:
     cmd: python scripts/reproduce_check.py
