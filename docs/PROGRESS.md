@@ -5,8 +5,8 @@
 | **T0** | Repository Audit & Baseline Truth Table | DONE | DONE (Verified by User) | `docs/AUDIT.md` |
 | **T1** | Config Centralization & Single Source of Truth | DONE | DONE | `configs/config.yaml`, `docs/AUDIT.md` |
 | **T2** | Preflight, Runner, Hooks & Resource Budget | DONE | DONE (M2.1 & M2.2 Completed) | `scripts/preflight.ps1`, `tasks.ps1`, `docs/RESOURCE_BUDGET.md`, `docs/evidence/preflight/` |
-| **T3** | DVC Data Pipeline & Versioning | TODO | TODO (M3.1) | `dvc.yaml`, `dvc.lock`, `docs/evidence/dvc/` |
-| **T4** | MinIO Object Store (S3-Compatible) | TODO | TODO | `docker-compose.yml`, `docs/evidence/minio/` |
+| **T3** | DVC Data Pipeline & Versioning | DONE (agent) | BLOCKED-ON-USER (M3.1 — dvc push, restore proof) | `dvc.yaml`, `dvc.lock`, `docs/evidence/dvc/` |
+| **T4** | MinIO Object Store (S3-Compatible) | DEFERRED | DEFERRED | See DECISIONS.md 2026-10-31 |
 | **T5** | Honest Evaluation Suite & Confused Pairs | TODO | N/A | `reports/eval_summary.json` |
 | **T6** | Shortcut-Robustness Suite (Novelty) | TODO | N/A | `src/robustness.py`, `reports/robustness_report.md` |
 | **T7** | Registry Lifecycle + Trust Gate + Rollback | TODO | TODO (M7.1) | `src/registry.py`, `reports/promotion_log.jsonl` |

@@ -4,6 +4,13 @@ stages:
     deps:
       - scripts/audit_and_split.py
       - configs/config.yaml
+    params:
+      - configs/config.yaml:
+          - seed
+          - split.train
+          - split.val
+          - split.test
+          - data.subsample_per_class
     outs:
       - data/splits/train.csv
       - data/splits/val.csv
@@ -15,9 +22,23 @@ stages:
     deps:
       - scripts/train.py
       - src/model.py
+      - src/dataset.py
       - configs/config.yaml
       - data/splits/train.csv
       - data/splits/val.csv
+      - data/splits/manifest_hashes.json
+    params:
+      - configs/config.yaml:
+          - seed
+          - model.arch
+          - model.pretrained
+          - model.num_classes
+          - model.imbalance_strategy
+          - training.epochs
+          - training.batch_size
+          - training.lr
+          - training.weight_decay
+          - training.amp
     outs:
       - models/best_model.pth
 
@@ -25,16 +46,27 @@ stages:
     cmd: python scripts/evaluate.py
     deps:
       - scripts/evaluate.py
+      - src/model.py
+      - src/dataset.py
       - models/best_model.pth
       - data/splits/test.csv
+      - configs/config.yaml
+    params:
+      - configs/config.yaml:
+          - seed
+          - data.image_size
     outs:
       - reports/metrics.json
+      - reports/per_class_metrics.csv
+      - reports/per_crop_metrics.json
+      - reports/EVALUATION_REPORT.md
 
   segment_benchmark:
     cmd: python scripts/benchmark_segmentation.py
     deps:
       - scripts/benchmark_segmentation.py
       - src/segmentation.py
+      - data/splits/test.csv
     outs:
       - reports/segmentation_quality.json
 
@@ -43,8 +75,16 @@ stages:
     deps:
       - scripts/run_bias_experiments.py
       - src/segmentation.py
+      - src/model.py
+      - data/splits/train.csv
+      - data/splits/test.csv
+      - configs/config.yaml
+    params:
+      - configs/config.yaml:
+          - seed
     outs:
       - reports/bias_study_metrics.json
+      - reports/BIAS_STUDY.md
 
   ood_evaluate:
     cmd: python scripts/evaluate_ood.py
@@ -52,8 +92,14 @@ stages:
       - scripts/evaluate_ood.py
       - src/ood_detector.py
       - models/best_model.pth
+      - data/splits/test.csv
+      - configs/config.yaml
+    params:
+      - configs/config.yaml:
+          - seed
     outs:
       - reports/ood_metrics.json
+      - reports/ood_report.md
 
   hierarchy_evaluate:
     cmd: python scripts/evaluate_hierarchy.py
@@ -61,16 +107,27 @@ stages:
       - scripts/evaluate_hierarchy.py
       - kb/coverage.yaml
       - models/best_model.pth
+      - data/splits/test.csv
+      - configs/config.yaml
     outs:
       - reports/hierarchy_metrics.json
+      - reports/hierarchy_report.md
 
   explainability:
     cmd: python scripts/run_explainability.py
     deps:
       - scripts/run_explainability.py
+      - src/model.py
+      - src/segmentation.py
       - models/best_model.pth
+      - data/splits/test.csv
+      - configs/config.yaml
+    params:
+      - configs/config.yaml:
+          - seed
     outs:
       - reports/explain_metrics.json
+      - reports/EXPLAINABILITY.md
 
   promote:
     cmd: python scripts/promote.py
@@ -79,6 +136,12 @@ stages:
       - reports/metrics.json
       - reports/bias_study_metrics.json
       - reports/ood_metrics.json
+      - configs/config.yaml
+    params:
+      - configs/config.yaml:
+          - evaluation.promotion_margin
+          - mlflow.registered_model_name
+          - mlflow.champion_alias
     outs:
       - reports/promotion_log.json
 
@@ -87,5 +150,10 @@ stages:
     deps:
       - scripts/reproduce_check.py
       - models/best_model.pth
+      - data/splits/test.csv
+      - configs/config.yaml
+    params:
+      - configs/config.yaml:
+          - seed
     outs:
       - reports/reproduce_check.json

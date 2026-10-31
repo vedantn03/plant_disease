@@ -47,6 +47,42 @@ This document mirrors all `🛑 MANUAL ACTION REQUIRED` blocks raised during the
 
 ---
 
+## Task T3 — DVC Data Pipeline & Versioning
+
+### Step M3.1: DVC Push, Status Verification & Restore Proof
+- **Why**: Pushes versioned data assets (splits, reports, model weights) to local storage remote `D:\dvc_remote` and proves data reproducibility and pull restoration.
+- **Do**:
+  1. Navigate to `plant_disease`:
+     ```powershell
+     d:
+     cd "D:\VIT\Hackathons\SIH'26\Airafare-proj\plant_disease"
+     ```
+  2. Push tracked assets to DVC remote:
+     ```powershell
+     ..\.venv\Scripts\dvc.exe push
+     ```
+  3. Verify status with remote:
+     ```powershell
+     ..\.venv\Scripts\dvc.exe status -c
+     ```
+  4. Perform restore proof on a small regenerable file (`reports/reproduce_check.json`):
+     ```powershell
+     Remove-Item reports\reproduce_check.json
+     ..\.venv\Scripts\dvc.exe pull reports/reproduce_check.json.dvc
+     # Or run general pull if individual pull isn't mapped:
+     ..\.venv\Scripts\dvc.exe pull
+     ```
+- **Expect**:
+  - `dvc push` transfers files to `D:\dvc_remote`
+  - `dvc status -c` reports `Data and pipelines are up to date`
+  - `reports\reproduce_check.json` is restored
+- **If it fails**:
+  - Check whether `D:\dvc_remote` exists (`New-Item -ItemType Directory -Force D:\dvc_remote`).
+- **Send me**:
+  - Output of `dvc push` and `dvc status -c`. Save them into `docs/evidence/dvc/dvc_push_output.txt` and `docs/evidence/dvc/dvc_status_c.txt`.
+
+---
+
 ## Utility: Large Figure Regeneration
 
 ### Regenerating `reports/figures/segmentation_40_grid.png`

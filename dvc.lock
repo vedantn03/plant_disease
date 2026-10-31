@@ -1,0 +1,358 @@
+schema: '2.0'
+stages:
+  audit_and_split:
+    cmd: python scripts/audit_and_split.py
+    deps:
+    - path: configs/config.yaml
+      hash: md5
+      md5: 24c398a89a02a29c49d8c13a090398f2
+      size: 1856
+    - path: scripts/audit_and_split.py
+      hash: md5
+      md5: 1e44ec7cdb823ce576cdc9638541b1dc
+      size: 20948
+    params:
+      configs/config.yaml:
+        data.subsample_per_class:
+        seed: 42
+        split.test: 0.15
+        split.train: 0.7
+        split.val: 0.15
+    outs:
+    - path: data/splits/test.csv
+      hash: md5
+      md5: 031f6be48c0444a2a1f6c2cdfad1b76a
+      size: 2824442
+    - path: data/splits/train.csv
+      hash: md5
+      md5: e7332c12d1da5f97884b08874ef0d386
+      size: 13189219
+    - path: data/splits/val.csv
+      hash: md5
+      md5: a33e1b566d7696654c956c84af032484
+      size: 2827735
+    - path: reports/audit_report.md
+      hash: md5
+      md5: 7b5b22598831d75da0c8aac52d4554f7
+      size: 1601
+  train:
+    cmd: python scripts/train.py
+    deps:
+    - path: configs/config.yaml
+      hash: md5
+      md5: 24c398a89a02a29c49d8c13a090398f2
+      size: 1856
+    - path: data/splits/manifest_hashes.json
+      hash: md5
+      md5: 37f59973f680d653d4072ef41ab470d6
+      size: 85
+    - path: data/splits/train.csv
+      hash: md5
+      md5: e7332c12d1da5f97884b08874ef0d386
+      size: 13189219
+    - path: data/splits/val.csv
+      hash: md5
+      md5: a33e1b566d7696654c956c84af032484
+      size: 2827735
+    - path: scripts/train.py
+      hash: md5
+      md5: 90b579025b7ed8112caddfb25ad73589
+      size: 16805
+    - path: src/dataset.py
+      hash: md5
+      md5: 32b00e5aca55ac984f49683f90d8a104
+      size: 7368
+    - path: src/model.py
+      hash: md5
+      md5: 999221f5dd9c14fb95b0692853fe4e6e
+      size: 6170
+    params:
+      configs/config.yaml:
+        model.arch: resnet18
+        model.imbalance_strategy: weighted_loss
+        model.num_classes: 38
+        model.pretrained: true
+        seed: 42
+        training.amp: true
+        training.batch_size: 64
+        training.epochs: 8
+        training.lr: 0.001
+        training.weight_decay: 0.0001
+    outs:
+    - path: models/best_model.pth
+      hash: md5
+      md5: 7203474fb41fedaa504a0033fc13a6d3
+      size: 134488005
+  evaluate:
+    cmd: python scripts/evaluate.py
+    deps:
+    - path: configs/config.yaml
+      hash: md5
+      md5: 24c398a89a02a29c49d8c13a090398f2
+      size: 1856
+    - path: data/splits/test.csv
+      hash: md5
+      md5: 031f6be48c0444a2a1f6c2cdfad1b76a
+      size: 2824442
+    - path: models/best_model.pth
+      hash: md5
+      md5: 7203474fb41fedaa504a0033fc13a6d3
+      size: 134488005
+    - path: scripts/evaluate.py
+      hash: md5
+      md5: feac806cdfc89c43cc786944f0560b7b
+      size: 39430
+    - path: src/dataset.py
+      hash: md5
+      md5: 32b00e5aca55ac984f49683f90d8a104
+      size: 7368
+    - path: src/model.py
+      hash: md5
+      md5: 999221f5dd9c14fb95b0692853fe4e6e
+      size: 6170
+    params:
+      configs/config.yaml:
+        data.image_size: 224
+        seed: 42
+    outs:
+    - path: reports/EVALUATION_REPORT.md
+      hash: md5
+      md5: f65cae57c9a9e1ef6bc70664b63dbfa2
+      size: 6156
+    - path: reports/metrics.json
+      hash: md5
+      md5: 40514b6040d19714f795639274cde105
+      size: 10281
+    - path: reports/per_class_metrics.csv
+      hash: md5
+      md5: c5f2577ce0b939f5e88352280d348392
+      size: 2707
+    - path: reports/per_crop_metrics.json
+      hash: md5
+      md5: 9cfc21292ef83f41dacb51b375d04ac0
+      size: 1163
+  segment_benchmark:
+    cmd: python scripts/benchmark_segmentation.py
+    deps:
+    - path: data/splits/test.csv
+      hash: md5
+      md5: 031f6be48c0444a2a1f6c2cdfad1b76a
+      size: 2824442
+    - path: scripts/benchmark_segmentation.py
+      hash: md5
+      md5: 1d43711d5722eaa356e8f1113b71b404
+      size: 4065
+    - path: src/segmentation.py
+      hash: md5
+      md5: 85e9a4381992df04df90fb4e1377236c
+      size: 5435
+    outs:
+    - path: reports/segmentation_quality.json
+      hash: md5
+      md5: dc2e169b3fe040454b2a8a40bb21c958
+      size: 12936
+  bias_study:
+    cmd: python scripts/run_bias_experiments.py
+    deps:
+    - path: configs/config.yaml
+      hash: md5
+      md5: 24c398a89a02a29c49d8c13a090398f2
+      size: 1856
+    - path: data/splits/test.csv
+      hash: md5
+      md5: 031f6be48c0444a2a1f6c2cdfad1b76a
+      size: 2824442
+    - path: data/splits/train.csv
+      hash: md5
+      md5: e7332c12d1da5f97884b08874ef0d386
+      size: 13189219
+    - path: scripts/run_bias_experiments.py
+      hash: md5
+      md5: ff8acbec8d77c974f7aaf99538f23c55
+      size: 14943
+    - path: src/model.py
+      hash: md5
+      md5: 999221f5dd9c14fb95b0692853fe4e6e
+      size: 6170
+    - path: src/segmentation.py
+      hash: md5
+      md5: 85e9a4381992df04df90fb4e1377236c
+      size: 5435
+    params:
+      configs/config.yaml:
+        seed: 42
+    outs:
+    - path: reports/BIAS_STUDY.md
+      hash: md5
+      md5: 7630bc5ef87c23f2929ea1e20c72c46f
+      size: 2804
+    - path: reports/bias_study_metrics.json
+      hash: md5
+      md5: a82f3659411bbf29051f9ed76dec08ea
+      size: 773
+  ood_evaluate:
+    cmd: python scripts/evaluate_ood.py
+    deps:
+    - path: configs/config.yaml
+      hash: md5
+      md5: 24c398a89a02a29c49d8c13a090398f2
+      size: 1856
+    - path: data/splits/test.csv
+      hash: md5
+      md5: 031f6be48c0444a2a1f6c2cdfad1b76a
+      size: 2824442
+    - path: models/best_model.pth
+      hash: md5
+      md5: 7203474fb41fedaa504a0033fc13a6d3
+      size: 134488005
+    - path: scripts/evaluate_ood.py
+      hash: md5
+      md5: 99d10f25e31042301eb2d58e077a3548
+      size: 12217
+    - path: src/ood_detector.py
+      hash: md5
+      md5: 90501a5e50ce252e9274b2ded9cd38be
+      size: 4679
+    params:
+      configs/config.yaml:
+        seed: 42
+    outs:
+    - path: reports/ood_metrics.json
+      hash: md5
+      md5: 60de3492e5fda686496bb041473c9d04
+      size: 379
+    - path: reports/ood_report.md
+      hash: md5
+      md5: 96a846804ab26f5154f10a88fead4ce0
+      size: 2653
+  hierarchy_evaluate:
+    cmd: python scripts/evaluate_hierarchy.py
+    deps:
+    - path: configs/config.yaml
+      hash: md5
+      md5: 24c398a89a02a29c49d8c13a090398f2
+      size: 1856
+    - path: data/splits/test.csv
+      hash: md5
+      md5: 031f6be48c0444a2a1f6c2cdfad1b76a
+      size: 2824442
+    - path: kb/coverage.yaml
+      hash: md5
+      md5: d932860782da4d54a41ec9474e72e262
+      size: 4539
+    - path: models/best_model.pth
+      hash: md5
+      md5: 7203474fb41fedaa504a0033fc13a6d3
+      size: 134488005
+    - path: scripts/evaluate_hierarchy.py
+      hash: md5
+      md5: 4b80f56205c112e0cfc51280fc4fa5f6
+      size: 11222
+    outs:
+    - path: reports/hierarchy_metrics.json
+      hash: md5
+      md5: b6f21a8929ceacc613f4c4fa7d7c7074
+      size: 3406
+    - path: reports/hierarchy_report.md
+      hash: md5
+      md5: 7fbb8843d75d4be964f84fc4c3e5b27c
+      size: 2483
+  explainability:
+    cmd: python scripts/run_explainability.py
+    deps:
+    - path: configs/config.yaml
+      hash: md5
+      md5: 24c398a89a02a29c49d8c13a090398f2
+      size: 1856
+    - path: data/splits/test.csv
+      hash: md5
+      md5: 031f6be48c0444a2a1f6c2cdfad1b76a
+      size: 2824442
+    - path: models/best_model.pth
+      hash: md5
+      md5: 7203474fb41fedaa504a0033fc13a6d3
+      size: 134488005
+    - path: scripts/run_explainability.py
+      hash: md5
+      md5: 4e1f63d3be41566c906c90f44e3505ed
+      size: 14240
+    - path: src/model.py
+      hash: md5
+      md5: 999221f5dd9c14fb95b0692853fe4e6e
+      size: 6170
+    - path: src/segmentation.py
+      hash: md5
+      md5: 85e9a4381992df04df90fb4e1377236c
+      size: 5435
+    params:
+      configs/config.yaml:
+        seed: 42
+    outs:
+    - path: reports/EXPLAINABILITY.md
+      hash: md5
+      md5: 9dad5109d6c9005c5089dcf974846732
+      size: 2951
+    - path: reports/explain_metrics.json
+      hash: md5
+      md5: 7b10e31d708c64c3e60ce471892dffe8
+      size: 664
+  promote:
+    cmd: python scripts/promote.py
+    deps:
+    - path: configs/config.yaml
+      hash: md5
+      md5: 24c398a89a02a29c49d8c13a090398f2
+      size: 1856
+    - path: reports/bias_study_metrics.json
+      hash: md5
+      md5: a82f3659411bbf29051f9ed76dec08ea
+      size: 773
+    - path: reports/metrics.json
+      hash: md5
+      md5: 40514b6040d19714f795639274cde105
+      size: 10281
+    - path: reports/ood_metrics.json
+      hash: md5
+      md5: 60de3492e5fda686496bb041473c9d04
+      size: 379
+    - path: scripts/promote.py
+      hash: md5
+      md5: f6f421ea47e0bc4bd153cc51b15db0a3
+      size: 5392
+    params:
+      configs/config.yaml:
+        evaluation.promotion_margin: 0.03
+        mlflow.champion_alias: champion
+        mlflow.registered_model_name: PlantDiseaseClassifier
+    outs:
+    - path: reports/promotion_log.json
+      hash: md5
+      md5: f087ee473be2627ef0e0ce0d6f329b33
+      size: 426
+  reproduce_check:
+    cmd: python scripts/reproduce_check.py
+    deps:
+    - path: configs/config.yaml
+      hash: md5
+      md5: 24c398a89a02a29c49d8c13a090398f2
+      size: 1856
+    - path: data/splits/test.csv
+      hash: md5
+      md5: 031f6be48c0444a2a1f6c2cdfad1b76a
+      size: 2824442
+    - path: models/best_model.pth
+      hash: md5
+      md5: 7203474fb41fedaa504a0033fc13a6d3
+      size: 134488005
+    - path: scripts/reproduce_check.py
+      hash: md5
+      md5: cd6d0b2b0844e710fb8e628bb30aa051
+      size: 4278
+    params:
+      configs/config.yaml:
+        seed: 42
+    outs:
+    - path: reports/reproduce_check.json
+      hash: md5
+      md5: d56a3873c33f97ab61b12928b102507d
+      size: 153

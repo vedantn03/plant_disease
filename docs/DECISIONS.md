@@ -67,3 +67,9 @@ All decisions are recorded here. Format: `[YYYY-MM-DD] Decision | Reason`
 [2026-10-31] Retain demo_samples and SHAP figures with licence review disclaimer | `demo_samples/*.jpg` (~300 KB each) and SHAP figures in `reports/figures/shap/` (~1 MB each) are kept in the repository for offline test suite & demonstration capability. PlantVillage licence must be checked before public redistribution.
 
 [2026-10-31] Retain FastAPI @app.on_event until Task T9 serving overhaul | FastAPI `@app.on_event("startup")` and `"shutdown"` emit deprecation warnings in favor of lifespan handlers. Migrating to lifespan handlers is deferred to Task T9 (registry-backed serving refactor) to maintain atomic, clean task boundaries.
+
+[2026-10-31] T4 (MinIO object store) deferred | MinIO requires either a separate Docker service or a running binary. The local DVC remote at `D:\dvc_remote` is fully sufficient for offline demo and viva. MinIO would add complexity (two extra containers, bucket lifecycle config) with no measurable benefit given the project's local-first constraint. Re-evaluate if the demo moves to a multi-machine setup.
+
+[2026-10-31] Shared venv (.venv) with airfare project retained for now | `D:\VIT\Hackathons\SIH'26\Airafare-proj\.venv` is shared between the plant_disease and airfare sub-projects. This is technically fine but risks version conflicts when one project upgrades a package. Proposed clean-up: create `plant_disease\.venv_pd` (plant-disease-only venv) after the demo so each project pins its own dependency tree. This is a post-demo housekeeping task and has no impact on current reproducibility.
+
+[2026-10-31] manifest_hashes.json stays git-tracked, not DVC-tracked | The file is a tiny (<1 KB) hash-of-hashes manifest for the raw dataset. Git-tracking it gives a single-command diff (`git diff`) to detect dataset drift between sessions. DVC would add indirection with no space saving. Ref: https://dvc.org/doc/user-guide/data-management/remote-storage

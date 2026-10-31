@@ -9,6 +9,7 @@ Usage:
   python scripts/reproduce_check.py
 """
 
+import json
 import sys
 from pathlib import Path
 import numpy as np
@@ -92,6 +93,19 @@ def main():
     print("  - We mitigate this via: fixed seeds (PyTorch, NumPy, Python RNG), pinned lockfiles,")
     print("    and torch.backends.cudnn.benchmark = False.")
     print("=" * 60)
+
+    # Save structured report for DVC tracking & UI governance tab
+    report = {
+        "status": "PASSED",
+        "agreement_pct": float(pred_agreement * 100),
+        "max_abs_logit_delta": float(max_abs_diff),
+        "mean_abs_logit_delta": float(mean_abs_diff),
+        "sample_size": len(images),
+        "seed": 42,
+    }
+    report_path = root / "reports" / "reproduce_check.json"
+    report_path.write_text(json.dumps(report, indent=2), encoding="utf-8")
+    log.info(f"Report written to {report_path}")
 
 
 if __name__ == "__main__":
