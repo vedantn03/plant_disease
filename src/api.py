@@ -41,6 +41,7 @@ from src.advisory_engine import AdvisoryEngine, DISCLAIMER
 from src.calibration import probs_from_logits
 from src.config_loader import load_config
 from src.model import GradCAM, build_model, heatmap_to_base64_png, preprocess_image
+from src.model_loader import resolve_serving_checkpoint
 from src.ood_detector import check_image_heuristics
 from src.utils import ensure_dir, get_logger, parse_class_name
 
@@ -75,6 +76,7 @@ _state: dict = {
     "class_counts": defaultdict(int),
     "confidence_sum": 0.0,
     "log_file": None,
+    "model_provenance": {},
 }
 
 
@@ -89,7 +91,8 @@ async def startup() -> None:
     log.info(f"Inference device: {device}")
 
     # Load model
-    checkpoint_path = project_root / "models" / "best_model.pth"
+    checkpoint_path, provenance = resolve_serving_checkpoint(cfg, project_root)
+    _state["model_provenance"] = provenance
     if not checkpoint_path.exists():
         log.warning(f"No checkpoint found at {checkpoint_path}. /predict will return 503.")
         _state["model"] = None
@@ -119,7 +122,10 @@ async def startup() -> None:
             except Exception:
                 crop_to_classes["unknown"].append(cls_name)
         _state["crop_to_classes"] = crop_to_classes
-        log.info(f"Model loaded: {num_classes} classes, device={device}")
+        log.info(
+            f"Model loaded: {num_classes} classes, device={device}, "
+            f"source={provenance.get('model_source')}"
+        )
 
     # Advisory engine
     _state["advisory_engine"] = AdvisoryEngine(project_root / "kb" / "advisories.yaml")
@@ -177,6 +183,8 @@ async def health() -> dict:
         "status": "ok" if model_loaded else "degraded",
         "model_loaded": model_loaded,
         "device": _state.get("device", "unknown"),
+        "model_source": _state.get("model_provenance", {}).get("model_source", "unknown"),
+        "model_uri": _state.get("model_provenance", {}).get("model_uri", "unknown"),
     }
 
 

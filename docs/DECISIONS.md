@@ -71,6 +71,10 @@ three-fill protocol, and ECE. Batch inference and drift artifacts remain separat
 
 [2026-10-31] Retain FastAPI @app.on_event until Task T9 serving overhaul | FastAPI `@app.on_event("startup")` and `"shutdown"` emit deprecation warnings in favor of lifespan handlers. Migrating to lifespan handlers is deferred to Task T9 (registry-backed serving refactor) to maintain atomic, clean task boundaries.
 
+[2026-10-31] Make registry-backed serving opt-in | Local `models/best_model.pth` remains the default
+serving source. Setting `serving.model_source: registry` resolves the configured MLflow
+`@champion` alias and downloads exactly one `.pth` artifact without modifying the local champion.
+
 [2026-10-31] T4 (MinIO object store) deferred | MinIO requires either a separate Docker service or a running binary. The local DVC remote at `D:\dvc_remote` is fully sufficient for offline demo and viva. MinIO would add complexity (two extra containers, bucket lifecycle config) with no measurable benefit given the project's local-first constraint. Re-evaluate if the demo moves to a multi-machine setup.
 
 [2026-10-31] Shared venv (.venv) with airfare project retained for now | `D:\VIT\Hackathons\SIH'26\Airafare-proj\.venv` is shared between the plant_disease and airfare sub-projects. This is technically fine but risks version conflicts when one project upgrades a package. Proposed clean-up: create `plant_disease\.venv_pd` (plant-disease-only venv) after the demo so each project pins its own dependency tree. This is a post-demo housekeeping task and has no impact on current reproducibility.
