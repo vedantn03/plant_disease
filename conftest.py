@@ -5,6 +5,7 @@ Shared pytest fixtures for the plant_disease test suite.
 Sets DATA_ROOT from .env before any test module is imported.
 """
 
+import os
 import sys
 from pathlib import Path
 
@@ -18,3 +19,6 @@ try:
     load_dotenv(project_root / ".env", override=False)
 except ImportError:
     pass  # python-dotenv not installed; expect DATA_ROOT in env
+
+if not os.environ.get("DATA_ROOT", "").strip():
+    os.environ["DATA_ROOT"] = str(project_root / "data")
