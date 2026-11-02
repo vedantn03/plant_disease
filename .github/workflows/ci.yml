@@ -4,7 +4,7 @@ on:
   push:
     branches: [ main, master ]
   pull_request:
-    branches: [ main, master ]
+    branches: [ main, master, feat/ordered-mlops-next-steps ]
 
 jobs:
   test:
@@ -24,7 +24,7 @@ jobs:
           pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
           pip install pytest pyyaml fastapi uvicorn pillow requests python-dotenv httpx pydantic scipy scikit-learn python-multipart mlflow
 
-      - name: Run Full Test Suite (Unit, Integration & OOD)
+      - name: Run Test Suite (artifact-aware)
         run: |
           pytest tests/ -v
 
