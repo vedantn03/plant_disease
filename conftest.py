@@ -20,7 +20,6 @@ try:
 except ImportError:
     pass  # python-dotenv not installed; expect DATA_ROOT in env
 
-
 def api_artifact_skip_reason(project_root: Path | None = None) -> str | None:
     """Return a skip reason when local API artifacts/configuration are unavailable."""
     root = project_root or Path(__file__).resolve().parent
@@ -33,3 +32,7 @@ def api_artifact_skip_reason(project_root: Path | None = None) -> str | None:
         return "DATA_ROOT unavailable; API integration tests require the local dataset"
 
     return None
+
+
+if not os.environ.get("DATA_ROOT", "").strip():
+    os.environ["DATA_ROOT"] = str(project_root / "data")
