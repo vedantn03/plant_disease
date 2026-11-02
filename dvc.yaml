@@ -41,7 +41,8 @@ stages:
           - training.weight_decay
           - training.amp
     outs:
-      - models/best_model.pth
+      - models/candidates:
+          persist: true
 
   evaluate:
     cmd: python scripts/evaluate.py
