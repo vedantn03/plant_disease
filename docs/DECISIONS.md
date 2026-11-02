@@ -113,3 +113,40 @@ end-of-file-fixer, YAML/JSON validation, large-file checking, and Ruff. They do 
 The claim was corrected in `.pre-commit-config.yaml` and `docs/MANUAL_STEPS.md` rather than adding
 an unverified third-party hook. GitHub secret scanning and the requested history checks remain
 separate manual checks.
+
+[2026-10-31] Plain train command is candidate-only | `scripts/train.py` writes the best checkpoint
+to `models/candidates/<run_id>.pth` even when invoked without `--candidate`; the flag is retained
+as documentation. This safer default prevents accidental overwrite of `models/best_model.pth`.
+Promotion remains a separate dry-run gate. The DVC train output declaration is currently
+inconsistent and must be resolved before any real `dvc repro`.
+
+[2026-10-31] DVC champion-output mismatch options | Before enabling real reproduction, choose one:
+(a) declare a candidate output path; (b) remove the train output declaration; or (c) add a
+separate explicitly approved champion-producing stage. No option is implemented here.
+
+[2026-11-02] DVC train output follows candidate-only training | The train stage now declares
+`models/candidates/` with `persist: true` because `scripts/train.py` writes only candidate
+checkpoints and must not overwrite `models/best_model.pth`. The champion remains a separate DVC
+tracked file and stays a dependency of evaluation stages. The rejected alternatives were removing
+the train output entirely (which would make candidate artifacts invisible to the pipeline) and
+adding a champion-producing stage (which would create an unsafe promotion path before gate approval).
+The `persist` syntax is documented by DVC at
+https://dvc.org/doc/user-guide/project-structure/dvcyaml-files#outs and in the DVC pipeline
+running guide at https://github.com/treeverse/dvc.org/blob/main/content/docs/user-guide/pipelines/running-pipelines.md.
+
+After pulling this change, verify the existing champion object without running reproduction:
+
+```powershell
+(Get-FileHash models\best_model.pth -Algorithm MD5).Hash
+..\.venv\Scripts\dvc.exe status
+..\.venv\Scripts\dvc.exe push
+(Get-FileHash models\best_model.pth -Algorithm MD5).Hash
+..\.venv\Scripts\dvc.exe status -c
+```
+
+The two MD5 outputs must both be
+`7203474FB41FEDAA504A0033FC13A6D3`. `dvc status` may report the changed train
+stage until a candidate run updates its lock entry; this is expected and is not
+a reason to run `dvc repro`. If any MD5 differs or the champion is missing,
+stop immediately and restore only from the existing `D:\dvc_remote` backup; do
+not overwrite the file from another checkpoint.

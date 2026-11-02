@@ -22,7 +22,7 @@ Generated from genuine hardware inspection via Windows system calls, `nvidia-smi
 
 | Component | Status | Limit / Configuration |
 | :--- | :--- | :--- |
-| **Docker CLI** | `v29.8.0` (Client) | Installed at `C:\Users\Vedant\AppData\Local\Programs\DockerDesktop\resources\bin\docker.EXE` |
+| **Docker CLI** | `v29.8.0` (Client) | Installed under `%LOCALAPPDATA%\Programs\DockerDesktop\resources\bin\docker.EXE` |
 | **Docker Compose** | `v5.5.1` (Plugin) | Docker Compose plugin operational |
 | **Docker Daemon Engine** | Offline / Suspended | Must start Docker Desktop before running container profiles |
 | **WSL2 Memory Target** | ~8.0 GB - 12.0 GB recommended | Configured via `.wslconfig` on host to prevent memory starvation |

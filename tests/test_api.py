@@ -17,6 +17,7 @@ import pytest
 from PIL import Image
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+from conftest import api_artifact_skip_reason
 
 # ── TestClient import ─────────────────────────────────────────────────────────
 # FastAPI's TestClient uses httpx under the hood
@@ -33,8 +34,9 @@ def client():
     if not CLIENT_AVAILABLE:
         pytest.skip("FastAPI/httpx not available")
     project_root = Path(__file__).resolve().parent.parent
-    if not (project_root / "models" / "best_model.pth").exists():
-        pytest.skip("Model artifact unavailable; API integration tests require local weights")
+    reason = api_artifact_skip_reason(project_root)
+    if reason:
+        pytest.skip(reason)
     with TestClient(app) as c:
         yield c
 
@@ -180,3 +182,14 @@ def test_predict_disclaimer_always_present(client):
         body = resp.json()
         assert "disclaimer" in body
         assert len(body["disclaimer"]) > 50  # non-trivial text
+
+
+def test_api_artifact_skip_helper_allows_complete_local_fixture(tmp_path, monkeypatch):
+    models = tmp_path / "models"
+    models.mkdir()
+    (models / "best_model.pth").write_bytes(b"fixture")
+    data_root = tmp_path / "dataset"
+    data_root.mkdir()
+    monkeypatch.setenv("DATA_ROOT", str(data_root))
+
+    assert api_artifact_skip_reason(tmp_path) is None

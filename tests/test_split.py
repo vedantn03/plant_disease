@@ -29,17 +29,25 @@ def _load_split(name: str) -> list[dict]:
         return list(csv.DictReader(f))
 
 
-def test_splits_exist():
-    required = ["train", "val", "test"]
-    missing = [name for name in required if not (SPLITS_DIR / f"{name}.csv").exists()]
+def _require_all_splits() -> None:
+    missing = [name for name in ("train", "val", "test")
+               if not (SPLITS_DIR / f"{name}.csv").exists()]
     if missing:
         pytest.skip(
-            "Split manifests are not available in this environment. "
-            "Run scripts/audit_and_split.py first."
+            "Split manifests unavailable; run scripts/audit_and_split.py first "
+            f"(missing: {', '.join(missing)})"
         )
 
 
+def test_splits_exist():
+    _require_all_splits()
+    for name in ["train", "val", "test"]:
+        assert (SPLITS_DIR / f"{name}.csv").exists(), \
+            f"{name}.csv missing. Run scripts/audit_and_split.py"
+
+
 def test_splits_nonempty():
+    _require_all_splits()
     for name in ["train", "val", "test"]:
         recs = _load_split(name)
         assert len(recs) > 0, f"{name} split is empty"
@@ -47,6 +55,7 @@ def test_splits_nonempty():
 
 def test_zero_group_overlap():
     """Core assertion: no group_id appears in more than one split."""
+    _require_all_splits()
     train = _load_split("train")
     val = _load_split("val")
     test = _load_split("test")
@@ -66,6 +75,7 @@ def test_zero_group_overlap():
 
 def test_class_names_parseable():
     """All class_name values in any split must parse without error."""
+    _require_all_splits()
     for name in ["train", "val", "test"]:
         recs = _load_split(name)
         for r in recs:
