@@ -46,10 +46,26 @@ def test_fail_min_recall():
 
 
 def test_fail_bg_drop():
-    champ = _ok()
+    champ = _ok(bg_drop=0.05)
     cand = _ok(bg_drop=0.12)
     verdict = evaluate_gate(cand, champ, _thresholds())
     assert "bg_drop" in verdict["failures"]
+
+
+def test_bg_drop_is_relative_to_champion():
+    champ = _ok(bg_drop=0.18)
+    cand = _ok(bg_drop=0.185)
+    verdict = evaluate_gate(cand, champ, _thresholds())
+    assert "bg_drop" not in verdict["failures"]
+    bg = next(c for c in verdict["criteria"] if c["name"] == "bg_drop")
+    assert bg["threshold"] == 0.20
+
+
+def test_within_crop_f1_is_gate_metric_when_available():
+    champ = _ok(macro_f1=0.70, within_crop_macro_f1=0.9908)
+    cand = _ok(macro_f1=0.70, within_crop_macro_f1=0.9860)
+    verdict = evaluate_gate(cand, champ, _thresholds())
+    assert "macro_f1" not in verdict["failures"]
 
 
 def test_fail_ece():

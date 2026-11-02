@@ -21,7 +21,8 @@ env/
 
 # ── Data & model artifacts (never commit) ──────────────────
 data/splits/*.csv
-models/
+models/*
+!models/best_model.pth.dvc
 *.pth
 *.pt
 *.onnx

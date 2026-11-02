@@ -26,6 +26,10 @@ from src.utils import get_logger
 log = get_logger("robustness_eval")
 
 
+def _pct(value: float | None, digits: int = 2) -> str:
+    return "not available" if value is None else f"{value * 100:.{digits}f}%"
+
+
 def generate_robustness_artifacts():
     reports_dir = PROJECT_ROOT / "reports"
     reports_dir.mkdir(parents=True, exist_ok=True)
@@ -41,65 +45,49 @@ def generate_robustness_artifacts():
     explain_data = json.loads(explain_path.read_text()) if explain_path.exists() else {}
     seg_data = json.loads(seg_path.read_text()) if seg_path.exists() else {}
 
-    # 2. Assemble consolidated robustness metrics
-    cb = metrics_data.get("capture_bias_probe", {
-        "corner_rf_test_acc": 0.4610,
-        "center_masked_cnn_acc": 0.6867,
-        "chance_level": 0.0263,
-        "majority_class_rate": 0.1015,
-    })
-
-    gcam = explain_data.get("gradcam", {
-        "leaf_mass_mean": 0.7038,
-        "leaf_mass_std": 0.1360,
-        "bg_mass_mean": 0.2962,
-    })
-
-    seg_quality = {
-        "n_samples": seg_data.get("n_samples", 40),
-        "failure_count": seg_data.get("failure_count", 0),
-        "failure_rate": seg_data.get("failure_rate", 0.0),
-        "clean_rate": seg_data.get("clean_rate", 1.0),
-        "mean_fg_ratio": 0.5090,
-    }
-
-    # Prefer VAL baselines computed by scripts/compute_val_diagnostics.py.
-    # Do not silently copy TEST bg_drop onto VAL.
+    # 2. Assemble consolidated robustness metrics from the shared evaluator.
     val_base_path = reports_dir / "gate_baselines_val.json"
-    val_base = json.loads(val_base_path.read_text()) if val_base_path.exists() else None
-    if val_base and "masked_background" in val_base:
-        clean_macro_f1 = val_base["masked_background"]["clean_macro_f1"]
-        masked_macro_f1 = val_base["masked_background"]["masked_macro_f1"]
-        split_label = "VAL"
-    else:
-        clean_macro_f1 = metrics_data.get("headline", {}).get("macro_f1")
-        masked_macro_f1 = None
-        split_label = "TEST (legacy; VAL baselines missing)"
-        if clean_macro_f1 is None or masked_macro_f1 is None:
-            raise RuntimeError(
-                "VAL masked-background metrics not found. Run "
-                "python scripts/compute_val_diagnostics.py"
-            )
-    bg_drop = round(clean_macro_f1 - masked_macro_f1, 4)
+    if not val_base_path.exists():
+        raise RuntimeError("Run python scripts/compute_val_diagnostics.py first")
+    val_base = json.loads(val_base_path.read_text())
+    val_by_fill = val_base.get("masked_background_by_fill")
+    test_by_fill = val_base.get("masked_background_test_by_fill")
+    if not val_by_fill or not test_by_fill:
+        raise RuntimeError("Three-fill metrics missing; rerun compute_val_diagnostics.py")
+
+    cb = metrics_data.get("capture_bias_probe", {})
+    gcam = explain_data.get("gradcam", {})
+    seg_quality = seg_data
+    clean_macro_f1 = val_base["clean_macro_f1"]
+    split_label = "VAL and TEST"
+    bg_drops = [float(item["bg_drop"]) for item in val_by_fill.values()]
 
     robustness_out = {
         "masked_background": {
             "clean_macro_f1": clean_macro_f1,
-            "masked_macro_f1": masked_macro_f1,
-            "bg_drop": bg_drop,
-            "retention_rate": round(masked_macro_f1 / clean_macro_f1, 4),
+            "protocol": {
+                "mask": "Woebbecke ExG segmentation",
+                "fills": ["black", "mid_grey", "per_image_mean"],
+            },
+            "val_by_fill": val_by_fill,
+            "test_by_fill": test_by_fill,
+            "bg_drop_range_val": [min(bg_drops), max(bg_drops)],
         },
         "background_probe": {
-            "corner_rf_acc": cb.get("corner_rf_test_acc", 0.4610),
-            "chance_level": cb.get("chance_level", 0.0263),
-            "ratio_over_chance": round(cb.get("corner_rf_test_acc", 0.4610) / cb.get("chance_level", 0.0263), 2),
-            "center_masked_cnn_acc": cb.get("center_masked_cnn_acc", 0.6867),
-            "majority_class_rate": cb.get("majority_class_rate", 0.1015),
+            "corner_rf_acc": cb.get("corner_rf_test_acc"),
+            "chance_level": cb.get("chance_level"),
+            "ratio_over_chance": (
+                round(cb["corner_rf_test_acc"] / cb["chance_level"], 2)
+                if cb.get("corner_rf_test_acc") is not None and cb.get("chance_level")
+                else None
+            ),
+            "center_masked_cnn_acc": cb.get("center_masked_cnn_acc"),
+            "majority_class_rate": cb.get("majority_class_rate"),
         },
         "attribution_concentration": {
-            "gradcam_leaf_mass_mean": gcam.get("leaf_mass_mean", 0.7038),
-            "gradcam_leaf_mass_std": gcam.get("leaf_mass_std", 0.1360),
-            "gradcam_bg_mass_mean": gcam.get("bg_mass_mean", 0.2962),
+            "gradcam_leaf_mass_mean": gcam.get("leaf_mass_mean"),
+            "gradcam_leaf_mass_std": gcam.get("leaf_mass_std"),
+            "gradcam_bg_mass_mean": gcam.get("bg_mass_mean"),
             "n_samples": explain_data.get("n_samples", 100),
         },
         "segmentation_audit": seg_quality,
@@ -120,7 +108,7 @@ def generate_robustness_artifacts():
 
 ## 1. Executive Summary
 
-PlantVillage was collected under laboratory conditions using detached leaves mounted on uniform poster boards. This report quantitatively audits the degree to which model predictions rely on genuine biological symptoms (leaf tissue, necrotic spots, chlorosis) versus non-biological shortcuts (paper background, border lighting, camera artifacts).
+PlantVillage was collected under laboratory conditions using detached leaves mounted on uniform poster boards. This report audits the effect of masking the segmented background. A drop mixes background reliance with masking artifacts; it does not identify a unique fraction of pathology signal.
 
 ---
 
@@ -128,12 +116,12 @@ PlantVillage was collected under laboratory conditions using detached leaves mou
 
 When background pixels identified by Woebbecke Excess-Green segmentation are masked out:
 
-| Evaluation Mode | Macro-F1 | Retention Rate | Drop from Clean Baseline |
+| Split / fill | Clean Macro-F1 | Masked Macro-F1 | Retention | bg_drop |
 | :--- | :---: | :---: | :---: |
-| **Clean in-domain ({split_label})** | **{clean_macro_f1*100:.2f}%** | 100.0% | Baseline |
-| **Masked-background ({split_label})** | **{masked_macro_f1*100:.2f}%** | **{robustness_out['masked_background']['retention_rate']*100:.2f}%** | **{bg_drop*100:.2f}% (bg_drop)** |
+{''.join(f"| VAL / {name} | {value['clean_macro_f1']*100:.2f}% | {value['masked_macro_f1']*100:.2f}% | {value['retention_rate']*100:.2f}% | {value['bg_drop']:.4f} |\\n" for name, value in val_by_fill.items())}
+{''.join(f"| TEST / {name} | {value['clean_macro_f1']*100:.2f}% | {value['masked_macro_f1']*100:.2f}% | {value['retention_rate']*100:.2f}% | {value['bg_drop']:.4f} |\\n" for name, value in test_by_fill.items())}
 
-> **Interpretation**: The model retains **{robustness_out['masked_background']['retention_rate']*100:.1f}%** of clean macro-F1 when the background is masked; the drop mixes background reliance with masking artifacts. `bg_drop = {bg_drop:.4f}` is the T7 gate baseline (PROVISIONAL).
+> **Interpretation**: Each row reports retention under one fill. The drop mixes background reliance with masking artifacts. No single `bg_drop` is “the” value.
 
 ---
 
@@ -141,9 +129,9 @@ When background pixels identified by Woebbecke Excess-Green segmentation are mas
 
 | Probe Benchmark | Measured Accuracy | Baseline Comparison | Finding |
 | :--- | :---: | :---: | :--- |
-| **Corner-Pixel RF Probe** (4 corner pixels only) | **{cb.get('corner_rf_test_acc', 0.4610)*100:.1f}%** | 2.6% Random Chance (1/38) | **{robustness_out['background_probe']['ratio_over_chance']}x higher than chance**, proving non-trivial class signature in paper borders. |
-| **Majority-Class Baseline** | {cb.get('majority_class_rate', 0.1015)*100:.1f}% | Chance (2.6%) | Prevalent test split class rate. |
-| **Center-Masked CNN** (central 60% of leaf obscured) | **{cb.get('center_masked_cnn_acc', 0.6867)*100:.2f}%** | Chance (2.6%) | Demonstrates residual edge/border reliance when leaf center is hidden. |
+| **Corner-Pixel RF Probe** (4 corner pixels only) | **{_pct(cb.get('corner_rf_test_acc'), 1)}** | measured baseline | Requires the corresponding probe artifact. |
+| **Majority-Class Baseline** | {_pct(cb.get('majority_class_rate'), 1)} | measured baseline | Requires the corresponding probe artifact. |
+| **Center-Masked CNN** (central 60% of leaf obscured) | **{_pct(cb.get('center_masked_cnn_acc'), 2)}** | measured baseline | Requires the corresponding probe artifact. |
 
 ---
 
@@ -151,8 +139,8 @@ When background pixels identified by Woebbecke Excess-Green segmentation are mas
 
 Attribution heatmaps evaluated across N={robustness_out['attribution_concentration']['n_samples']} seeded test images:
 
-- **Attribution Mass Inside Leaf Lamina**: **{robustness_out['attribution_concentration']['gradcam_leaf_mass_mean']*100:.2f}%** (± {robustness_out['attribution_concentration']['gradcam_leaf_mass_std']*100:.1f}%)
-- **Attribution Mass in Background Paper**: **{robustness_out['attribution_concentration']['gradcam_bg_mass_mean']*100:.2f}%**
+- **Attribution Mass Inside Leaf Lamina**: **{_pct(robustness_out['attribution_concentration']['gradcam_leaf_mass_mean'])}** (± {_pct(robustness_out['attribution_concentration']['gradcam_leaf_mass_std'], 1)})
+- **Attribution Mass in Background Paper**: **{_pct(robustness_out['attribution_concentration']['gradcam_bg_mass_mean'])}**
 
 > **Faithfulness**: Over 70% of attribution focus is concentrated on the segmented leaf foreground.
 

@@ -17,6 +17,7 @@ import pytest
 from PIL import Image
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+from conftest import api_artifact_skip_reason
 
 # ── TestClient import ─────────────────────────────────────────────────────────
 # FastAPI's TestClient uses httpx under the hood
@@ -32,6 +33,10 @@ except ImportError:
 def client():
     if not CLIENT_AVAILABLE:
         pytest.skip("FastAPI/httpx not available")
+    project_root = Path(__file__).resolve().parent.parent
+    reason = api_artifact_skip_reason(project_root)
+    if reason:
+        pytest.skip(reason)
     with TestClient(app) as c:
         yield c
 
@@ -157,6 +162,15 @@ def test_serving_confidence_is_unscaled_softmax():
     assert p_soft[0, 0] < p[0, 0]  # T>1 would change confidence; serving must not
 
 
+def test_api_uses_lifespan_handlers():
+    """Serving lifecycle is managed by FastAPI lifespan, not deprecated events."""
+    src = (Path(__file__).resolve().parent.parent / "src" / "api.py").read_text(
+        encoding="utf-8"
+    )
+    assert "@app.on_event" not in src
+    assert "lifespan=lifespan" in src
+
+
 def test_predict_disclaimer_always_present(client):
     """Disclaimer must appear in every response."""
     jpeg_bytes = _make_jpeg_bytes()
@@ -168,3 +182,14 @@ def test_predict_disclaimer_always_present(client):
         body = resp.json()
         assert "disclaimer" in body
         assert len(body["disclaimer"]) > 50  # non-trivial text
+
+
+def test_api_artifact_skip_helper_allows_complete_local_fixture(tmp_path, monkeypatch):
+    models = tmp_path / "models"
+    models.mkdir()
+    (models / "best_model.pth").write_bytes(b"fixture")
+    data_root = tmp_path / "dataset"
+    data_root.mkdir()
+    monkeypatch.setenv("DATA_ROOT", str(data_root))
+
+    assert api_artifact_skip_reason(tmp_path) is None

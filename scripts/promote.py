@@ -45,6 +45,7 @@ def _metrics_from_payload(payload: dict) -> GateMetrics:
         cal = payload.get("calibration", {})
         return GateMetrics(
             macro_f1=float(payload.get("clean_macro_f1", mb.get("clean_macro_f1"))),
+            within_crop_macro_f1=payload.get("within_crop_macro_f1_excluding_single_class_crops"),
             min_recall=float(rec.get("value", rec) if isinstance(rec, dict) else rec),
             bg_drop=float(mb["bg_drop"]),
             ece=float(cal.get("ece_before", cal.get("ece", payload.get("ece")))),
@@ -65,6 +66,7 @@ def _metrics_from_payload(payload: dict) -> GateMetrics:
     cal = payload.get("calibration", {})
     return GateMetrics(
         macro_f1=float(headline.get("macro_f1", payload["macro_f1"])),
+        within_crop_macro_f1=payload.get("within_crop_macro_f1_excluding_single_class_crops"),
         min_recall=float(min_rec),
         bg_drop=float(bg.get("bg_drop", payload["bg_drop"])),
         ece=float(cal.get("ece_before", payload.get("ece"))),
@@ -97,7 +99,11 @@ def main() -> int:
         help="Force first-model bootstrap even if champion-metrics exists",
     )
     parser.add_argument("--version", default=None, help="MLflow model version to tag / alias")
-    parser.add_argument("--dry-run", action="store_true", default=True)
+    parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Log the gate verdict without moving @champion (default behavior)",
+    )
     parser.add_argument(
         "--apply",
         action="store_true",
@@ -128,6 +134,10 @@ def main() -> int:
         "val_min_recall": f"{candidate.min_recall:.4f}",
         "val_bg_drop": f"{candidate.bg_drop:.4f}",
         "val_ece": f"{candidate.ece:.5f}",
+        "robustness_metrics": (
+            f"val_bg_drop={candidate.bg_drop:.4f};val_ece={candidate.ece:.5f};"
+            f"val_min_recall={candidate.min_recall:.4f}"
+        ),
         "gate_provisional": str(verdict["any_provisional"]).lower(),
     })
 

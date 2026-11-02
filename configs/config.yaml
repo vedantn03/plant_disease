@@ -55,6 +55,9 @@ mlflow:
   champion_alias: "champion"
 
 serving:
+  # "local" preserves the current champion-file behavior. "registry" resolves
+  # the configured MLflow @champion alias without overwriting local weights.
+  model_source: "local"
   # Confidence below this → status="uncertain"
   confidence_threshold: 0.50
   max_upload_bytes: 10485760   # 10 MB

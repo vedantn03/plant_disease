@@ -1,22 +1,51 @@
 """Dry-run promotion never moves @champion while thresholds are provisional."""
 
 import json
+from types import SimpleNamespace
+
+import pytest
 
 from src.gates import GateMetrics, evaluate_gate, load_gate_thresholds
-from src.registry import append_promotion_log, promote_alias
+from src.registry import append_promotion_log, promote_alias, register_candidate_version
 
 
 class _FakeClient:
     def __init__(self) -> None:
         self.aliases: dict[tuple[str, str], str] = {}
+        self.registered: list[dict] = []
 
     def set_registered_model_alias(self, name, alias, version):
         self.aliases[(name, alias)] = str(version)
 
+    def create_registered_model(self, name):
+        return {"name": name}
 
-def test_dry_run_does_not_call_set_alias(monkeypatch):
+    def create_model_version(self, name, source, run_id, tags):
+        self.registered.append({
+            "name": name,
+            "source": source,
+            "run_id": run_id,
+            "tags": tags,
+        })
+        return type("ModelVersion", (), {"version": "1"})()
+
+
+@pytest.fixture
+def registry_config(monkeypatch):
+    """Keep fake-client tests independent of local DATA_ROOT configuration."""
+    cfg = SimpleNamespace(
+        mlflow=SimpleNamespace(
+            registered_model_name="PlantDiseaseClassifier",
+            champion_alias="champion",
+            tracking_uri="sqlite:///mlflow.db",
+        )
+    )
+    monkeypatch.setattr("src.registry.load_config", lambda: cfg)
+    return cfg
+
+
+def test_dry_run_does_not_call_set_alias(registry_config):
     fake = _FakeClient()
-    monkeypatch.setattr("src.registry.get_client", lambda: fake)
     # promote_alias with dry_run True must not touch the fake
     result = promote_alias("3", alias="champion", dry_run=True, client=fake)
     assert result["moved"] is False
@@ -24,11 +53,29 @@ def test_dry_run_does_not_call_set_alias(monkeypatch):
     assert fake.aliases == {}
 
 
-def test_apply_would_set_alias_on_fake_client():
+def test_apply_would_set_alias_on_fake_client(registry_config):
     fake = _FakeClient()
     result = promote_alias("3", alias="champion", dry_run=False, client=fake)
     assert result["moved"] is True
     assert list(fake.aliases.values()) == ["3"]
+
+
+def test_candidate_registration_has_provenance_and_pending_gate_tags(registry_config):
+    fake = _FakeClient()
+    version = register_candidate_version(
+        source="runs:/run-1/model",
+        run_id="run-1",
+        tags={"split": "val"},
+        client=fake,
+    )
+    assert version.version == "1"
+    tags = fake.registered[0]["tags"]
+    assert tags["status"] == "candidate"
+    assert tags["gate_verdict"] == "PENDING"
+    assert tags["robustness_metrics"] == "not_computed"
+    assert "dvc_data_hash" in tags
+    assert "git_commit" in tags
+    assert "config_hash" in tags
 
 
 def test_provisional_gate_blocks_live_promotion_policy():

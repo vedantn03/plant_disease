@@ -9,9 +9,9 @@
 | **T4** | MinIO Object Store (S3-Compatible) | DEFERRED | DEFERRED | See DECISIONS.md 2026-10-31 |
 | **T5** | Honest Evaluation Suite & Confused Pairs | DONE | DONE (Agent-only) | `reports/eval_summary.json` |
 | **T6** | Shortcut-Robustness Suite (Novelty) | DONE | DONE (Agent-only) | `src/robustness.py`, `reports/robustness_report.md` |
-| **T7** | Registry Lifecycle + Trust Gate + Rollback | TODO | TODO (M7.1) | `src/registry.py`, `reports/promotion_log.jsonl` |
+| **T7** | Registry Lifecycle + Trust Gate + Rollback | IN PROGRESS (dry-run only) | Pending approval and candidate runs | `src/registry.py`, `reports/promotion_log.jsonl`, `configs/gates/gate_thresholds.yaml` |
 | **T8** | Calibration, OOD, Quality & Abstention | TODO | TODO (M8.1) | `src/calibration.py`, `src/ood.py` |
-| **T9** | Registry-Backed Serving (`models:/...@champion`) | TODO | N/A | `src/model_loader.py` |
+| **T9** | Registry-Backed Serving (`models:/...@champion`) | IN PROGRESS (opt-in resolver; lifespan complete) | Pending MLflow artifact verification | `src/model_loader.py`, `src/api.py` |
 | **T10** | Docker Images & Compose Profiles | TODO | TODO (M10.1) | `docker-compose.yml`, `docs/evidence/docker/` |
 | **T11** | Metrics, Prometheus & Grafana Panels | TODO | TODO (M11.1) | `monitoring/`, `docs/evidence/grafana/` |
 | **T12** | Live Drift Detection & Alert Rules | TODO | TODO (M12.1) | `scripts/monitor_drift.py` |
@@ -25,3 +25,15 @@
 | **T20** | Cloud Architecture Mapping (AWS SageMaker) | TODO | N/A | `docs/CLOUD_PATH.md` |
 | **T21** | System Viva & Governance Pack | TODO | N/A | `docs/ARCHITECTURE.md`, `docs/RUNBOOK.md` |
 | **T22** | Live Demo Script & Checklist | TODO | N/A | `docs/DEMO.md` |
+
+## 2026-10-31 Update
+
+- Champion calibration refit: optimal `T=0.9759`; serving remains unscaled.
+- Masked-background evaluation now has one shared three-fill implementation.
+- Measured champion timing: 287.6 seconds per epoch and 2321.9 seconds for 8 epochs.
+- Candidate seed support and checkpoint provenance metadata were added without a write path to
+  `models/best_model.pth`.
+- Registry-backed serving now resolves the configured MLflow `@champion` alias only when
+  `serving.model_source: registry` is explicitly selected; local checkpoint serving remains
+  the default. Lifespan migration and machine-side alias verification remain pending.
+- Training and seed-variance runs remain blocked pending user confirmation.

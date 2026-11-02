@@ -58,7 +58,7 @@
   - Evaluated on 8,134 held-out test images across 1,000 non-parametric bootstrap iterations.
   - **Overall Accuracy**: **99.30%** [95% CI: 99.13%, 99.47%].
   - **Macro-F1**: **0.9903** [95% CI: 98.71%, 99.31%].
-  - Expected Calibration Error (ECE): 0.0050 before scaling, improved via temperature scaling ($T=1.25$).
+  - Expected Calibration Error (ECE): use the reproducible unscaled VAL/TEST artifact values; temperature scaling is diagnostic only and is not applied at serving unless a current VAL refit improves VAL NLL.
   - Sub-30ms serving: 2.52ms latency on GPU; 26.67ms on CPU (edge-compatible).
 - **Embedded Visual**: Precision-Recall curves (`reports/figures/pr_curve.png`) and Calibration curve (`reports/figures/calibration_curve.png`).
 

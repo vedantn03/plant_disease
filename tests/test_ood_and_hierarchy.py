@@ -16,10 +16,14 @@ from fastapi.testclient import TestClient
 
 from src.api import app
 from src.ood_detector import check_image_heuristics
+from conftest import api_artifact_skip_reason
 
 
 @pytest.fixture(scope="module")
 def client():
+    reason = api_artifact_skip_reason()
+    if reason:
+        pytest.skip(reason)
     with TestClient(app) as c:
         yield c
 

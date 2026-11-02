@@ -21,6 +21,7 @@ stages:
     cmd: python scripts/train.py
     deps:
       - scripts/train.py
+      - src/registry.py
       - src/model.py
       - src/dataset.py
       - configs/config.yaml
@@ -40,7 +41,8 @@ stages:
           - training.weight_decay
           - training.amp
     outs:
-      - models/best_model.pth
+      - models/candidates:
+          persist: true
 
   evaluate:
     cmd: python scripts/evaluate.py

@@ -20,7 +20,8 @@
 
 param(
     [Parameter(Position=0, Mandatory=$false)]
-    [string]$Target = "help"
+    [string]$Target = "help",
+    [int]$Seed = 42
 )
 
 $ErrorActionPreference = "Stop"
@@ -39,6 +40,7 @@ function Show-Help {
     Write-Host "  verify-gpu  - Verify CUDA GPU availability via PyTorch"
     Write-Host "  audit       - Audit dataset, check hashes, and generate group splits"
     Write-Host "  train       - Train ResNet-18 classifier (8 epochs, AMP)"
+    Write-Host "  candidate   - Train a candidate with an explicit seed; never promotes"
     Write-Host "  serve       - Start FastAPI backend directly on port 8000"
     Write-Host "  ui          - Start Streamlit dashboard on port 8501"
     Write-Host "  evaluate    - Run comprehensive evaluation suite and generate reports"
@@ -69,8 +71,20 @@ switch ($Target.ToLower()) {
         & $PYTHON scripts/audit_and_split.py
     }
     "train" {
-        Write-Host "Starting model training..." -ForegroundColor Cyan
+        Write-Host "Starting candidate training; models\best_model.pth is protected..." -ForegroundColor Cyan
         & $PYTHON scripts/train.py
+    }
+    "candidate" {
+        $champion = "models\best_model.pth"
+        $before = if (Test-Path $champion) { (Get-FileHash $champion -Algorithm MD5).Hash } else { "MISSING" }
+        Write-Host "Champion MD5 before: $before"
+        & $PYTHON scripts/train.py --candidate --seed $Seed
+        $after = if (Test-Path $champion) { (Get-FileHash $champion -Algorithm MD5).Hash } else { "MISSING" }
+        Write-Host "Champion MD5 after:  $after"
+        if ($before -ne $after) {
+            throw "Safety check failed: models\best_model.pth changed."
+        }
+        Write-Host "Candidate completed; champion checkpoint unchanged." -ForegroundColor Green
     }
     "serve" {
         Write-Host "Starting FastAPI backend on http://127.0.0.1:8000 ..." -ForegroundColor Cyan

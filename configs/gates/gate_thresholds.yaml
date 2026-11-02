@@ -20,36 +20,38 @@ champion_reference:
 criteria:
   macro_f1:
     provisional: true
-    rule: candidate_val_macro_f1 >= champion_val_macro_f1 - margin
+    metric: within_crop_macro_f1
+    rule: candidate_val_within_crop_macro_f1 >= champion_val_within_crop_macro_f1 - margin
     margin: 0.005
     derivation: >
-      Copied from the 2026-10-28 4-criterion note in docs/DECISIONS.md
-      (Macro-F1 delta >= -0.005). PROVISIONAL: replace with observed
-      seed-variance spread after C1/C2. First model compares against itself.
+      Baseline is the measured champion VAL within-crop macro-F1 of 0.9908.
+      The margin remains provisional until seed variance is measured. The first
+      model compares against itself.
 
   min_recall:
     provisional: true
-    rule: min_over_classes(val_recall) >= floor  (point estimate)
+    rule: min_over_classes(val_recall) >= floor, subject to tiny-class rule
     floor: 0.85
     tiny_class_rule: pending_approval
     tiny_class_n_example: 23
     derivation: >
-      Floor 0.85 copied from docs/MANUAL_STEPS.md Task T7. Tiny classes
-      (e.g. Potato___healthy TEST support 23) move 1/n ≈ 0.0435 recall per
-      extra error. Proposed alternatives (not applied until approved):
+      Floor 0.85 copied from docs/MANUAL_STEPS.md Task T7. A class with
+      n_val=23 moves 1/n ≈ 0.0435 recall per extra error. Proposed alternatives
+      (not applied until approved):
       (a) Wilson lower bound of recall vs floor; (b) skip classes with
       n_val < n_min. See reports/tiny_class_recall_analysis.json after
       scripts/compute_val_diagnostics.py.
 
   bg_drop:
     provisional: true
-    rule: val_clean_macro_f1 - val_masked_macro_f1 <= max_drop
-    max_drop: 0.08
+    rule: candidate_val_bg_drop <= champion_val_bg_drop + margin
+    margin: 0.02
+    absolute_informational_max: 0.08
     derivation: >
-      Ceiling 0.08 copied from docs/MANUAL_STEPS.md Task T7. Interpretation:
-      the model retains (1 - bg_drop) of clean macro-F1 when the background
-      is masked; the drop mixes background reliance with masking artifacts.
-      Must be recomputed on VAL, not copied from TEST.
+      The old <=0.08 ceiling had no VAL basis: 0.0663 was a TEST value.
+      The measured champion VAL black-fill drop is 0.1843. Use a relative
+      margin under the agreed three-fill protocol; the absolute value is
+      informational only. The drop mixes background reliance with masking artifacts.
 
   ece:
     provisional: true
@@ -58,7 +60,7 @@ criteria:
     n_bins: 15
     temperature_scaling: not_applied_at_serving
     derivation: >
-      Ceiling 0.05 copied from docs/MANUAL_STEPS.md Task T7. ECE is the
-      unscaled (T=1) 15-bin value on VAL. Bootstrap percentile CIs for ECE
+      Ceiling 0.05 remains provisional. The measured unscaled (T=1) VAL ECE
+      is 0.00110. Bootstrap percentile CIs for ECE
       are known to be upward-biased; the point estimate can fall outside
       its own bootstrap CI (see docs/DECISIONS.md).

@@ -69,6 +69,7 @@ class GateMetrics:
     min_recall: float
     bg_drop: float
     ece: float
+    within_crop_macro_f1: float | None = None
     min_recall_class: str | None = None
     min_recall_n: int | None = None
     min_recall_wilson_lower: float | None = None
@@ -101,7 +102,11 @@ def evaluate_gate(
 
     criteria_cfg = thresholds["criteria"]
     first_model = champion is None
-    champ_f1 = candidate.macro_f1 if first_model else champion.macro_f1
+    candidate_f1 = candidate.within_crop_macro_f1 or candidate.macro_f1
+    champion_f1 = None if champion is None else (
+        champion.within_crop_macro_f1 or champion.macro_f1
+    )
+    champ_f1 = candidate_f1 if first_model else champion_f1
 
     results: list[CriterionResult] = []
 
@@ -109,9 +114,9 @@ def evaluate_gate(
     f1_cfg = criteria_cfg["macro_f1"]
     f1_margin = float(f1_cfg["margin"])
     f1_floor = champ_f1 - f1_margin
-    f1_pass = candidate.macro_f1 >= f1_floor
+    f1_pass = candidate_f1 >= f1_floor
     f1_reason = (
-        f"VAL macro-F1 {candidate.macro_f1:.4f} vs floor {f1_floor:.4f} "
+        f"VAL within-crop macro-F1 {candidate_f1:.4f} vs floor {f1_floor:.4f} "
         f"(champion {champ_f1:.4f} - margin {f1_margin:.4f}"
         f"{'; first-model bootstrap' if first_model else ''})"
     )
@@ -119,7 +124,7 @@ def evaluate_gate(
         name="macro_f1",
         passed=f1_pass,
         provisional=bool(f1_cfg.get("provisional", True)),
-        observed=candidate.macro_f1,
+        observed=candidate_f1,
         threshold=f1_floor,
         reason=f1_reason if f1_pass else f"FAIL: {f1_reason}",
     ))
@@ -144,18 +149,25 @@ def evaluate_gate(
 
     # 3. Background-mask drop (upper bound on shortcut + masking artifacts)
     bg_cfg = criteria_cfg["bg_drop"]
-    bg_max = float(bg_cfg["max_drop"])
-    bg_pass = candidate.bg_drop <= bg_max
+    bg_margin = float(bg_cfg["margin"])
+    bg_ceiling = (
+        candidate.bg_drop
+        if first_model
+        else round(champion.bg_drop + bg_margin, 10)
+    )
+    bg_pass = first_model or candidate.bg_drop <= bg_ceiling
     bg_reason = (
-        f"VAL bg_drop {candidate.bg_drop:.4f} vs max {bg_max:.4f} "
-        "(drop mixes background reliance with masking artifacts)"
+        f"VAL bg_drop {candidate.bg_drop:.4f} vs champion-relative ceiling {bg_ceiling:.4f} "
+        f"(margin {bg_margin:.4f}; absolute informational value "
+        f"{bg_cfg.get('absolute_informational_max', 'not set')}; "
+        "drop mixes background reliance with masking artifacts)"
     )
     results.append(CriterionResult(
         name="bg_drop",
         passed=bg_pass,
         provisional=bool(bg_cfg.get("provisional", True)),
         observed=candidate.bg_drop,
-        threshold=bg_max,
+        threshold=bg_ceiling,
         reason=bg_reason if bg_pass else f"FAIL: {bg_reason}",
     ))
 

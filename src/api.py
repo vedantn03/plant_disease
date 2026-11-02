@@ -21,6 +21,7 @@ import io
 import json
 import logging
 import time
+from contextlib import asynccontextmanager
 from collections import defaultdict
 from pathlib import Path
 from typing import Optional
@@ -41,6 +42,7 @@ from src.advisory_engine import AdvisoryEngine, DISCLAIMER
 from src.calibration import probs_from_logits
 from src.config_loader import load_config
 from src.model import GradCAM, build_model, heatmap_to_base64_png, preprocess_image
+from src.model_loader import resolve_serving_checkpoint
 from src.ood_detector import check_image_heuristics
 from src.utils import ensure_dir, get_logger, parse_class_name
 
@@ -49,16 +51,6 @@ log = get_logger("api", level=logging.INFO)
 # ─────────────────────────────────────────────────────────────────────────────
 # App init & model loading
 # ─────────────────────────────────────────────────────────────────────────────
-
-app = FastAPI(
-    title="Plant Disease Advisory API",
-    description=(
-        "Classifies leaf images into PlantVillage classes and returns a "
-        "treatment advisory from a cited knowledge base. "
-        "NOT a field-ready diagnostic tool. See /docs for full schema."
-    ),
-    version="0.1.0",
-)
 
 # State (loaded on startup)
 _state: dict = {
@@ -75,10 +67,10 @@ _state: dict = {
     "class_counts": defaultdict(int),
     "confidence_sum": 0.0,
     "log_file": None,
+    "model_provenance": {},
 }
 
 
-@app.on_event("startup")
 async def startup() -> None:
     """Load model, config, coverage matrix, and advisory engine on startup."""
     project_root = Path(__file__).resolve().parent.parent
@@ -89,7 +81,8 @@ async def startup() -> None:
     log.info(f"Inference device: {device}")
 
     # Load model
-    checkpoint_path = project_root / "models" / "best_model.pth"
+    checkpoint_path, provenance = resolve_serving_checkpoint(cfg, project_root)
+    _state["model_provenance"] = provenance
     if not checkpoint_path.exists():
         log.warning(f"No checkpoint found at {checkpoint_path}. /predict will return 503.")
         _state["model"] = None
@@ -119,7 +112,10 @@ async def startup() -> None:
             except Exception:
                 crop_to_classes["unknown"].append(cls_name)
         _state["crop_to_classes"] = crop_to_classes
-        log.info(f"Model loaded: {num_classes} classes, device={device}")
+        log.info(
+            f"Model loaded: {num_classes} classes, device={device}, "
+            f"source={provenance.get('model_source')}"
+        )
 
     # Advisory engine
     _state["advisory_engine"] = AdvisoryEngine(project_root / "kb" / "advisories.yaml")
@@ -139,12 +135,32 @@ async def startup() -> None:
     log.info(f"Request log: {log_path}")
 
 
-@app.on_event("shutdown")
 async def shutdown() -> None:
     if _state["log_file"]:
         _state["log_file"].close()
     if _state["grad_cam"]:
         _state["grad_cam"].remove_hooks()
+
+
+@asynccontextmanager
+async def lifespan(_app: FastAPI):
+    await startup()
+    try:
+        yield
+    finally:
+        await shutdown()
+
+
+app = FastAPI(
+    title="Plant Disease Advisory API",
+    description=(
+        "Classifies leaf images into PlantVillage classes and returns a "
+        "treatment advisory from a cited knowledge base. "
+        "NOT a field-ready diagnostic tool. See /docs for full schema."
+    ),
+    version="0.1.0",
+    lifespan=lifespan,
+)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -177,6 +193,8 @@ async def health() -> dict:
         "status": "ok" if model_loaded else "degraded",
         "model_loaded": model_loaded,
         "device": _state.get("device", "unknown"),
+        "model_source": _state.get("model_provenance", {}).get("model_source", "unknown"),
+        "model_uri": _state.get("model_provenance", {}).get("model_uri", "unknown"),
     }
 
 

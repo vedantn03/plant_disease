@@ -87,7 +87,11 @@ Extensively used in academic benchmarking (>3,000 citations). Widely utilized fo
 Freely available under public open-access academic repositories (e.g., Mendeley Data, Kaggle).
 
 ### What is the dataset license?
-Creative Commons Attribution-ShareAlike 4.0 International (CC BY-SA 4.0).
+The repository does not record the exact download URL used for the local copy, so
+the applicable license for that copy is **unverified**. The official Zenodo
+color-image record currently states Creative Commons Attribution-ShareAlike 3.0
+United States (CC BY-SA 3.0 US): https://zenodo.org/records/1204914. Confirm
+that record is the source used before redistributing derived images.
 
 ---
 

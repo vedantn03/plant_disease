@@ -112,6 +112,36 @@ def set_version_tags(name: str, version: str, tags: dict[str, str], client: Mlfl
         client.set_model_version_tag(name, version, key, str(value))
 
 
+def register_candidate_version(
+    source: str,
+    run_id: str,
+    tags: dict[str, str] | None = None,
+    client: MlflowClient | None = None,
+) -> Any:
+    """Register a model artifact as a candidate with provenance tags."""
+    cfg = load_config()
+    client = client or get_client()
+    name = cfg.mlflow.registered_model_name
+    try:
+        client.create_registered_model(name)
+    except MlflowException as exc:
+        if "already exists" not in str(exc).lower():
+            raise
+
+    version_tags = default_tags({
+        "status": "candidate",
+        "gate_verdict": "PENDING",
+        "robustness_metrics": "not_computed",
+        **(tags or {}),
+    })
+    return client.create_model_version(
+        name=name,
+        source=source,
+        run_id=run_id,
+        tags=version_tags,
+    )
+
+
 def promote_alias(
     version: str,
     alias: str | None = None,
@@ -145,7 +175,7 @@ def rollback_champion(dry_run: bool = True, client: MlflowClient | None = None) 
     """
     Move @champion to the previous version that carries gate_verdict=PASS.
 
-    Refuses to point at a version that would fail the gate (e.g. subsample v1).
+    Refuses to point at a version without an explicit gate_verdict=PASS tag.
     """
     cfg = load_config()
     client = client or get_client()

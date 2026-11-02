@@ -1,5 +1,5 @@
 # Pre-commit configuration for plant_disease
-# Enforces code hygiene, secret scanning, and file size boundaries.
+# Enforces code hygiene and file size boundaries. It does not scan for secrets.
 
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks

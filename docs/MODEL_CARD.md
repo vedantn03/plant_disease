@@ -16,10 +16,10 @@
 | **Task** | Multi-class image classification (38 classes, 14 crops) |
 | **Input** | RGB image → Resize(256) → CenterCrop(224) → ImageNet normalise |
 | **Output** | Class probabilities over 38 PlantVillage classes |
-| **Version** | Champion v2 (full-data run, 8 epochs) |
+| **Version** | Local full-data checkpoint (historical documents called this Champion v2) |
 | **MLflow Run ID** | `fb731412d82544e0abc231b8d7c62f95` |
 | **Checkpoint** | `models/best_model.pth` |
-| **Registry alias** | `champion` → version 2 |
+| **Registry alias** | Not verifiable from this checkout; inspect the MLflow registry before claiming an alias |
 
 ---
 
@@ -57,6 +57,7 @@
 | **Preprocessing (val/test/inference)** | Resize(256) → CenterCrop(224) → ImageNet normalise |
 | **AMP** | Enabled (FP16, RTX 3050 6 GB) |
 | **Imbalance handling** | Inverse-frequency class-weighted CE loss |
+| **Measured champion training time** | 287.6 s/epoch; 2321.9 s for 8 epochs (~39 min) |
 
 ---
 
@@ -118,9 +119,30 @@ All from `reports/metrics.json`.
 
 | Item | Value | Source |
 |------|-------|--------|
-| Temperature scaling factor T | 1.32 | `reports/metrics.json` → temperature_scale |
+| Temperature scaling factor T | 0.9759 diagnostic optimum; serving uses T=1 | `reports/temperature_refit.json` |
 | Pre-scaling ECE | see calibration section of metrics.json | measured |
 | Post-scaling ECE | see calibration section of metrics.json | measured |
+
+Temperature scaling is not applied at serving because the VAL NLL improvement from
+0.01920 to 0.01919 is negligible.
+
+## Background-Masking Robustness
+
+The shared protocol uses Woebbecke ExG segmentation and reports three fills:
+black, mid-grey, and each image's mean background colour. A masked-background drop
+mixes background reliance with masking artifacts; it is not a measurement of the
+fraction of signal derived from pathology.
+
+| Split / fill | Clean macro-F1 | Masked macro-F1 | bg_drop |
+|---|---:|---:|---:|
+| VAL / black | 0.9919 | 0.8076 | 0.1843 |
+| TEST / black | 0.9903 | 0.9240 | 0.0663 |
+| VAL / mid-grey | pending artifact | pending artifact | pending artifact |
+| TEST / mid-grey | pending artifact | pending artifact | pending artifact |
+| VAL / per-image mean | pending artifact | pending artifact | pending artifact |
+| TEST / per-image mean | pending artifact | pending artifact | pending artifact |
+
+The three-fill range, rather than one fill, is the robustness report and gate input.
 
 ---
 
