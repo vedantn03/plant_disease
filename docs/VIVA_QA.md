@@ -29,8 +29,7 @@
 
 #### Q6: What are the exact champion metrics and their confidence intervals?
 **Answer**: Evaluated across 8,134 held-out test images with 1,000 non-parametric bootstrap iterations:
-- **Test Accuracy**: **99.30%** [95% CI: 99.13%, 99.47%]
-- **Macro-F1**: **0.9903** [95% CI: 98.71%, 99.31%]
+- Test accuracy and Macro-F1: use the saved `reports/metrics.json` values; cite confidence intervals only from that report.
 - **Expected Calibration Error (ECE)**: use the reproducible unscaled VAL/TEST artifact values; temperature scaling is diagnostic only and is not applied at serving unless a current VAL refit improves VAL NLL.
 
 ---
@@ -43,20 +42,18 @@
 #### Q8: How did you implement automated leaf segmentation?
 **Answer**: In `src/segmentation.py`, we implemented the Woebbecke Excess Green Index:
 $$ExG = 2G - R - B$$
-Combined with saturation thresholding in HSV color space, binary morphological opening (`scipy.ndimage`), and largest connected component extraction, it isolates the green/chlorotic leaf lamina. Benchmarked across 40 random test leaves, it achieved **100% clean extraction (0% failure rate)**.
+Combined with saturation thresholding in HSV color space, binary morphological opening (`scipy.ndimage`), and largest connected component extraction, it isolates the green/chlorotic leaf lamina. Benchmark result: **unverified here**; check the current segmentation report.
 
 #### Q9: What were the results of the background-randomization experiments (E0, E1, E2)?
-**Answer**:
-- **E0 (Baseline)**: Clean accuracy = 56.50%, but collapsed to **31.50%** on background-swapped test images (a 25% drop). Center-masked reliance was 37.00%.
-- **E1 (Randomized 80%)**: Clean accuracy = 66.00%, Background-swapped = 60.00%.
-- **E2 (Mixed 40% clean / 60% randomized)**: Clean accuracy = 66.50%, Background-swapped = **60.50%** (**91.0% retention** under complete background shift), while center-masked spurious reliance dropped from 37% down to **25%**.
+**Answer**: See the saved `reports/BIAS_STUDY.md` for experiment values and conditions. Quote results
+with the report's split and setup; do not generalize them beyond that experiment.
 
 ---
 
 ### Category 4: Selective Prediction & Out-of-Distribution Detection
 
 #### Q10: Why is softmax thresholding flawed for rejecting non-leaf images?
-**Answer**: Softmax forces probabilities to sum to 1. On uniform inputs (such as a solid grey tile or random noise), logit values are near zero, but small imbalances are amplified by exponentiation. In our tests, a flat grey tile received **99.95% confidence** under max-softmax, completely bypassing a 0.50 threshold.
+**Answer**: Softmax forces probabilities to sum to 1, so confidence alone is not a reliable OOD check. Quote specific grey-tile confidence only when supported by a current saved report; otherwise mark it unverified.
 
 #### Q11: How does your Layer 1 Heuristic Pre-Check work?
 **Answer**: Layer 1 executes in $<0.1$ ms before any neural inference:
@@ -71,10 +68,9 @@ $$E(x; T) = -T \cdot \log \sum_{i=1}^C \exp\left(\frac{z_i}{T}\right)$$
 Unlike softmax, Energy does not constrain outputs to sum to 1. It is mathematically proportional to the negative log marginal likelihood of the input. In-distribution leaf images produce large negative energy scores ($E \le -12.44$), whereas non-leaf noise and out-of-distribution inputs yield higher energy values.
 
 #### Q13: What are the empirical OOD detection benchmark numbers?
-**Answer**: Evaluated on PlantVillage test leaves (ID) vs CIFAR/noise/textures (OOD):
-- **Max Softmax**: AUROC = 0.8369, FPR95 = 63.3%.
-- **Energy Score Alone**: AUROC = 0.8831, FPR95 = 61.7%.
-- **Layer 1 Heuristics + Energy Score**: AUROC = **0.9548**, FPR95 = **10.0%** (an **84% reduction in false positives**!).
+**Answer**: The saved `reports/ood_metrics.json` reports max-softmax AUROC 0.8369/FPR95 0.6333,
+energy AUROC 0.8831/FPR95 0.6167, and layered prefilter+energy AUROC 0.9548/FPR95 0.1. These
+are report-specific benchmark results, not a claim of field performance.
 
 ---
 
@@ -143,28 +139,24 @@ This steep collapse proves the explainers identify true functional decision feat
 ### Category 8: Production MLOps, Drift & Governance
 
 #### Q25: How does the automated 4-criterion promotion gate work?
-**Answer**: In `scripts/promote.py`, a candidate model is promoted to `champion` only if:
-1. Macro-F1 delta $\ge -0.005$ relative to current champion.
-2. Per-class recall floor $\ge 0.85$ across all 38 classes.
-3. OOD discrimination AUROC $\ge 0.85$.
-4. Background swap accuracy retention $\ge 75\%$.
+**Answer**: `scripts/promote.py` evaluates VAL within-crop macro-F1, minimum per-class recall,
+champion-relative masked-background drop, and ECE. Thresholds remain provisional; dry-run is the
+current workflow and `--apply` is refused while criteria are provisional. TEST metrics are for
+reporting only and do not drive candidate selection.
 
 #### Q26: What throughput does the batch inference engine achieve?
-**Answer**: In `scripts/batch_infer.py`:
-- **Single image**: 110.5 frames per second (9.05 ms/image).
-- **Batch size 16**: 263.3 frames per second (3.80 ms/image).
-- **Batch size 64**: **317.4 frames per second** (3.15 ms/image).
+**Answer**: The saved `reports/INFERENCE_BENCHMARK.md` reports 110.5, 263.3, and 317.4 images/sec
+for batch sizes 1, 16, and 64 respectively, under its stated benchmark setup.
 
 #### Q27: How is data drift detected in production?
-**Answer**: In `scripts/simulate_drift.py`, incoming requests are logged to `logs/requests.jsonl`. We apply the **two-sample Kolmogorov-Smirnov (KS) test** and compute the **Population Stability Index (PSI)** on image brightness, blur score (variance of Laplacian), and prediction confidence. Shifts exceeding critical thresholds trigger automated alerts.
+**Answer**: The real-log path is `scripts/drift_exporter.py`: it compares a sliding window of API request-log features with a TRAIN-split baseline. `scripts/simulate_drift.py` remains SIMULATION ONLY. Replay is staged traffic, not real users, and threshold choices are provisional.
 
 #### Q28: How does the automated retraining trigger work?
-**Answer**: `scripts/check_drift_and_trigger.py` parses `reports/drift_report.json`. If drift $p$-value $<0.05$ or $\text{PSI} > 0.25$, it generates `reports/retraining_trigger.json` containing drift metrics, severity, and an execution command for the retraining pipeline.
+**Answer**: `scripts/check_drift_and_trigger.py` is SIMULATION ONLY and will not create synthetic inputs or trigger retraining. Real-log monitoring exposes a Prometheus alert; no automated retraining is connected.
 
 #### Q29: How did you verify deterministic reproducibility?
 **Answer**: In `scripts/reproduce_check.py`, we run dual forward passes with identical seeds and weights across a batch of images. The script asserts:
-- Class prediction agreement = **100%**.
-- Maximum logit difference = **0.000000**.
+- Class prediction agreement and maximum logit difference: **unverified here**; check the current reproducibility report.
 
 #### Q30: What is the commercial positioning of this project?
 **Answer**: This project is an **academic prototype of the engineering pipeline behind a crop diagnostic advisory**, built to demonstrate end-to-end MLOps best practices (data grouping, bias mitigation, layered OOD, dual explainability, audited advisories, drift triggers). It is **not field-ready software** and does not claim commercial equivalence.

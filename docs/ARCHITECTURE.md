@@ -61,8 +61,10 @@ flowchart TD
     subgraph User_Interface["4. Presentation, Monitoring & Governance"]
         API --> Streamlit["app/ui.py (Streamlit :8501)\n5 Interactive Tabs"]
         JSONL --> Streamlit
-        JSONL --> Drift["scripts/simulate_drift.py\nTwo-sample KS-Test & PSI Shift"]
-        Drift --> DriftTrigger["scripts/check_drift_and_trigger.py\n(retraining_trigger.json)"]
+        JSONL --> DriftExporter["scripts/drift_exporter.py\nReal request log window; staged replay is labeled"]
+        DriftExporter --> Prom["Prometheus drift gauges and alert rule"]
+        TestSplit --> DriftSimulation["SIMULATION ONLY: scripts/simulate_drift.py"]
+        DriftSimulation --> DriftTrigger["SIMULATION ONLY: scripts/check_drift_and_trigger.py"]
     end
 ```
 
@@ -83,9 +85,10 @@ flowchart TD
 | **Model Registry & Gate** | `scripts/promote.py` | Enforces a provisional four-criterion gate: within-crop VAL macro-F1 retention, per-class recall floor, champion-relative masked-background drop, and ECE. |
 | **Advisory Engine v2** | `src/advisory_engine.py` | Matches Schema v2 advisories from `kb/advisories.yaml` and foliar epidemiological risk from `kb/weather_rules.yaml` with negative constraint checks. |
 | **Batch Inference Engine** | `scripts/batch_infer.py` | High-throughput batch inference engine processing image manifests via mini-batched tensors (110.5 fps single, 317.4 fps batch-64). |
-| **Telemetry & Drift Engine** | `scripts/simulate_drift.py` & `check_drift_and_trigger.py` | Logs incoming query features (blur, brightness, latency), runs two-sample KS and PSI tests, and issues automated retraining trigger manifests upon drift breach. |
+| **Telemetry & Drift Engine** | `scripts/compute_baseline_features.py`, `scripts/drift_exporter.py` | Computes a TRAIN-split feature baseline and evaluates sliding windows from `logs/requests.jsonl`; staged replay is recorded, and drift thresholds remain provisional. Legacy drift scripts are SIMULATION ONLY. |
 | **Reproducibility Harness** | `scripts/reproduce_check.py` | Validates strict deterministic forward passes, asserting zero logit divergence across identical seeds. |
-| **Web Dashboard** | `app/ui.py` | Five-tab Streamlit dashboard offering Diagnostic Screening, Telemetry Monitoring, Bias Study Evidence, Coverage & Structural Gaps, and MLOps Governance. |
+| **Registry-verified Serving & Metrics** | `src/api.py`, `src/model_loader.py` | Resolves the registry champion alias read-only, loads mounted checkpoint weights, reports manifest/MD5 match in health, and exposes Prometheus metrics. |
+| **Web Dashboard** | `app/ui.py` | Three-tab Streamlit dashboard: Diagnostic Screening, Production Telemetry, and MLOps System. |
 
 ---
 

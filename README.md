@@ -92,8 +92,29 @@ curl -X POST http://localhost:8000/predict -F "file=@leaf.jpg" -F "temperature_c
 ```powershell
 # Start the API first, then:
 ..\\.venv\\Scripts\\python.exe scripts\\simulate_drift.py
-# Output: reports/drift_report.md, reports/drift_plot.png
+# SIMULATION ONLY: outputs reports/drift_report.md and reports/drift_plot.png
 ```
+
+### Real request-log drift monitoring (WP4)
+
+The request-log monitor compares API log windows with a TRAIN-split feature baseline. Replay
+traffic is staged traffic and is recorded as `traffic_source=replay`; it is never represented as
+real users. The configured PSI threshold is a proposal awaiting approval. The old drift demo and
+legacy trigger script remain SIMULATION ONLY.
+
+After the API and monitoring profile are running, generate the baseline on the machine that has
+the TRAIN split, DVC hash manifest, and champion checkpoint:
+
+```powershell
+..\.venv\Scripts\python.exe scripts\compute_baseline_features.py
+```
+
+The command prints its measured elapsed time. No runtime estimate is published because this
+baseline includes local champion inference and the required files are unavailable here. Then
+send enough normal API traffic to meet `drift.minimum_sample_count`; inspect
+`reports\drift_latest.json`, Prometheus `/alerts`, and the drift panels. Repeat with staged replay
+using `--degrade blur` and `--degrade dark`. A flag is conditional on the configured provisional
+rule and observed window values; the Prometheus alert also waits for the configured `alert_for`.
 
 ---
 
@@ -110,7 +131,7 @@ curl -X POST http://localhost:8000/predict -F "file=@leaf.jpg" -F "temperature_c
 | 7 | Show advisory | Show VERIFIED advisory (Tomato Early Blight) + PLACEHOLDER |
 | 8 | Show uncertain | Send a non-leaf / blurry image → `status=uncertain` |
 | 9 | Show /stats | `GET http://localhost:8000/stats` |
-| 10| Drift demo | `python scripts/simulate_drift.py` → show drift_plot.png |
+| 10| SIMULATION drift demo | `python scripts/simulate_drift.py` → SIMULATION-only drift_plot.png |
 
 ---
 
@@ -139,23 +160,38 @@ curl -X POST http://localhost:8000/predict -F "file=@leaf.jpg" -F "temperature_c
 
 ---
 
-## One-Command Quickstart Stack
+## Docker Compose Quickstart
+
+Run these commands in PowerShell from the repository directory. The Compose API uses the
+read-only `models/` checkpoint mount and does not mount or require the training dataset.
+The mounted `models/best_model.pth` checkpoint is still required for predictions.
 
 ```powershell
-# 1. Launch FastAPI Serving Backend (Terminal 1)
-make serve
-# API runs on http://127.0.0.1:8000 (Swagger docs at /docs)
-
-# 2. Launch Interactive Streamlit UI (Terminal 2)
-make ui
-# Opens in browser at http://localhost:8501
-
-# 3. Run Full Evaluation Suite (Regenerate 11 Figures + Reports)
-make evaluate
-
-# 4. Run Test Suite (18 Unit Tests)
-make test
+if (!(Test-Path .env)) { Copy-Item .env.example .env }
+notepad .env
+docker compose config
+.\tasks.ps1 up-core
 ```
+
+Set local Grafana credentials in `.env` before starting monitoring. Start the monitoring
+profile after core is healthy:
+
+```powershell
+.\tasks.ps1 up-monitoring
+```
+
+Open API health at `http://localhost:8000/health`, the Streamlit UI at
+`http://localhost:8501`, Prometheus targets at `http://localhost:9090/targets`, and Grafana at
+`http://localhost:3000`. Grafana uses the credentials in `.env`; no default password is supplied.
+Prometheus scrapes the Compose API service at `api:8000/metrics` every 15 seconds. For an API
+running on the host instead, set the Prometheus target to `host.docker.internal:8000`.
+
+The Docker build uses the explicit `python:3.12-slim` base tag ([official Python image tags](https://hub.docker.com/_/python?tab=description)). Prometheus is pinned to `prom/prometheus:v3.13.2` ([official image tags](https://hub.docker.com/r/prom/prometheus/tags)); Grafana is pinned to `grafana/grafana:13.2.1` ([official image tags](https://hub.docker.com/r/grafana/grafana/tags)). Official installation references: [Prometheus Docker installation](https://prometheus.io/docs/prometheus/latest/installation/) and [Grafana Docker installation](https://grafana.com/docs/grafana/latest/setup-grafana/installation/docker/).
+
+The project path contains an apostrophe. Compose bind mounts use relative YAML paths; quote the
+PowerShell location explicitly with `Set-Location -LiteralPath "D:\VIT\Hackathons\SIH'26\Airafare-proj\plant_disease"`.
+If Docker reports a bind-mount/path translation error, retry from an apostrophe-free checkout
+path that Docker Desktop can access.
 
 ---
 
@@ -179,7 +215,7 @@ Capture the following 4 screenshots during your live demo for report/slide submi
 | **Model Registry & Gate** | MLflow registration and the `champion` alias are implemented in `src/registry.py` and `scripts/promote.py`; registry state is runtime-local and must be verified from MLflow artifacts. |
 | **Inference Serving** | FastAPI (`src/api.py`) with automatic input validation, Grad-CAM attribution, confidence thresholding (0.50), and JSON lines request logging. |
 | **Interactive Dashboard** | Streamlit single-page application (`app/ui.py`) with Diagnose, Monitoring, and Model & Evidence tabs. |
-| **Drift Monitoring** | `scripts/simulate_drift.py` applying Kolmogorov-Smirnov (KS) tests and Population Stability Index (PSI) to detect optical distribution shifts. |
+| **Drift Monitoring** | `scripts/drift_exporter.py` compares real request-log windows with a TRAIN-split baseline; replay is staged traffic. `scripts/simulate_drift.py` remains SIMULATION ONLY. |
 | **Responsible AI & Governance** | Pure PyTorch Grad-CAM hooks, temperature-scaled calibration (ECE), empirical bias probe replication, and strictly cited agricultural advisories (`docs/SOURCE_AUDIT.md`). |
 
 ---

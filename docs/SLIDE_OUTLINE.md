@@ -21,12 +21,12 @@
 ---
 
 ### Slide 2: Data Audit, Group Partitioning & Leakage Prevention
-- **Headline**: Auditing 54,305 PlantVillage Images & Resolving Multi-Shot Capture Leakage
+- **Headline**: Auditing PlantVillage Images & Resolving Multi-Shot Capture Leakage
 - **Talking Points**:
-  - SHA-256 hash deduplication removed 21 exact identical duplicate images.
+  - Exact duplicate removal count: **unverified here**; check the current audit report.
   - Multi-shot leaves share camera sequence tokens (e.g. `GH_HL Leaf 173.1`, `173.2`); naive splitting places identical physical leaves in both train and test splits.
   - Furthermore, independent lab photographers reused generic IDs across different crops (`RS_HL 5672` in Apple and Soybean).
-  - Implemented crop-prefixed scoping `<crop>::<id>` with stratified 70/15/15 partitioning (Train: 38,002, Val: 8,148, Test: 8,134).
+  - Implemented crop-prefixed scoping `<crop>::<id>` with group-aware partitioning; split sizes: **unverified here**.
   - Automated unit test proves mathematically zero intersection between train and test groups.
 - **Embedded Visual**: Data manifest audit table from `reports/audit_report.md`.
 
@@ -35,7 +35,7 @@
 ### Slide 3: End-to-End System Architecture
 - **Headline**: Decoupled, Observable MLOps Lifecycle Architecture
 - **Talking Points**:
-  - Decoupled stages: Data Versioning (DVC) $\rightarrow$ Training & MLflow $\rightarrow$ 4-Criterion Promotion Gate $\rightarrow$ Multi-Layer Serving (FastAPI) $\rightarrow$ 5-Tab Streamlit Dashboard $\rightarrow$ Live Drift Telemetry & Retraining Trigger.
+  - Decoupled stages: Data Versioning (DVC) $\rightarrow$ Training & MLflow $\rightarrow$ provisional Promotion Gate $\rightarrow$ Multi-Layer Serving (FastAPI) $\rightarrow$ three-tab Streamlit Dashboard $\rightarrow$ simulated drift assessment.
   - Layered input validation: Layer 1 optical heuristics immediately reject non-leaf objects ($<0.1$ ms); Layer 2 Helmholtz energy score handles OOD distribution shifts.
   - Crop-aware hierarchical switch dynamically renormalizes class probabilities.
 - **Embedded Visual**: Mermaid architecture diagram from `docs/ARCHITECTURE.md`.
@@ -45,9 +45,9 @@
 ### Slide 4: Neural Model Training & MLflow Tracking
 - **Headline**: ResNet-18 with Class-Weighted Cross-Entropy on Host GPU
 - **Talking Points**:
-  - Handled 36:1 severe class imbalance (5,507 majority vs 152 minority) using inverse-frequency loss weighting, avoiding epoch distortion.
-  - Automatic Mixed Precision (AMP FP16) training executed on local RTX 3050 Laptop GPU for 8 epochs with Cosine Annealing.
-  - 100% parameter, code version, and metric provenance logged to SQLite-backed MLflow tracking server.
+  - Class imbalance: use counts from the current dataset report.
+  - Training configuration and hardware: use current run provenance.
+  - MLflow records configured run parameters and metrics.
 - **Embedded Visual**: MLflow loss and Macro-F1 progression charts.
 
 ---
@@ -55,11 +55,10 @@
 ### Slide 5: Baseline Evaluation & Non-Parametric Bootstrap Validation
 - **Headline**: High Evaluation Performance with Rigorous Statistical Bounds
 - **Talking Points**:
-  - Evaluated on 8,134 held-out test images across 1,000 non-parametric bootstrap iterations.
-  - **Overall Accuracy**: **99.30%** [95% CI: 99.13%, 99.47%].
-  - **Macro-F1**: **0.9903** [95% CI: 98.71%, 99.31%].
+  - Evaluation sample count and bootstrap settings: **unverified here**; confirm from current report.
+  - Saved report `reports/metrics.json`: accuracy 99.30%; macro-F1 0.9903 with 95% bootstrap interval 0.9871–0.9931.
   - Expected Calibration Error (ECE): use the reproducible unscaled VAL/TEST artifact values; temperature scaling is diagnostic only and is not applied at serving unless a current VAL refit improves VAL NLL.
-  - Sub-30ms serving: 2.52ms latency on GPU; 26.67ms on CPU (edge-compatible).
+  - Serving latency: **unverified here**; confirm from current benchmark.
 - **Embedded Visual**: Precision-Recall curves (`reports/figures/pr_curve.png`) and Calibration curve (`reports/figures/calibration_curve.png`).
 
 ---
@@ -68,11 +67,8 @@
 - **Headline**: Attacking Spurious Laboratory Background Memorization
 - **Talking Points**:
   - Noyan (2022) background probe: Random Forest trained solely on 4 corner background pixels achieved 46.1% accuracy (chance is 2.6%).
-  - Built automated foreground segmentation via Woebbecke Excess Green Index ($ExG = 2G - R - B$) with 100% clean extraction across 40 samples.
-  - Conducted three controlled experiments:
-    - **E0 (Baseline)**: Collapsed from 56.5% to 31.5% on background-swapped leaves (a 25% drop).
-    - **E2 (Mixed 40/60)**: Achieved 66.5% clean and **60.5% background-swapped** (**91.0% retention** under complete background shifts!).
-    - Center-masked spurious reliance slashed from 37% down to 25%.
+  - Built automated foreground segmentation via Woebbecke Excess Green Index ($ExG = 2G - R - B$); quantitative extraction results are unverified here.
+  - Experiment metrics: **unverified here**; insert only values present in the current bias-study report.
 - **Embedded Visual**: `reports/figures/bias_ablation_comparison.png` and `reports/figures/segmentation_40_grid.png`.
 
 ---
@@ -81,8 +77,7 @@
 - **Headline**: Resolving Cross-Genus Confusion via Hierarchical Selective Prediction
 - **Talking Points**:
   - Solanaceae crops (Potato and Tomato) share visual morphology and common pathogens (*Alternaria*, *Phytophthora*).
-  - Evaluated 8,134 test images under Auto vs Crop-Guided modes.
-  - Crop-guided masked softmax eliminates cross-genus confusion, boosting accuracy to 99.32% and providing disambiguated in-crop probabilities.
+  - Evaluation sample count and comparative accuracy: **unverified here**; check the current hierarchy report.
 - **Embedded Visual**: Solanaceae Confusion Matrix (`reports/figures/potato_tomato_confusion.png`).
 
 ---
@@ -90,10 +85,10 @@
 ### Slide 8: Layered OOD Detection: Heuristic Pre-Check + Energy Score
 - **Headline**: Multi-Layer Input Validation Defeating Overconfidence on Noise & Grey Tiles
 - **Talking Points**:
-  - Softmax thresholding fails: a flat grey tile bypasses 0.50 threshold with 99.95% confidence!
-  - **Layer 1 Heuristic Pre-Check**: Evaluates flatness (pixel std $<8.0$), decodability, and chlorophyll/lesion color balance in $<0.1$ms. Instantly intercepts grey tiles with code `NOT_A_LEAF_COLOR`.
+  - Specific grey-tile confidence: **unverified here**; verify against a saved OOD report.
+  - **Layer 1 Heuristic Pre-Check**: Evaluates flatness, decodability, and color balance; measured latency is unverified here.
   - **Layer 2 Helmholtz Free Energy Score**: $E(x) = -T \cdot \log \sum \exp(z_i/T)$. Out-of-distribution inputs yield high energy.
-  - Achieves **0.9548 AUROC** with only **10.0% FPR95** (an 84% reduction in false positives).
+  - Saved `reports/ood_metrics.json`: layered prefilter+energy AUROC 0.9548 and FPR95 0.1 on that report's benchmark.
 - **Embedded Visual**: OOD ROC Curves (`reports/figures/ood_roc_curves.png`).
 
 ---
@@ -102,8 +97,7 @@
 - **Headline**: Proving Saliency Faithfulness via Attribution Mass & Greedy Pixel Deletion
 - **Talking Points**:
   - Implemented dual explainability: Hook-based Grad-CAM (layer4) and game-theoretic SHAP GradientExplainer.
-  - Attribution Mass: 70.4% of Grad-CAM mass and 64.5% of SHAP mass falls strictly on the segmented leaf lamina.
-  - Faithfulness Verification: Hooker et al. pixel deletion benchmark shows progressive Salient pixel masking collapses accuracy from 99.3% to 13.9% at 50% deletion, proving functional feature relevance rather than border edge detection.
+  - Attribution mass and deletion benchmark values: **unverified here**; confirm from current explainability reports.
 - **Embedded Visual**: Deletion Curve (`reports/figures/explain_deletion_curve.png`) and side-by-side SHAP visual (`reports/figures/shap/`).
 
 ---
@@ -113,7 +107,7 @@
 - **Talking Points**:
   - Schema v2 advisory engine citing verified extension guides (UC IPM, Cornell, Penn State, ICAR-CPRI, ICAR-IIHR, TNAU).
   - 6 foliar epidemiological risk rules in `kb/weather_rules.yaml` elevating clinical urgency based on temperature and humidity thresholds.
-  - Strict Negative Constraints: Fungicides are barred for viral, greening, and mite conditions.
+  - Advisory constraints: describe from the current knowledge base; avoid unverified counts or claims.
   - Regulatory Safety: Dosages are deliberately omitted and deferred to physical registered container labels.
 - **Embedded Visual**: UI Advisory Card & Source Traceability Matrix (`docs/SOURCE_AUDIT.md`).
 
@@ -123,9 +117,8 @@
 - **Headline**: High-Throughput Serving & Closed-Loop Retraining Governance
 - **Talking Points**:
   - Asynchronous FastAPI serving with Prometheus instrumentation and JSON lines audit logging.
-  - Batch inference throughput: 110.5 fps single, **317.4 fps batch-64** on RTX 3050 GPU.
-  - Two-sample Kolmogorov-Smirnov test and PSI monitoring on image blur, brightness, and confidence.
-  - Automated retraining trigger: generates `reports/retraining_trigger.json` when statistical distribution shift occurs.
+  - Saved `reports/INFERENCE_BENCHMARK.md`: 110.5 images/sec at batch 1 and 317.4 images/sec at batch 64 under its stated setup.
+  - Drift assessment and retraining trigger outputs are SIMULATION, not production telemetry.
 - **Embedded Visual**: Throughput scaling chart from `reports/INFERENCE_BENCHMARK.md`.
 
 ---
@@ -135,6 +128,5 @@
 - **Talking Points**:
   - Transparent structural gap auditing in `kb/coverage.yaml`: Orange/Squash (no healthy class), Blueberry/Soybean (no disease class).
   - 4-Criterion promotion gate enforcing holistic pipeline health.
-  - Zero-difference deterministic reproducibility check (0.00 logit diff).
-  - All 24 automated unit/integration tests passing.
-- **Embedded Visual**: 5-Tab Streamlit dashboard overview and coverage matrix.
+  - Reproducibility and test outcomes: report only from current command output.
+- **Embedded Visual**: Three-tab Streamlit dashboard overview and coverage matrix.

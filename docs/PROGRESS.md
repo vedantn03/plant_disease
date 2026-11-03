@@ -37,3 +37,15 @@
   `serving.model_source: registry` is explicitly selected; local checkpoint serving remains
   the default. Lifespan migration and machine-side alias verification remain pending.
 - Training and seed-variance runs remain blocked pending user confirmation.
+
+## 2026-11-03 Promotion Gate Closeout (WP1)
+
+- Per-crop F1 now scopes labels to classes present in the crop truth labels; historical
+  `reports/per_crop_metrics_<run8>.json` files are affected and must be regenerated or marked
+  stale, never hand-edited.
+- Seed 43's supplied VAL comparison remains the only candidate gate evaluation currently saved.
+  Refreshing it with current per-class counts, seed-44 evaluation, and the variance summary are
+  manual steps on the data machine.
+- Promotion thresholds remain provisional; TEST metrics are reporting only.
+- Branch creation for `feat/wp1-close-gate` was blocked in this sandbox because `.git` is
+  read-only; create it from `main` before staging these workspace edits.

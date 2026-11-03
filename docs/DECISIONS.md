@@ -53,7 +53,7 @@ absolute background-retention ceiling and an OOD criterion. The current provisio
 within-crop VAL macro-F1, per-class recall, champion-relative masked-background drop under the
 three-fill protocol, and ECE. Batch inference and drift artifacts remain separate evaluations.
 
-[2026-10-28] 5-Tab Streamlit governance dashboard | UI enhanced with tabs for Diagnostic Screening, Service Logs & Telemetry, Model Evidence & Bias Study, Coverage & Structural Gaps, and MLOps Lifecycle & Governance.
+[2026-10-28] Historical dashboard expansion note (superseded) | The current UI has three tabs: Diagnostic Screening, Production Telemetry, and MLOps System.
 
 [2026-10-28] Comprehensive Part 9 Documentation Pack delivered | Created SYLLABUS_MAP.md, RISK_REGISTER.md, DATASHEET.md, CLOUD_MAPPING.md, and dvc.yaml; refreshed ARCHITECTURE.md, SOURCE_AUDIT.md, DEMO_SCRIPT.md, VIVA_QA.md, and SLIDE_OUTLINE.md with all verified empirical metrics.
 
@@ -61,9 +61,9 @@ three-fill protocol, and ECE. Batch inference and drift artifacts remain separat
 
 [2026-10-28] Built Comparative XAI Benchmark with LIME & SHAP (Unit-V) | scripts/benchmark_xai.py benchmarks Grad-CAM, SHAP GradientExplainer, and LIME Superpixel ImageExplainer side-by-side, measuring latency, attribution sparsity, and leaf foreground concentration (Grad-CAM: 84.7%, SHAP: 77.2%, LIME: 92.3%). Saved reports/figures/xai_trio_comparison.png.
 
-[2026-10-28] Built Apache Airflow Simulation Runner & SageMaker Cloud Compiler (Unit-III & Unit-VI) | scripts/run_airflow_simulation.py executes all DAG tasks with live logging (SUCCESS); scripts/compile_sagemaker_pipeline.py generates verified AWS SageMaker Pipeline Workflow JSON in reports/sagemaker_pipeline_definition.json.
+[2026-10-28] Airflow runner is SIMULATION; SageMaker compiler is local | `scripts/run_airflow_simulation.py` output is SIMULATION and does not indicate live Airflow execution. The pipeline compiler writes a local definition artifact.
 
-[2026-10-28] Upgraded UI Tab 5 into VIT MLOps Curriculum & Governance Hub | Tab 5 now features interactive accordions for Units I to VI with one-click buttons to execute reproducibility checks, data validation, Airflow retraining simulations, and view SageMaker definitions.
+[2026-10-28] Historical UI hub note (superseded) | The current UI contains three tabs; curriculum and governance content is under MLOps System.
 
 [2026-10-31] Untrack scratch/ and large figure files | `scratch/` directory and `reports/figures/segmentation_40_grid.png` (~15 MB, exceeding the 5 MB repository limit) are untracked and added to `.gitignore`. The figure can be regenerated deterministically via `python scripts/benchmark_segmentation.py`.
 
@@ -150,3 +150,72 @@ stage until a candidate run updates its lock entry; this is expected and is not
 a reason to run `dvc repro`. If any MD5 differs or the champion is missing,
 stop immediately and restore only from the existing `D:\dvc_remote` backup; do
 not overwrite the file from another checkpoint.
+
+[2026-11-03] Candidate selection uses VAL metrics; TEST is reporting only | Promotion-gate
+comparisons and candidate selection use saved VAL metrics only. TEST metrics are for final
+reporting and must not drive model selection; seed 44's higher TEST macro-F1 is not a basis for
+promotion. Gate thresholds remain provisional pending review of the seed-variance report.
+
+[2026-11-03] Registry-verified serving design (WP2) | The registry alias is authoritative for
+champion identity, resolved read-only at API startup. The API loads checkpoint bytes only from the
+read-only mounted `models/` volume and compares their MD5 plus manifest version/run ID with the
+alias. The committed `models/champion_manifest.json` is initialized for v2 from the existing DVC
+pointer. On a successful explicitly applied promotion, `scripts/promote.py` writes the new
+manifest only after alias movement. `/health` reports mismatch; `serving.registry_strict` controls
+whether mismatch/unavailable identity prevents model load. Alternatives considered: loading the
+registry artifact directly (may reference host-only Windows paths and would break Linux Docker),
+or making local checkpoint identity authoritative (does not meet the registry-source-of-truth
+requirement). Neither alternative is implemented. Host inspection cannot establish whether saved
+artifact URIs are readable inside the Linux container; run `scripts/inspect_registry.py` and test
+container-side access before making that claim.
+
+[2026-11-03] Dataset-free serving config (WP3) | `load_config()` continues to require
+`DATA_ROOT` by default, so training, audit, evaluation, and other existing callers retain their
+validation. The FastAPI startup path opts out explicitly because inference uses the mounted
+checkpoint and serving configuration, not the training dataset. The checkpoint remains required
+for successful predictions. The prior Compose `DATA_ROOT=/app/data` value was an unmounted
+placeholder; it satisfied the string-only loader check but did not make dataset access necessary.
+
+[2026-11-03] Local Compose monitoring (WP3) | Compose profiles are `core` (API and UI) and
+`monitoring` (Prometheus and Grafana). Prometheus scrapes the API service name on port 8000 at a
+15-second interval, and rule files start empty for the next work package. Prometheus and Grafana
+use named storage volumes. The API model mount remains read-only. Pinned images: Prometheus
+`prom/prometheus:v3.13.2` ([official tags](https://hub.docker.com/r/prom/prometheus/tags)) and
+Grafana `grafana/grafana:13.2.1` ([official tags](https://hub.docker.com/r/grafana/grafana/tags));
+their Docker install references are [Prometheus](https://prometheus.io/docs/prometheus/latest/installation/)
+and [Grafana](https://grafana.com/docs/grafana/latest/setup-grafana/installation/docker/).
+The scrape interval is declared in `monitoring/prometheus.yml`. When API runs on the host,
+Prometheus can instead target `host.docker.internal:8000`.
+
+[2026-11-03] MLflow-in-Docker investigation (WP3) | The host MLflow tracking store is
+`sqlite:///mlflow.db`, and the registered model artifact sources may be Windows paths. No
+containerized MLflow service or artifact proxy is implemented. Options: (1) run the MLflow UI on
+the host through `tasks.ps1 mlflow-ui` (recommended for local inspection; uses the host database
+and host filesystem, so do not use concurrently with host training that writes the same SQLite
+store); (2) mount a copy of the SQLite database into a container (risks stale metadata, and copied
+Windows artifact URIs may still not resolve in Linux); or (3) build an artifact proxy (additional
+service, access control, and path mapping concerns). The host UI task is provided; the user must
+decide whether either container option should be pursued later.
+
+[2026-11-03] Windows Compose path quoting (WP3) | Compose uses relative bind-mount paths in YAML,
+which avoids embedding the apostrophe-containing project path in shell command arguments. In
+PowerShell, use `Set-Location -LiteralPath` with a double-quoted path. If Docker Desktop cannot
+translate a bind mount from that location, use a checkout under an apostrophe-free path that
+Docker Desktop can access.
+
+[2026-11-03] Docker base matches pinned scientific dependencies (WP3) | The supplied Docker build
+output showed the pinned NumPy 2.5.3 and SciPy 1.18.1 releases require Python 3.12, while the
+Dockerfile used Python 3.11. The API/UI base is therefore `python:3.12-slim`, an available Docker
+Official Image tag ([tag listing](https://hub.docker.com/_/python?tab=description)); the existing
+NumPy/SciPy pins remain unchanged.
+
+[2026-11-03] Real-log drift monitor proposal (WP4) | The baseline samples TRAIN records with the
+configured seed and sample count, and derives brightness/blur through `src.image_features`. It
+also runs read-only champion inference on that same sample to establish a confidence baseline;
+the checkpoint is never written. The exporter evaluates the most recent configured request-log
+window and labels replay share separately from other logged traffic. The proposed rule is
+PSI greater than the conventional 0.2 value AND KS p-value below the existing configured
+`ks_alpha`; this is provisional and awaits user approval. `alert_for` is in config and mirrored in
+the Prometheus rule file. The legacy scripts `simulate_drift.py` and `check_drift_and_trigger.py`
+remain SIMULATION ONLY; the latter no longer creates synthetic observations or a real retraining
+action. No real baseline, exporter result, or alert was run in this environment.
