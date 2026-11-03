@@ -90,6 +90,7 @@ def test_dashboard_queries_only_metrics_declared_by_api():
     assert any("predict_confidence_bucket" in expression for expression in expressions)
     assert any("predict_abstain_total" in expression for expression in expressions)
     assert any("model_info" in expression for expression in expressions)
+    assert any("bg_check_total" in expression for expression in expressions)
 
 
 def test_grafana_provisioning_and_credentials_have_no_committed_secret():
