@@ -232,7 +232,7 @@ def _install_model_bundle(bundle: dict) -> None:
     if old_grad_cam:
         old_grad_cam.remove_hooks()
     try:
-        MODEL_INFO.remove(version=str(old_version), model_source=str(old_source))
+        MODEL_INFO.remove(str(old_version), str(old_source))
     except (AttributeError, KeyError, ValueError):
         pass
     _state.update(bundle)
@@ -405,7 +405,7 @@ async def admin_reload(
             if old_grad_cam:
                 old_grad_cam.remove_hooks()
             try:
-                MODEL_INFO.remove(version=old_version, model_source=old_source)
+                MODEL_INFO.remove(old_version, old_source)
             except (AttributeError, KeyError, ValueError):
                 pass
             _state.update({

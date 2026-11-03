@@ -56,8 +56,8 @@ def test_model_info_gauge_changes_to_reloaded_version(monkeypatch):
             self.removed = []
             self.values = []
 
-        def remove(self, **labels):
-            self.removed.append(labels)
+        def remove(self, *label_values):
+            self.removed.append(label_values)
 
         def labels(self, **labels):
             self.values.append(labels)
@@ -79,6 +79,6 @@ def test_model_info_gauge_changes_to_reloaded_version(monkeypatch):
         "model_version": "3",
         "model_provenance": {"model_source": "registry"},
     })
-    assert gauge.removed == [{"version": "2", "model_source": "registry"}]
+    assert gauge.removed == [("2", "registry")]
     assert gauge.values == [{"version": "3", "model_source": "registry"}]
     assert gauge.value == 1
