@@ -55,10 +55,10 @@ mlflow:
   champion_alias: "champion"
 
 serving:
-  # "local" preserves the current champion-file behavior. "registry" resolves
-  # the configured MLflow @champion alias without overwriting local weights.
-  model_source: "local"
-  registry_strict: false
+  # Registry alias identifies the active version; checkpoint bytes come from the
+  # versioned, DVC-tracked path in models/champion_manifest.json.
+  model_source: "registry"
+  registry_strict: true
   # Confidence below this → status="uncertain"
   confidence_threshold: 0.50
   max_upload_bytes: 10485760   # 10 MB

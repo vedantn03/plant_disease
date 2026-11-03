@@ -25,6 +25,8 @@ from mlflow.tracking import MlflowClient
 from mlflow.exceptions import MlflowException
 
 from src.config_loader import load_config, _project_root
+from src.model_loader import atomic_write_manifest, file_md5, read_manifest, safe_checkpoint_path
+from src.promotion_safety import checkpoint_dvc_status
 from src.utils import get_logger
 
 log = get_logger("registry")
@@ -79,13 +81,13 @@ def default_tags(extra: dict[str, str] | None = None) -> dict[str, str]:
 
 
 def get_client() -> MlflowClient:
-    cfg = load_config()
+    cfg = load_config(require_data_root=False)
     mlflow.set_tracking_uri(cfg.mlflow.tracking_uri)
     return MlflowClient()
 
 
 def get_champion_version(client: MlflowClient | None = None) -> Any | None:
-    cfg = load_config()
+    cfg = load_config(require_data_root=False)
     client = client or get_client()
     try:
         return client.get_model_version_by_alias(
@@ -151,7 +153,7 @@ def promote_alias(
     """
     Point an alias at `version`. dry_run=True never calls set_registered_model_alias.
     """
-    cfg = load_config()
+    cfg = load_config(require_data_root=False)
     alias = alias or cfg.mlflow.champion_alias
     client = client or get_client()
     name = cfg.mlflow.registered_model_name
@@ -171,47 +173,84 @@ def promote_alias(
     return action
 
 
-def rollback_champion(dry_run: bool = True, client: MlflowClient | None = None) -> dict[str, Any]:
-    """
-    Move @champion to the previous version that carries gate_verdict=PASS.
-
-    Refuses to point at a version without an explicit gate_verdict=PASS tag.
-    """
-    cfg = load_config()
+def rollback_champion(
+    dry_run: bool = True,
+    client: MlflowClient | None = None,
+    *,
+    manifest_path: Path | None = None,
+    project_root: Path | None = None,
+) -> dict[str, Any]:
+    """Move the alias to the highest prior DVC-verified PASS version."""
+    cfg = load_config(require_data_root=False)
     client = client or get_client()
     name = cfg.mlflow.registered_model_name
     current = get_champion_version(client)
-    versions = client.search_model_versions(f"name='{name}'")
-    ranked = sorted(versions, key=lambda mv: int(mv.version), reverse=True)
+    if current is None:
+        msg = "Champion alias is not set; refusing rollback."
+        record = {"action": "rollback", "ok": False, "reason": msg, "dry_run": dry_run}
+        append_promotion_log(record)
+        return record
 
-    current_ver = int(current.version) if current is not None else None
-    eligible = []
-    for mv in ranked:
-        tags = mv.tags or {}
-        if tags.get("gate_verdict") != "PASS":
+    project_root = project_root or PROJECT_ROOT
+    manifest_path = manifest_path or project_root / "models" / "champion_manifest.json"
+    try:
+        manifest = read_manifest(manifest_path)
+    except (OSError, ValueError, KeyError, json.JSONDecodeError) as exc:
+        msg = f"Could not read champion manifest: {exc}"
+        record = {"action": "rollback", "ok": False, "reason": msg, "dry_run": dry_run}
+        append_promotion_log(record)
+        return record
+
+    current_ver = int(current.version)
+    registered_versions = {
+        int(mv.version) for mv in client.search_model_versions(f"name='{name}'")
+    }
+    eligible: list[tuple[int, str]] = []
+    for version_text, entry in manifest.get("versions", {}).items():
+        try:
+            version_num = int(version_text)
+        except ValueError:
             continue
-        if current_ver is not None and int(mv.version) >= current_ver:
+        if version_num >= current_ver or version_num not in registered_versions:
             continue
-        eligible.append(mv)
+        if entry.get("gate_verdict") != "PASS":
+            continue
+        try:
+            checkpoint = safe_checkpoint_path(project_root, str(entry.get("checkpoint_path", "")))
+        except ValueError:
+            continue
+        if not checkpoint.is_file() or file_md5(checkpoint) != str(entry.get("md5", "")).lower():
+            continue
+        dvc_ok, _ = checkpoint_dvc_status(checkpoint, git_root=project_root)
+        if dvc_ok:
+            eligible.append((version_num, version_text))
 
     if not eligible:
         msg = (
-            "No prior version with tag gate_verdict=PASS. "
-            "Refusing rollback: a subsample / ungated version must not become @champion."
+            "No prior DVC-verified version with gate_verdict=PASS. Refusing rollback."
         )
         log.error(msg)
         record = {"action": "rollback", "ok": False, "reason": msg, "dry_run": dry_run}
         append_promotion_log(record)
         return record
 
-    target = eligible[0]
-    move = promote_alias(target.version, dry_run=dry_run, client=client)
+    target_num, target_version = max(eligible)
+    move = promote_alias(target_version, dry_run=dry_run, client=client)
     record = {
         "action": "rollback",
         "ok": True,
         "from_version": current_ver,
-        "to_version": int(target.version),
+        "to_version": target_num,
         **move,
     }
+    if not dry_run:
+        prior_manifest = json.loads(json.dumps(manifest))
+        try:
+            manifest["active_version"] = target_version
+            atomic_write_manifest(manifest_path, manifest)
+        except Exception as exc:
+            promote_alias(str(current_ver), dry_run=False, client=client)
+            atomic_write_manifest(manifest_path, prior_manifest)
+            record.update({"ok": False, "reason": f"Manifest update failed; alias restored: {exc}"})
     append_promotion_log(record)
     return record

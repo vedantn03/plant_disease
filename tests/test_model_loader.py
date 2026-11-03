@@ -89,3 +89,36 @@ def test_registry_resolution_loads_mounted_checkpoint_and_reports_mismatch(tmp_p
     assert path == checkpoint
     assert provenance["registry_match"] is False
     assert provenance["artifact_source"] == "file:///host/path"
+
+
+def test_registry_resolution_uses_versioned_manifest_entry(tmp_path):
+    import hashlib
+    import json
+
+    checkpoint = tmp_path / "models" / "candidates" / "candidate.pth"
+    checkpoint.parent.mkdir(parents=True)
+    checkpoint.write_bytes(b"candidate checkpoint fixture")
+    digest = hashlib.md5(checkpoint.read_bytes(), usedforsecurity=False).hexdigest()
+    (tmp_path / "models" / "champion_manifest.json").write_text(json.dumps({
+        "schema_version": 1,
+        "active_version": "2",
+        "versions": {
+            "2": {"run_id": "run-2", "checkpoint_path": "models/best_model.pth",
+                  "md5": "unused", "gate_verdict": "BASELINE"},
+            "3": {"run_id": "run-3", "checkpoint_path": "models/candidates/candidate.pth",
+                  "md5": digest, "gate_verdict": "PASS"},
+        },
+    }), encoding="utf-8")
+
+    class FakeRegistryClient:
+        def get_model_version_by_alias(self, _name, _alias):
+            return type("Version", (), {
+                "version": "3", "run_id": "run-3", "source": "runs:/run-3/model"
+            })()
+
+    path, provenance = resolve_serving_checkpoint(
+        _cfg("registry"), tmp_path, registry_client=FakeRegistryClient()
+    )
+    assert path == checkpoint
+    assert provenance["registry_match"] is True
+    assert provenance["gate_verdict"] == "PASS"

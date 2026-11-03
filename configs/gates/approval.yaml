@@ -1,0 +1,5 @@
+# Keep false until the user explicitly approves and commits this file.
+approved: false
+approved_by: ""
+approved_on: ""
+thresholds_sha256: ""

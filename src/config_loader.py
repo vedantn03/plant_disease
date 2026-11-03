@@ -73,6 +73,10 @@ def load_config(
     if mlflow_uri:
         cfg["mlflow"]["tracking_uri"] = mlflow_uri
 
+    model_source = os.environ.get("SERVING_MODEL_SOURCE", "").strip()
+    if model_source:
+        cfg["serving"]["model_source"] = model_source
+
     # Validate that data root is set
     if require_data_root and not cfg["data"]["root"]:
         raise EnvironmentError(

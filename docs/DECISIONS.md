@@ -161,8 +161,8 @@ champion identity, resolved read-only at API startup. The API loads checkpoint b
 read-only mounted `models/` volume and compares their MD5 plus manifest version/run ID with the
 alias. The committed `models/champion_manifest.json` is initialized for v2 from the existing DVC
 pointer. On a successful explicitly applied promotion, `scripts/promote.py` writes the new
-manifest only after alias movement. `/health` reports mismatch; `serving.registry_strict` controls
-whether mismatch/unavailable identity prevents model load. Alternatives considered: loading the
+manifest only after alias movement. `/health` reports mismatch and WP6 refuses to load a mismatched
+checkpoint. Alternatives considered: loading the
 registry artifact directly (may reference host-only Windows paths and would break Linux Docker),
 or making local checkpoint identity authoritative (does not meet the registry-source-of-truth
 requirement). Neither alternative is implemented. Host inspection cannot establish whether saved
@@ -228,3 +228,30 @@ and remain subject to review. `abstain_on_bg_inconsistent` defaults to false. Th
 sensitivity to this background replacement and is not proof of shortcut learning. Added latency is
 reported only by a run on actual VAL images or real API requests; no such measurement was run here.
 Field-probe output is aggregate and unlabelled, with no persisted per-image responses.
+
+[2026-11-03] WP6 promotion lifecycle | Candidate selection is VAL-only; TEST metrics remain for
+reporting. User-selected thresholds are within-crop macro-F1 at least champion minus 0.005,
+minimum class recall at least 0.85 with a Wilson 95% lower bound when support is below 30,
+per-image-mean background drop at most champion plus 0.03, and ECE at most 0.01. Black and
+mid-grey fill drops are informational. These are still provisional: `--apply` requires
+`configs/gates/approval.yaml` to set `approved: true` and include the SHA-256 of the exact
+threshold file. Any change to that file invalidates the approval hash. Observed seed ranges are
+generated from `reports/seed_variance.json` by `scripts/sync_gate_spreads.py`; the threshold
+file is not populated by hand. The supplied seed report states that three seeds are a small,
+descriptive sample, not a stable variance estimate.
+
+The registry alias identifies the serving version. `models/champion_manifest.json` maps versions
+to run IDs, repository-relative checkpoint paths, MD5 values, and gate verdicts. The API loads
+weights only from the mounted local checkpoint after matching registry version, run ID, and
+checkpoint MD5. A candidate must have a matching DVC pointer, and that pointer must be committed
+before an applied promotion. Alias movement is followed by an atomic manifest replacement; if
+manifest writing fails, promotion attempts to restore the prior alias and manifest.
+`models/best_model.pth` remains the v2 checkpoint and is never overwritten by promotion.
+
+`POST /admin/reload` requires `X-Admin-Token` to match `ADMIN_RELOAD_TOKEN` from ignored `.env` and
+requires a local Host plus a loopback or private-network client address. This supports Docker
+Desktop's private bridge forwarding while the Compose API port is bound to host loopback. The
+Compose service reads the mounted MLflow SQLite file as read-only to resolve the alias; do not run
+container serving concurrently with a host process that writes the same database. Registry writes
+occur only when the user runs
+`scripts/promote.py --apply` or `tasks.ps1 rollback`.
