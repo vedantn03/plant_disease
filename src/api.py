@@ -7,6 +7,7 @@ Endpoints:
   POST /predict   – multipart image + optional temp/humidity
   GET  /health    – liveness check
   GET  /stats     – request count, mean latency, class distribution, mean confidence
+  GET  /metrics   – Prometheus metrics (requires prometheus-client)
 
 Request logging:
   Every request is appended as a JSON line to cfg.serving.log_file.
@@ -26,13 +27,40 @@ from collections import defaultdict
 from pathlib import Path
 from typing import Optional
 
-import numpy as np
 import torch
 import torch.nn.functional as F
 import yaml
-from fastapi import FastAPI, File, Form, HTTPException, UploadFile
-from fastapi.responses import JSONResponse
+from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile
+from fastapi.responses import JSONResponse, Response
 from PIL import Image
+
+try:
+    from prometheus_client import CONTENT_TYPE_LATEST, Counter, Gauge, Histogram, generate_latest
+    PROMETHEUS_AVAILABLE = True
+except ImportError:
+    PROMETHEUS_AVAILABLE = False
+
+    class _MetricStub:
+        def labels(self, **_labels):
+            return self
+
+        def inc(self, *_args, **_kwargs):
+            return None
+
+        def observe(self, *_args, **_kwargs):
+            return None
+
+        def set(self, *_args, **_kwargs):
+            return None
+
+    def _metric_stub(*_args, **_kwargs):
+        return _MetricStub()
+
+    Counter = Gauge = Histogram = _metric_stub
+    CONTENT_TYPE_LATEST = "text/plain; version=0.0.4; charset=utf-8"
+
+    def generate_latest():
+        return b"# prometheus-client is not installed\n"
 
 # Project imports (run from plant_disease/ root)
 import sys
@@ -41,12 +69,29 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from src.advisory_engine import AdvisoryEngine, DISCLAIMER
 from src.calibration import probs_from_logits
 from src.config_loader import load_config
+from src.image_features import blur_score, image_brightness
 from src.model import GradCAM, build_model, heatmap_to_base64_png, preprocess_image
 from src.model_loader import resolve_serving_checkpoint
 from src.ood_detector import check_image_heuristics
 from src.utils import ensure_dir, get_logger, parse_class_name
 
 log = get_logger("api", level=logging.INFO)
+
+PREDICT_REQUESTS = Counter(
+    "predict_requests_total", "Prediction requests by result status and source",
+    ["status", "traffic_source"],
+)
+ABSTAIN_REQUESTS = Counter(
+    "predict_abstain_total", "Uncertain or rejected requests by reason and source",
+    ["reason", "traffic_source"],
+)
+PREDICT_LATENCY = Histogram(
+    "predict_latency_seconds", "Prediction request latency in seconds", ["traffic_source"]
+)
+PREDICT_CONFIDENCE = Histogram(
+    "predict_confidence", "Returned prediction confidence", ["traffic_source"]
+)
+MODEL_INFO = Gauge("model_info", "Loaded model identity", ["version", "model_source"])
 
 # ─────────────────────────────────────────────────────────────────────────────
 # App init & model loading
@@ -68,13 +113,20 @@ _state: dict = {
     "confidence_sum": 0.0,
     "log_file": None,
     "model_provenance": {},
+    "registry_match": "unknown",
+    "checkpoint_md5": None,
+    "registry_error": None,
+    "strict_blocked": False,
 }
 
 
 async def startup() -> None:
     """Load model, config, coverage matrix, and advisory engine on startup."""
     project_root = Path(__file__).resolve().parent.parent
-    cfg = load_config(project_root / "configs" / "config.yaml")
+    cfg = load_config(
+        project_root / "configs" / "config.yaml",
+        require_data_root=False,
+    )
     _state["cfg"] = cfg
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -83,7 +135,22 @@ async def startup() -> None:
     # Load model
     checkpoint_path, provenance = resolve_serving_checkpoint(cfg, project_root)
     _state["model_provenance"] = provenance
-    if not checkpoint_path.exists():
+    _state["registry_match"] = provenance.get("registry_match", "unknown")
+    _state["checkpoint_md5"] = provenance.get("checkpoint_md5")
+    _state["registry_error"] = provenance.get("registry_error")
+    if provenance.get("registry_match") is False:
+        log.error("Registry alias identity or checkpoint digest differs from champion manifest.")
+    strict = bool(getattr(cfg.serving, "registry_strict", False))
+    if strict and provenance.get("registry_match") is not True:
+        log.error("Registry manifest verification failed; strict serving is disabled.")
+        _state["model"] = None
+    strict_blocked = strict and (
+        provenance.get("registry_match") is not True or bool(provenance.get("registry_error"))
+    )
+    _state["strict_blocked"] = bool(strict_blocked)
+    if strict_blocked:
+        log.error("Strict registry verification prevents checkpoint loading.")
+    elif not checkpoint_path.exists():
         log.warning(f"No checkpoint found at {checkpoint_path}. /predict will return 503.")
         _state["model"] = None
     else:
@@ -97,6 +164,15 @@ async def startup() -> None:
         model.eval()
 
         _state["model"] = model
+        model_version = str(
+            provenance.get("registry_version")
+            or provenance.get("manifest_version")
+            or "unknown"
+        )
+        MODEL_INFO.labels(
+            version=model_version,
+            model_source=str(provenance.get("model_source", "unknown")),
+        ).set(1)
         _state["grad_cam"] = GradCAM(model)
         _state["class_to_idx"] = class_to_idx
         idx_to_class = {v: k for k, v in class_to_idx.items()}
@@ -167,21 +243,6 @@ app = FastAPI(
 # Image quality helpers
 # ─────────────────────────────────────────────────────────────────────────────
 
-def image_brightness(img: Image.Image) -> float:
-    """Mean pixel brightness (0-255) of the grayscale image."""
-    gray = np.array(img.convert("L"), dtype=np.float32)
-    return float(gray.mean())
-
-
-def blur_score(img: Image.Image) -> float:
-    """Variance of Laplacian — higher = sharper."""
-    gray = np.array(img.convert("L"), dtype=np.float32)
-    # Laplacian kernel
-    from scipy.ndimage import laplace
-    lap = laplace(gray)
-    return float(lap.var())
-
-
 # ─────────────────────────────────────────────────────────────────────────────
 # /health
 # ─────────────────────────────────────────────────────────────────────────────
@@ -189,13 +250,32 @@ def blur_score(img: Image.Image) -> float:
 @app.get("/health")
 async def health() -> dict:
     model_loaded = _state["model"] is not None
+    model_version = _state.get("model_provenance", {}).get(
+        "registry_version", _state.get("model_provenance", {}).get("manifest_version", "unknown")
+    )
     return {
         "status": "ok" if model_loaded else "degraded",
         "model_loaded": model_loaded,
         "device": _state.get("device", "unknown"),
         "model_source": _state.get("model_provenance", {}).get("model_source", "unknown"),
         "model_uri": _state.get("model_provenance", {}).get("model_uri", "unknown"),
+        "model_version": model_version,
+        "checkpoint_md5_prefix": str(_state.get("checkpoint_md5") or "")[:8] or None,
+        "registry_match": _state.get("registry_match", "unknown"),
+        "registry_error": _state.get("registry_error"),
+        "registry_strict_blocked": _state.get("strict_blocked", False),
     }
+
+
+@app.get("/metrics")
+async def metrics() -> Response:
+    if not PROMETHEUS_AVAILABLE:
+        return Response(
+            "prometheus-client is not installed\n",
+            status_code=503,
+            media_type=CONTENT_TYPE_LATEST,
+        )
+    return Response(generate_latest(), media_type=CONTENT_TYPE_LATEST)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -219,16 +299,25 @@ async def stats() -> dict:
 
 @app.post("/predict")
 async def predict(
+    request: Request,
     file: UploadFile = File(...),
     crop: Optional[str] = Form(default=None),
     temperature_c: Optional[float] = Form(default=None),
     humidity_pct: Optional[float] = Form(default=None),
+    traffic_source: Optional[str] = Form(default=None),
 ) -> JSONResponse:
     t_start = time.perf_counter()
+    source_header = "replay" if (
+        traffic_source == "replay" or request.headers.get("X-Traffic-Source") == "replay"
+    ) else "api"
     cfg = _state["cfg"]
 
     # ── Validate model is loaded ──────────────────────────────────────────────
     if _state["model"] is None:
+        PREDICT_REQUESTS.labels(status="unavailable", traffic_source=source_header).inc()
+        PREDICT_LATENCY.labels(traffic_source=source_header).observe(
+            time.perf_counter() - t_start
+        )
         raise HTTPException(status_code=503, detail="Model not loaded. Run training first.")
 
     # ── Validate file type and size ───────────────────────────────────────────
@@ -258,7 +347,11 @@ async def predict(
     is_valid_leaf, reason_code, reason_msg = check_image_heuristics(img)
     if not is_valid_leaf:
         latency_ms = (time.perf_counter() - t_start) * 1000
-        _log_request("REJECTED_OOD", 0.0, brightness, b_score, latency_ms, "rejected_not_a_leaf")
+        _record_prediction("rejected_not_a_leaf", latency_ms, 0.0, reason_code, source_header)
+        _log_request(
+            "REJECTED_OOD", 0.0, brightness, b_score, latency_ms,
+            "rejected_not_a_leaf", source_header,
+        )
         return JSONResponse({
             "status": "rejected_not_a_leaf",
             "reason_code": reason_code,
@@ -340,7 +433,8 @@ async def predict(
     # ── Rejection / Uncertainty Check ─────────────────────────────────────────
     if best_prob < threshold:
         latency_ms = (time.perf_counter() - t_start) * 1000
-        _log_request(best_class, best_prob, brightness, b_score, latency_ms, "uncertain")
+        _record_prediction("uncertain", latency_ms, best_prob, "confidence_below_threshold", source_header)
+        _log_request(best_class, best_prob, brightness, b_score, latency_ms, "uncertain", source_header)
         _update_stats(best_class, best_prob, latency_ms)
         return JSONResponse({
             "status": "uncertain",
@@ -372,7 +466,8 @@ async def predict(
 
     # ── Build response ────────────────────────────────────────────────────────
     latency_ms = (time.perf_counter() - t_start) * 1000
-    _log_request(best_class, best_prob, brightness, b_score, latency_ms, "ok")
+    _record_prediction("ok", latency_ms, best_prob, "none", source_header)
+    _log_request(best_class, best_prob, brightness, b_score, latency_ms, "ok", source_header)
     _update_stats(best_class, best_prob, latency_ms)
 
     return JSONResponse({
@@ -462,6 +557,7 @@ def _log_request(
     b_score: float,
     latency_ms: float,
     status: str,
+    traffic_source: str = "api",
 ) -> None:
     record = {
         "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
@@ -471,6 +567,7 @@ def _log_request(
         "blur_score": round(b_score, 2),
         "latency_ms": round(latency_ms, 1),
         "status": status,
+        "traffic_source": traffic_source,
     }
     if _state["log_file"]:
         _state["log_file"].write(json.dumps(record) + "\n")
@@ -481,3 +578,13 @@ def _update_stats(cls: str, confidence: float, latency_ms: float) -> None:
     _state["total_latency_ms"] += latency_ms
     _state["class_counts"][cls] += 1
     _state["confidence_sum"] += confidence
+
+
+def _record_prediction(
+    status: str, latency_ms: float, confidence: float, reason: str, traffic_source: str
+) -> None:
+    PREDICT_REQUESTS.labels(status=status, traffic_source=traffic_source).inc()
+    PREDICT_LATENCY.labels(traffic_source=traffic_source).observe(latency_ms / 1000.0)
+    PREDICT_CONFIDENCE.labels(traffic_source=traffic_source).observe(confidence)
+    if status in {"uncertain", "rejected_not_a_leaf"}:
+        ABSTAIN_REQUESTS.labels(reason=reason or "unspecified", traffic_source=traffic_source).inc()

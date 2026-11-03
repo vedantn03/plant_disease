@@ -17,7 +17,7 @@ import pytest
 from PIL import Image
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-from conftest import api_artifact_skip_reason
+from conftest import api_model_skip_reason
 
 # ── TestClient import ─────────────────────────────────────────────────────────
 # FastAPI's TestClient uses httpx under the hood
@@ -34,7 +34,7 @@ def client():
     if not CLIENT_AVAILABLE:
         pytest.skip("FastAPI/httpx not available")
     project_root = Path(__file__).resolve().parent.parent
-    reason = api_artifact_skip_reason(project_root)
+    reason = api_model_skip_reason(project_root)
     if reason:
         pytest.skip(reason)
     with TestClient(app) as c:
@@ -59,6 +59,42 @@ def test_health(client):
     body = resp.json()
     assert "status" in body
     assert "model_loaded" in body
+    assert "model_version" in body
+    assert "model_source" in body
+    assert "checkpoint_md5_prefix" in body
+    assert "registry_match" in body
+
+
+def test_metrics_names_after_prediction_or_skip(client):
+    jpeg_bytes = _make_jpeg_bytes(color=(60, 150, 70))
+    response = client.post(
+        "/predict",
+        files={"file": ("leaf.jpg", jpeg_bytes, "image/jpeg")},
+        headers={"X-Traffic-Source": "replay"},
+    )
+    if response.status_code == 503:
+        pytest.skip("Model unavailable; metrics integration requires local model weights")
+    metrics = client.get("/metrics")
+    if metrics.status_code == 503:
+        pytest.skip("prometheus-client unavailable in the test environment")
+    assert metrics.status_code == 200
+    body = metrics.text
+    assert "predict_requests_total" in body
+    assert "predict_latency_seconds" in body
+    assert "predict_confidence" in body
+    assert 'traffic_source="replay"' in body
+    assert "model_info" in body
+
+
+
+
+def test_metrics_endpoint_without_model_can_be_checked_with_skip_helper():
+    project_root = Path(__file__).resolve().parent.parent
+    reason = api_model_skip_reason(project_root)
+    if reason:
+        pytest.skip(reason)
+    if not __import__("src.api", fromlist=["PROMETHEUS_AVAILABLE"]).PROMETHEUS_AVAILABLE:
+        pytest.skip("prometheus-client unavailable")
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -192,4 +228,8 @@ def test_api_artifact_skip_helper_allows_complete_local_fixture(tmp_path, monkey
     data_root.mkdir()
     monkeypatch.setenv("DATA_ROOT", str(data_root))
 
-    assert api_artifact_skip_reason(tmp_path) is None
+    assert api_model_skip_reason(tmp_path) is None
+
+
+def test_api_model_skip_helper_reports_missing_artifacts(tmp_path):
+    assert api_model_skip_reason(tmp_path) is not None

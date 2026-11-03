@@ -48,6 +48,7 @@ def inspect_registry() -> dict[str, Any]:
         run_payload: dict[str, Any] = {}
         artifact = {
             "source": version.source,
+            "source_uri": version.source,
             "retrievable": False,
             "error": None,
         }
@@ -83,12 +84,20 @@ def inspect_registry() -> dict[str, Any]:
             "run": run_payload,
             "artifact": artifact,
         })
+        inspected[-1]["artifact_source_uri"] = str(version.source)
 
     return {
         "tracking_uri": cfg.mlflow.tracking_uri,
         "model": name,
         "alias": alias,
         "versions": inspected,
+        "container_compatibility": {
+            "status": "not_verified",
+            "reason": (
+                "This inspection runs on the host; source URI readability inside a Linux "
+                "container requires a container-side check."
+            ),
+        },
         "notes": [
             "Read-only inspection: no tags, aliases, runs, or artifacts are modified.",
             "A retrievable artifact is not automatically approved for promotion.",
@@ -98,7 +107,8 @@ def inspect_registry() -> dict[str, Any]:
 
 def main() -> int:
     try:
-        print(json.dumps(_jsonable(inspect_registry()), indent=2, sort_keys=True))
+        payload = inspect_registry()
+        print(json.dumps(_jsonable(payload), indent=2, sort_keys=True))
         return 0
     except Exception as exc:
         print(json.dumps({"error": str(exc)}, indent=2))

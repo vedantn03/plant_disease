@@ -29,6 +29,7 @@ mlflow>=2.22.0
 
 # ── FastAPI serving ────────────────────────────────────────────────────────────
 fastapi>=0.115.0
+prometheus-client
 uvicorn[standard]>=0.34.0
 python-multipart>=0.0.20
 
