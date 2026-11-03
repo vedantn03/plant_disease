@@ -7,7 +7,7 @@ This document mirrors all `🛑 MANUAL ACTION REQUIRED` blocks raised during the
 ## Task T2 — Preflight, Runner, Hooks & Resource Budget
 
 ### Step M2.1: Pre-commit Installation & Preflight Execution
-- **Why**: Verifies preflight diagnostics directly on your active PowerShell console and activates git pre-commit hooks to block large files (>5MB). Secret scanning is not provided by the currently pinned hooks.
+- **Why**: Verifies preflight diagnostics directly on your active PowerShell console and activates git pre-commit hooks to block large files (>5MB) and run heuristic secret checks. Secret detection can miss some secret formats; it is not a guarantee.
 - **Do**:
   1. Open PowerShell and navigate to the project directory:
      ```powershell

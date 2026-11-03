@@ -20,7 +20,9 @@ Model loading:
 
 import io
 import json
+import hashlib
 import logging
+import os
 import time
 from contextlib import asynccontextmanager
 from collections import defaultdict
@@ -124,9 +126,18 @@ _state: dict = {
 }
 
 
+def _check_test_model_environment() -> str | None:
+    """Return the fixture path only in test mode; reject accidental production use."""
+    fixture_checkpoint = os.environ.get("PLANT_DISEASE_TEST_MODEL")
+    if fixture_checkpoint and os.environ.get("ENV", "").lower() != "test":
+        raise RuntimeError("PLANT_DISEASE_TEST_MODEL is permitted only when ENV=test")
+    return fixture_checkpoint
+
+
 async def startup() -> None:
     """Load model, config, coverage matrix, and advisory engine on startup."""
     project_root = Path(__file__).resolve().parent.parent
+    fixture_checkpoint = _check_test_model_environment()
     cfg = load_config(
         project_root / "configs" / "config.yaml",
         require_data_root=False,
@@ -137,7 +148,20 @@ async def startup() -> None:
     log.info(f"Inference device: {device}")
 
     # Load model
-    checkpoint_path, provenance = resolve_serving_checkpoint(cfg, project_root)
+    if fixture_checkpoint:
+        checkpoint_path = Path(fixture_checkpoint).resolve()
+        if not checkpoint_path.is_file():
+            raise RuntimeError("Test fixture checkpoint does not exist")
+        digest = hashlib.md5(checkpoint_path.read_bytes()).hexdigest()
+        provenance = {
+            "model_source": "test_fixture",
+            "model_uri": str(checkpoint_path),
+            "manifest_version": "test-fixture",
+            "checkpoint_md5": digest,
+            "registry_match": "unknown",
+        }
+    else:
+        checkpoint_path, provenance = resolve_serving_checkpoint(cfg, project_root)
     _state["model_provenance"] = provenance
     _state["registry_match"] = provenance.get("registry_match", "unknown")
     _state["checkpoint_md5"] = provenance.get("checkpoint_md5")
