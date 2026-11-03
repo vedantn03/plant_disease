@@ -99,6 +99,7 @@ def test_fixture_model_exercises_health_predict_and_metrics(
             max_mask_area_fraction=0.95,
         ),
         serving=SimpleNamespace(
+            model_source="registry",
             registry_strict=False,
             log_file=str(tmp_path / "requests.jsonl"),
             top_k=5,

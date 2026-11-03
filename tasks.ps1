@@ -111,8 +111,9 @@ switch ($Target.ToLower()) {
         & $PYTHON scripts/promote.py --dry-run
     }
     "rollback" {
-        Write-Host "Executing model rollback..." -ForegroundColor Cyan
-        & $PYTHON -c "from src.registry import rollback_champion; rollback_champion()"
+        Write-Host "Applying rollback to the previous DVC-verified PASS version..." -ForegroundColor Cyan
+        & $PYTHON -c "import json; from src.registry import rollback_champion; result=rollback_champion(dry_run=False); print(json.dumps(result, indent=2)); raise SystemExit(0 if result.get('ok') else 1)"
+        if ($LASTEXITCODE -ne 0) { throw "Rollback refused or failed with exit code $LASTEXITCODE." }
     }
     "test" {
         Write-Host "Running pytest test suite..." -ForegroundColor Cyan

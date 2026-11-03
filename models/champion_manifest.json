@@ -1,0 +1,12 @@
+{
+  "schema_version": 1,
+  "active_version": "2",
+  "versions": {
+    "2": {
+      "run_id": "fb731412d82544e0abc231b8d7c62f95",
+      "checkpoint_path": "models/best_model.pth",
+      "md5": "7203474fb41fedaa504a0033fc13a6d3",
+      "gate_verdict": "BASELINE"
+    }
+  }
+}

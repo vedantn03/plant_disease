@@ -5,6 +5,7 @@ from types import SimpleNamespace
 
 import pytest
 
+from scripts.promote import _load_metrics
 from src.gates import GateMetrics, evaluate_gate, load_gate_thresholds
 from src.registry import append_promotion_log, promote_alias, register_candidate_version
 
@@ -40,7 +41,7 @@ def registry_config(monkeypatch):
             tracking_uri="sqlite:///mlflow.db",
         )
     )
-    monkeypatch.setattr("src.registry.load_config", lambda: cfg)
+    monkeypatch.setattr("src.registry.load_config", lambda **_kwargs: cfg)
     return cfg
 
 
@@ -98,3 +99,10 @@ def test_append_promotion_log_jsonl(tmp_path, monkeypatch):
     rec = json.loads(lines[0])
     assert rec["dry_run"] is True
     assert "timestamp" in rec
+
+
+def test_metrics_loader_rejects_non_val_selection(tmp_path):
+    report = tmp_path / "metrics.json"
+    report.write_text('{"split": "TEST", "results": []}', encoding="utf-8")
+    with pytest.raises(ValueError, match="requires VAL"):
+        _load_metrics(report)

@@ -14,11 +14,14 @@ Request logging:
   Fields: timestamp, predicted_class, confidence, brightness, blur_score, latency_ms, status
 
 Model loading:
-  Loads from models/best_model.pth (local checkpoint). See DECISIONS.md for why
-  we don't use the MLflow registry client here.
+  Resolves the configured MLflow champion alias, then loads the matching,
+  MD5-verified checkpoint from the mounted models/ volume via its manifest.
 """
 
 import io
+import asyncio
+import hmac
+import ipaddress
 import json
 import hashlib
 import logging
@@ -32,7 +35,7 @@ from typing import Optional
 import torch
 import torch.nn.functional as F
 import yaml
-from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile
+from fastapi import FastAPI, File, Form, Header, HTTPException, Request, UploadFile
 from fastapi.responses import JSONResponse, Response
 from PIL import Image
 
@@ -53,6 +56,9 @@ except ImportError:
             return None
 
         def set(self, *_args, **_kwargs):
+            return None
+
+        def remove(self, *_args, **_kwargs):
             return None
 
     def _metric_stub(*_args, **_kwargs):
@@ -123,7 +129,117 @@ _state: dict = {
     "checkpoint_md5": None,
     "registry_error": None,
     "strict_blocked": False,
+    "model_version": "unknown",
 }
+
+_reload_lock = asyncio.Lock()
+
+
+def _is_loopback_host(host: str | None) -> bool:
+    """Return true only for IP loopback addresses."""
+    try:
+        return bool(host) and ipaddress.ip_address(host).is_loopback
+    except ValueError:
+        return False
+
+
+def _is_local_admin_request(request: Request) -> bool:
+    client_host = request.client.host if request.client else None
+    request_host = request.url.hostname
+    local_request_host = str(request_host).lower() in {"localhost", "127.0.0.1", "::1"}
+    try:
+        client_ip = ipaddress.ip_address(client_host) if client_host else None
+    except ValueError:
+        return False
+    # Docker Desktop forwards host-loopback requests from a private bridge address.
+    # Compose binds the published API port to 127.0.0.1, and the admin token is still required.
+    return bool(client_ip and (client_ip.is_loopback or client_ip.is_private) and local_request_host)
+
+
+def _authorize_admin_reload(request: Request, admin_token: str | None) -> None:
+    """Enforce local request origin and the configured reload token."""
+    if not _is_local_admin_request(request):
+        raise HTTPException(status_code=403, detail="Admin reload is local-use only")
+    expected_token = os.environ.get("ADMIN_RELOAD_TOKEN", "").strip()
+    if not expected_token:
+        raise HTTPException(status_code=503, detail="Admin reload token is not configured")
+    if not admin_token or not hmac.compare_digest(admin_token, expected_token):
+        raise HTTPException(status_code=401, detail="Invalid or missing admin token")
+
+
+def _build_model_bundle(
+    cfg,
+    project_root: Path,
+    device: str,
+    *,
+    checkpoint_override: Path | None = None,
+    provenance_override: dict | None = None,
+) -> dict:
+    """Resolve and verify the current checkpoint before constructing serving state."""
+    if checkpoint_override is not None:
+        checkpoint_path = checkpoint_override
+        provenance = provenance_override or {}
+    else:
+        checkpoint_path, provenance = resolve_serving_checkpoint(cfg, project_root)
+    if provenance.get("registry_error"):
+        raise RuntimeError(str(provenance["registry_error"]))
+    actual_source = str(
+        provenance.get("model_source", getattr(cfg.serving, "model_source", "local"))
+    ).lower()
+    if actual_source == "registry":
+        if provenance.get("registry_match") is not True:
+            raise RuntimeError("Registry alias or checkpoint MD5 does not match the manifest")
+    if not checkpoint_path.is_file():
+        raise FileNotFoundError(f"Serving checkpoint not found: {checkpoint_path}")
+
+    checkpoint = torch.load(str(checkpoint_path), map_location=device, weights_only=False)
+    class_to_idx = checkpoint["class_to_idx"]
+    model = build_model(num_classes=len(class_to_idx), pretrained=False)
+    model.load_state_dict(checkpoint["model_state_dict"])
+    model.to(device)
+    model.eval()
+    idx_to_class = {value: key for key, value in class_to_idx.items()}
+    crop_to_classes = defaultdict(list)
+    for class_name in class_to_idx:
+        try:
+            crop, _ = parse_class_name(class_name)
+            crop_to_classes[crop.lower()].append(class_name)
+        except Exception:
+            crop_to_classes["unknown"].append(class_name)
+    return {
+        "model": model,
+        "grad_cam": GradCAM(model),
+        "class_to_idx": class_to_idx,
+        "idx_to_class": idx_to_class,
+        "crop_to_classes": crop_to_classes,
+        "model_provenance": provenance,
+        "registry_match": provenance.get("registry_match", "unknown"),
+        "checkpoint_md5": provenance.get("checkpoint_md5"),
+        "registry_error": provenance.get("registry_error"),
+        "strict_blocked": False,
+        "model_version": str(
+            provenance.get("registry_version") or provenance.get("manifest_version") or "unknown"
+        ),
+        "device": device,
+    }
+
+
+def _install_model_bundle(bundle: dict) -> None:
+    """Swap the active serving bundle and update the model_info gauge."""
+    old_grad_cam = _state.get("grad_cam")
+    old_version = _state.get("model_version", "unknown")
+    old_source = _state.get("model_provenance", {}).get("model_source", "unknown")
+    if old_grad_cam:
+        old_grad_cam.remove_hooks()
+    try:
+        MODEL_INFO.remove(str(old_version), str(old_source))
+    except (AttributeError, KeyError, ValueError):
+        pass
+    _state.update(bundle)
+    MODEL_INFO.labels(
+        version=str(bundle["model_version"]),
+        model_source=str(bundle["model_provenance"].get("model_source", "unknown")),
+    ).set(1)
 
 
 def _check_test_model_environment() -> str | None:
@@ -147,79 +263,50 @@ async def startup() -> None:
     device = "cuda" if torch.cuda.is_available() else "cpu"
     log.info(f"Inference device: {device}")
 
-    # Load model
-    if fixture_checkpoint:
-        checkpoint_path = Path(fixture_checkpoint).resolve()
-        if not checkpoint_path.is_file():
-            raise RuntimeError("Test fixture checkpoint does not exist")
-        digest = hashlib.md5(checkpoint_path.read_bytes()).hexdigest()
-        provenance = {
-            "model_source": "test_fixture",
-            "model_uri": str(checkpoint_path),
-            "manifest_version": "test-fixture",
-            "checkpoint_md5": digest,
-            "registry_match": "unknown",
-        }
-    else:
-        checkpoint_path, provenance = resolve_serving_checkpoint(cfg, project_root)
-    _state["model_provenance"] = provenance
-    _state["registry_match"] = provenance.get("registry_match", "unknown")
-    _state["checkpoint_md5"] = provenance.get("checkpoint_md5")
-    _state["registry_error"] = provenance.get("registry_error")
-    if provenance.get("registry_match") is False:
-        log.error("Registry alias identity or checkpoint digest differs from champion manifest.")
-    strict = bool(getattr(cfg.serving, "registry_strict", False))
-    if strict and provenance.get("registry_match") is not True:
-        log.error("Registry manifest verification failed; strict serving is disabled.")
-        _state["model"] = None
-    strict_blocked = strict and (
-        provenance.get("registry_match") is not True or bool(provenance.get("registry_error"))
-    )
-    _state["strict_blocked"] = bool(strict_blocked)
-    if strict_blocked:
-        log.error("Strict registry verification prevents checkpoint loading.")
-    elif not checkpoint_path.exists():
-        log.warning(f"No checkpoint found at {checkpoint_path}. /predict will return 503.")
-        _state["model"] = None
-    else:
-        checkpoint = torch.load(str(checkpoint_path), map_location=device, weights_only=False)
-        class_to_idx = checkpoint["class_to_idx"]
-        num_classes = len(class_to_idx)
-
-        model = build_model(num_classes=num_classes, pretrained=False)
-        model.load_state_dict(checkpoint["model_state_dict"])
-        model.to(device)
-        model.eval()
-
-        _state["model"] = model
-        model_version = str(
-            provenance.get("registry_version")
-            or provenance.get("manifest_version")
-            or "unknown"
-        )
-        MODEL_INFO.labels(
-            version=model_version,
-            model_source=str(provenance.get("model_source", "unknown")),
-        ).set(1)
-        _state["grad_cam"] = GradCAM(model)
-        _state["class_to_idx"] = class_to_idx
-        idx_to_class = {v: k for k, v in class_to_idx.items()}
-        _state["idx_to_class"] = idx_to_class
-        _state["device"] = device
-
-        # Map crops to classes
-        crop_to_classes = defaultdict(list)
-        for cls_name in class_to_idx.keys():
-            try:
-                c, _ = parse_class_name(cls_name)
-                crop_to_classes[c.lower()].append(cls_name)
-            except Exception:
-                crop_to_classes["unknown"].append(cls_name)
-        _state["crop_to_classes"] = crop_to_classes
+    try:
+        if fixture_checkpoint:
+            checkpoint_path = Path(fixture_checkpoint).resolve()
+            if not checkpoint_path.is_file():
+                raise FileNotFoundError("Test fixture checkpoint does not exist")
+            provenance = {
+                "model_source": "test_fixture",
+                "model_uri": str(checkpoint_path),
+                "manifest_version": "test-fixture",
+                "checkpoint_md5": hashlib.md5(
+                    checkpoint_path.read_bytes(), usedforsecurity=False
+                ).hexdigest(),
+                "registry_match": "unknown",
+            }
+            bundle = _build_model_bundle(
+                cfg,
+                project_root,
+                device,
+                checkpoint_override=checkpoint_path,
+                provenance_override=provenance,
+            )
+        else:
+            bundle = _build_model_bundle(cfg, project_root, device)
+        _install_model_bundle(bundle)
         log.info(
-            f"Model loaded: {num_classes} classes, device={device}, "
-            f"source={provenance.get('model_source')}"
+            "Model loaded: %s classes, device=%s, source=%s",
+            len(_state["class_to_idx"]), device,
+            _state["model_provenance"].get("model_source"),
         )
+    except Exception as exc:
+        _state.update({
+            "model": None,
+            "grad_cam": None,
+            "model_provenance": {
+                "model_source": str(getattr(cfg.serving, "model_source", "unknown")),
+                "registry_error": str(exc),
+            },
+            "registry_match": False,
+            "checkpoint_md5": None,
+            "registry_error": str(exc),
+            "strict_blocked": True,
+            "model_version": "unknown",
+        })
+        log.error("Serving model resolution failed: %s", exc)
 
     # Advisory engine
     _state["advisory_engine"] = AdvisoryEngine(project_root / "kb" / "advisories.yaml")
@@ -278,9 +365,7 @@ app = FastAPI(
 @app.get("/health")
 async def health() -> dict:
     model_loaded = _state["model"] is not None
-    model_version = _state.get("model_provenance", {}).get(
-        "registry_version", _state.get("model_provenance", {}).get("manifest_version", "unknown")
-    )
+    model_version = _state.get("model_version", "unknown")
     return {
         "status": "ok" if model_loaded else "degraded",
         "model_loaded": model_loaded,
@@ -293,6 +378,61 @@ async def health() -> dict:
         "registry_error": _state.get("registry_error"),
         "registry_strict_blocked": _state.get("strict_blocked", False),
     }
+
+
+@app.post("/admin/reload")
+async def admin_reload(
+    request: Request,
+    admin_token: Optional[str] = Header(default=None, alias="X-Admin-Token"),
+) -> dict:
+    """Reload the registry alias target from a verified local checkpoint."""
+    _authorize_admin_reload(request, admin_token)
+
+    async with _reload_lock:
+        cfg = _state.get("cfg")
+        if cfg is None:
+            raise HTTPException(status_code=503, detail="API configuration is not loaded")
+        project_root = Path(__file__).resolve().parent.parent
+        device = "cuda" if torch.cuda.is_available() else "cpu"
+        try:
+            bundle = _build_model_bundle(cfg, project_root, device)
+        except Exception as exc:
+            old_grad_cam = _state.get("grad_cam")
+            old_version = str(_state.get("model_version", "unknown"))
+            old_source = str(
+                _state.get("model_provenance", {}).get("model_source", "unknown")
+            )
+            if old_grad_cam:
+                old_grad_cam.remove_hooks()
+            try:
+                MODEL_INFO.remove(old_version, old_source)
+            except (AttributeError, KeyError, ValueError):
+                pass
+            _state.update({
+                "model": None,
+                "grad_cam": None,
+                "model_provenance": {
+                    "model_source": str(getattr(cfg.serving, "model_source", "unknown")),
+                    "registry_error": str(exc),
+                },
+                "registry_match": False,
+                "checkpoint_md5": None,
+                "registry_error": str(exc),
+                "strict_blocked": True,
+                "model_version": "unknown",
+            })
+            raise HTTPException(
+                status_code=503,
+                detail=f"Reload refused; serving disabled: {exc}",
+            ) from exc
+        _install_model_bundle(bundle)
+        return {
+            "status": "reloaded",
+            "model_version": bundle["model_version"],
+            "model_source": bundle["model_provenance"].get("model_source"),
+            "checkpoint_md5_prefix": str(bundle["checkpoint_md5"] or "")[:8] or None,
+            "registry_match": bundle["registry_match"],
+        }
 
 
 @app.get("/metrics")

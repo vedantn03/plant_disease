@@ -40,8 +40,8 @@ stages:
     deps:
     - path: configs/config.yaml
       hash: md5
-      md5: 24c398a89a02a29c49d8c13a090398f2
-      size: 1856
+      md5: 31e24b89ea690a165224d2a1b05ed4c5
+      size: 2756
     - path: data/splits/manifest_hashes.json
       hash: md5
       md5: 37f59973f680d653d4072ef41ab470d6
@@ -56,16 +56,20 @@ stages:
       size: 2827735
     - path: scripts/train.py
       hash: md5
-      md5: 90b579025b7ed8112caddfb25ad73589
-      size: 16805
+      md5: 432c784d64a3be02faa811d294e55c1c
+      size: 18854
     - path: src/dataset.py
       hash: md5
-      md5: 32b00e5aca55ac984f49683f90d8a104
-      size: 7368
+      md5: a0181953e3e4a2e957449ae1e0d2b969
+      size: 7640
     - path: src/model.py
       hash: md5
       md5: 999221f5dd9c14fb95b0692853fe4e6e
       size: 6170
+    - path: src/registry.py
+      hash: md5
+      md5: ef4d5edd90da7ff133626a2ad0404837
+      size: 8630
     params:
       configs/config.yaml:
         model.arch: resnet18
@@ -79,10 +83,11 @@ stages:
         training.lr: 0.001
         training.weight_decay: 0.0001
     outs:
-    - path: models/best_model.pth
+    - path: models/candidates
       hash: md5
-      md5: 7203474fb41fedaa504a0033fc13a6d3
-      size: 134488005
+      md5: 2404de096898f1475b5d51dc9057902a.dir
+      size: 268991334
+      nfiles: 4
   evaluate:
     cmd: python scripts/evaluate.py
     deps:
