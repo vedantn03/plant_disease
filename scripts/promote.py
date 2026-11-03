@@ -10,6 +10,7 @@ to reports/promotion_log.jsonl and @champion is never moved.
 Usage:
   python scripts/promote.py --dry-run
   python scripts/promote.py --candidate-metrics reports/gate_baselines_val.json
+  python scripts/promote.py --candidate-metrics reports/candidate_gate_48ecf14d.json --champion-metrics reports/candidate_gate_comparison.json --champion-version 2
   python scripts/promote.py --apply   # refused while criteria are provisional
 """
 
@@ -17,6 +18,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import hashlib
 import sys
 from pathlib import Path
 
@@ -39,6 +41,21 @@ log = get_logger("promote")
 
 def _metrics_from_payload(payload: dict) -> GateMetrics:
     """Accept either a flat gate-baselines file or a nested metrics dump."""
+    if "results" in payload:
+        rows = payload["results"]
+        row = next((item for item in rows if item.get("name") == "candidate" or
+                    str(item.get("name", "")).startswith("candidate_seed_")), rows[-1])
+        recall = row["min_recall"]
+        fills = row["masked_background_by_fill"]
+        return GateMetrics(
+            macro_f1=float(row["clean_macro_f1"]),
+            within_crop_macro_f1=float(row["within_crop_macro_f1"]),
+            min_recall=float(recall["value"]),
+            bg_drop=float(fills["black"]["bg_drop"]),
+            ece=float(row["ece"]),
+            min_recall_class=recall.get("class"),
+            min_recall_n=recall.get("n"),
+        )
     if "masked_background" in payload:
         mb = payload["masked_background"]
         rec = payload.get("min_recall", {})
@@ -94,11 +111,22 @@ def main() -> int:
         help="JSON with VAL gate metrics for the current champion (omit/missing = first-model)",
     )
     parser.add_argument(
+        "--candidate-name",
+        default=None,
+        help="Select a named candidate row when candidate-metrics contains multiple runs",
+    )
+    parser.add_argument(
         "--candidate-is-champion-baseline",
         action="store_true",
         help="Force first-model bootstrap even if champion-metrics exists",
     )
-    parser.add_argument("--version", default=None, help="MLflow model version to tag / alias")
+    parser.add_argument("--version", default=None, help="MLflow candidate version (avoid in dry-run)")
+    parser.add_argument("--champion-version", default=None, help="Informational current champion version")
+    parser.add_argument(
+        "--champion-run-id",
+        default=None,
+        help="Select the champion row by run ID in a multi-run comparison JSON",
+    )
     parser.add_argument(
         "--dry-run",
         action="store_true",
@@ -117,12 +145,27 @@ def main() -> int:
         log.error(f"Candidate metrics not found: {cand_path}")
         sys.exit(1)
 
-    candidate = _metrics_from_payload(json.loads(cand_path.read_text(encoding="utf-8")))
+    candidate_payload = json.loads(cand_path.read_text(encoding="utf-8"))
+    if "results" in candidate_payload and args.candidate_name:
+        candidate_payload = next(
+            row for row in candidate_payload["results"]
+            if row.get("name") == args.candidate_name
+        )
+        candidate_payload = {"results": [candidate_payload]}
+    candidate = _metrics_from_payload(candidate_payload)
     champ_path = PROJECT_ROOT / args.champion_metrics if args.champion_metrics else None
     champion = None
     if not args.candidate_is_champion_baseline:
         if champ_path is not None and champ_path.exists() and champ_path.resolve() != cand_path.resolve():
-            champion = _load_champion_metrics(champ_path)
+            champion_payload = json.loads(champ_path.read_text(encoding="utf-8"))
+            if "results" in champion_payload:
+                champion_row = next(
+                    row for row in champion_payload["results"]
+                    if row.get("run_id") == args.champion_run_id
+                    or row.get("name") == args.champion_name
+                )
+                champion_payload = {"results": [champion_row]}
+            champion = _metrics_from_payload(champion_payload)
 
     thresholds = load_gate_thresholds()
     verdict = evaluate_gate(candidate, champion, thresholds)
@@ -147,6 +190,7 @@ def main() -> int:
         "model": cfg.mlflow.registered_model_name,
         "alias": cfg.mlflow.champion_alias,
         "version": args.version,
+        "champion_version": args.champion_version,
         "tags": tags,
         "verdict": verdict,
         "alias_moved": False,
@@ -170,9 +214,48 @@ def main() -> int:
 
     if args.apply and verdict["all_passed"] and args.version:
         client = get_client()
-        set_version_tags(cfg.mlflow.registered_model_name, str(args.version), tags, client)
+        champion_path = PROJECT_ROOT / "models" / "best_model.pth"
+        digest = hashlib.md5(usedforsecurity=False)
+        with champion_path.open("rb") as handle:
+            for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+                digest.update(chunk)
+        try:
+            version_obj = client.get_model_version(
+                cfg.mlflow.registered_model_name, str(args.version)
+            )
+        except Exception as exc:
+            log.error(f"Could not resolve candidate version before promotion: {exc}")
+            record["alias_moved"] = False
+            record["refuse_reason"] = "candidate_version_not_found"
+            append_promotion_log(record)
+            print(json.dumps(record, indent=2))
+            return 2
+        if str(version_obj.run_id) != str(candidate_payload.get("run_id")):
+            log.error("Candidate registry version run ID does not match the evaluated report.")
+            record["alias_moved"] = False
+            record["refuse_reason"] = "candidate_run_id_mismatch"
+            append_promotion_log(record)
+            print(json.dumps(record, indent=2))
+            return 2
+        manifest = {
+            "version": str(args.version),
+            "run_id": candidate_payload.get("run_id"),
+            "checkpoint_md5": digest.hexdigest(),
+        }
         move = promote_alias(str(args.version), dry_run=False, client=client)
         record["alias_moved"] = move["moved"]
+        if move["moved"]:
+            set_version_tags(cfg.mlflow.registered_model_name, str(args.version), tags, client)
+            (PROJECT_ROOT / "models" / "champion_manifest.json").write_text(
+                json.dumps(manifest, indent=2), encoding="utf-8"
+            )
+    elif args.apply and verdict["all_passed"]:
+        log.error("Refusing --apply without --version; registry version is required for manifest.")
+        record["alias_moved"] = False
+        record["refuse_reason"] = "missing_registry_version"
+        append_promotion_log(record)
+        print(json.dumps(record, indent=2))
+        return 2
     else:
         log.info("[dry-run] gate verdict logged; alias not moved")
         if args.version:
