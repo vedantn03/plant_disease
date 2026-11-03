@@ -36,6 +36,9 @@ class TinyFixtureModel(nn.Module):
 
 
 class FakeGradCAM:
+    def __init__(self, _model) -> None:
+        pass
+
     def generate(self, *_args, **_kwargs):
         return None
 
@@ -89,6 +92,12 @@ def test_fixture_model_exercises_health_predict_and_metrics(
 
     cfg = SimpleNamespace(
         data=SimpleNamespace(image_size=8),
+        background_check=SimpleNamespace(
+            bg_check_enabled=False,
+            abstain_on_bg_inconsistent=False,
+            min_mask_area_fraction=0.05,
+            max_mask_area_fraction=0.95,
+        ),
         serving=SimpleNamespace(
             registry_strict=False,
             log_file=str(tmp_path / "requests.jsonl"),

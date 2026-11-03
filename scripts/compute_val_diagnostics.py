@@ -31,7 +31,6 @@ sys.path.insert(0, str(PROJECT_ROOT))
 from src.calibration import (
     calibration_bundle,
     fit_temperature,
-    nll_at_temperature,
     softmax_np,
 )
 from src.config_loader import load_config
