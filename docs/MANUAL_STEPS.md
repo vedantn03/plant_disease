@@ -7,7 +7,7 @@ This document mirrors all `🛑 MANUAL ACTION REQUIRED` blocks raised during the
 ## Task T2 — Preflight, Runner, Hooks & Resource Budget
 
 ### Step M2.1: Pre-commit Installation & Preflight Execution
-- **Why**: Verifies preflight diagnostics directly on your active PowerShell console and activates git pre-commit hooks to block large files (>5MB). Secret scanning is not provided by the currently pinned hooks.
+- **Why**: Verifies preflight diagnostics directly on your active PowerShell console and activates git pre-commit hooks to block large files (>5MB) and run heuristic secret checks. Secret detection can miss some secret formats; it is not a guarantee.
 - **Do**:
   1. Open PowerShell and navigate to the project directory:
      ```powershell
@@ -380,3 +380,61 @@ champion checkpoint.
   probe shows a stable improvement; worker processes add Windows spawn overhead and
   can complicate reproducibility.
 - **Output**: Writes `reports/figures/segmentation_40_grid.png` and `reports/segmentation_quality.json`. Verified reproducible with 0% failure across 40 benchmark samples.
+
+## WP5 — Visible trust features
+
+`background_check.val_sample_size` is configured in `configs/config.yaml`; the current configured
+sample is a proposal, and mask-area bounds remain provisional. A real run reports its own elapsed
+time and mean added latency. I cannot provide a measured runtime estimate without your VAL files,
+checkpoint, and machine. This check measures background sensitivity; it does not prove shortcut
+learning. Field-probe images are unlabelled and are sent to the local API.
+
+1. In PowerShell, enter the project and run the synthetic tests:
+   ```powershell
+   Set-Location -LiteralPath "D:\VIT\Hackathons\SIH'26\Airafare-proj\plant_disease"
+   ..\.venv\Scripts\pytest.exe tests\test_background_check.py tests\test_field_probe.py tests\test_ui_helpers.py tests\test_api.py tests\test_compose_monitoring.py -q
+   ```
+   Expected: tests pass; API integration tests needing the real checkpoint skip through the shared
+   helper when it is unavailable. If imports fail, paste the full error before proceeding.
+2. Measure the real VAL sample:
+   ```powershell
+   ..\.venv\Scripts\python.exe scripts\measure_bg_check_rates.py
+   ```
+   Expected: JSON reports requested and actual sample sizes, outcome shares, mean added latency,
+   total elapsed time, and the `reports\bg_check_rates.json` output path. It reads the existing VAL
+   manifest and `models\best_model.pth`; it does not write the checkpoint. Likely failures include
+   missing `data\splits\val.csv`, `DATA_ROOT` or image paths, or the checkpoint. Fix missing inputs
+   and rerun; paste the printed JSON and report contents. No measured runtime estimate is available
+   yet; use `elapsed_seconds` from this run as the machine-specific duration.
+3. Start API and UI:
+   ```powershell
+   .\tasks.ps1 up-core
+   ```
+   Expected: Docker Compose starts the core services and prints API/UI URLs. Check the model is
+   loaded before testing. If Docker is unavailable, start the API and Streamlit using the host
+   commands already documented in this file, and confirm the API responds before proceeding.
+4. In the Diagnostic Screening tab, submit three images: a PlantVillage sample, a non-leaf image,
+   and one of your own leaf photos. Review the returned label, unscaled confidence, quality, OOD
+   status, and background sensitivity. For `unknown`, or when the API did not return a neutralized
+   image, the UI states the comparison is unavailable. Do not expect a particular outcome.
+5. In Explorer, place 20–30 of your own leaf photos in `data\field_probe\`, then run:
+   ```powershell
+   New-Item -ItemType Directory -Force data\field_probe
+   ..\.venv\Scripts\python.exe scripts\field_probe.py
+   Get-Content reports\field_probe.json
+   ```
+   Expected: the report title is `indicative only; no ground truth`, with status, abstention,
+   background sensitivity, and predicted-class counts. It contains aggregate counts, not image
+   contents or per-image responses. The API must remain running. If there are no supported images,
+   add your own JPG, PNG, or WebP photos and rerun. Paste the report contents.
+6. Save screenshots of Diagnostic Screening and MLOps System panels:
+   ```powershell
+   New-Item -ItemType Directory -Force docs\evidence\ui
+   ```
+   Capture the UI manually and save screenshots under `docs\evidence\ui\`. Attach them with the
+   reports.
+7. Stop the stack when finished:
+   ```powershell
+   .\tasks.ps1 down
+   ```
+   Paste back `reports\bg_check_rates.json`, `reports\field_probe.json`, and the screenshots.

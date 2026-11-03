@@ -219,3 +219,12 @@ PSI greater than the conventional 0.2 value AND KS p-value below the existing co
 the Prometheus rule file. The legacy scripts `simulate_drift.py` and `check_drift_and_trigger.py`
 remain SIMULATION ONLY; the latter no longer creates synthetic observations or a real retraining
 action. No real baseline, exporter result, or alert was run in this environment.
+
+[2026-11-03] Background sensitivity in serving (WP5) | The optional response comparison re-runs
+inference after replacing pixels outside the ExG mask with that image's mean RGB colour. A
+segmentation fallback/failure or mask area outside the configured bounds yields `unknown`; it never
+counts as consistent. The mask bounds and VAL sample size in `configs/config.yaml` are provisional
+and remain subject to review. `abstain_on_bg_inconsistent` defaults to false. This measures
+sensitivity to this background replacement and is not proof of shortcut learning. Added latency is
+reported only by a run on actual VAL images or real API requests; no such measurement was run here.
+Field-probe output is aggregate and unlabelled, with no persisted per-image responses.

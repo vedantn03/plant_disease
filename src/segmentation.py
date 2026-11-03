@@ -29,6 +29,12 @@ def segment_leaf(image: Image.Image) -> np.ndarray:
     Returns:
         mask: 2D boolean numpy array of shape (H, W), True = leaf, False = background.
     """
+    mask, _ = segment_leaf_with_status(image)
+    return mask
+
+
+def segment_leaf_with_status(image: Image.Image) -> tuple[np.ndarray, bool]:
+    """Return the ExG mask and whether it came from image segmentation, not fallback."""
     img_arr = np.array(image.convert("RGB"), dtype=np.float32) / 255.0
     r, g, b = img_arr[..., 0], img_arr[..., 1], img_arr[..., 2]
 
@@ -62,7 +68,11 @@ def segment_leaf(image: Image.Image) -> np.ndarray:
         # Fallback if entirely empty: central ellipse
         h, w = r.shape
         y, x = np.ogrid[:h, :w]
-        return ((x - w / 2.0) ** 2 / (w * 0.4) ** 2 + (y - h / 2.0) ** 2 / (h * 0.4) ** 2) <= 1.0
+        fallback = (
+            (x - w / 2.0) ** 2 / (w * 0.4) ** 2
+            + (y - h / 2.0) ** 2 / (h * 0.4) ** 2
+        ) <= 1.0
+        return fallback, False
 
     counts = np.bincount(labeled.flat)
     counts[0] = 0  # ignore 0 (background)
@@ -71,7 +81,7 @@ def segment_leaf(image: Image.Image) -> np.ndarray:
 
     # Fill remaining internal holes within leaf lamina
     final_mask = ndi.binary_fill_holes(final_mask)
-    return final_mask
+    return final_mask, True
 
 
 def generate_synthetic_background(

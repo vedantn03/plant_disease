@@ -23,6 +23,7 @@ import pandas as pd
 import requests
 import streamlit as st
 from PIL import Image
+from app.ui_helpers import load_saved_mlops_evidence, parse_prediction_trust
 
 # ---------------------------------------------------------------------------
 # Constants
@@ -32,6 +33,83 @@ DEMO_SAMPLES_DIR = PROJECT_ROOT / "demo_samples"
 LOGS_FILE        = PROJECT_ROOT / "logs" / "requests.jsonl"
 REPORTS_DIR      = PROJECT_ROOT / "reports"
 FIGURES_DIR      = REPORTS_DIR / "figures"
+
+
+def _render_trust_panel(payload: dict, original_image: Image.Image | None) -> None:
+    """Render API-returned trust fields and background-neutralized output only."""
+    trust = parse_prediction_trust(payload)
+    details = trust["bg_check_details"]
+    st.markdown("**Prediction trust and background sensitivity**")
+    label_col, confidence_col, ood_col, bg_col = st.columns(4)
+    label_col.metric("Returned label", trust["label"])
+    confidence = trust["confidence"]
+    confidence_col.metric(
+        "Unscaled confidence",
+        f"{confidence:.1%}" if confidence is not None else "not available",
+    )
+    ood_col.metric("OOD status", str(trust["ood_status"]))
+    bg_col.metric("Background sensitivity", trust["bg_check"])
+
+    quality = trust["quality"]
+    if quality is None:
+        st.caption("Image quality: not available from the API.")
+    else:
+        brightness = quality.get("brightness")
+        blur = quality.get("blur_score")
+        st.caption(
+            "Image quality values returned by API — "
+            f"brightness: {brightness if brightness is not None else 'not available'}; "
+            f"blur score: {blur if blur is not None else 'not available'}."
+        )
+
+    original_label = details.get("original_label") or trust["label"]
+    original_confidence = details.get("original_confidence", confidence)
+    neutralized_label = details.get("neutralized_label")
+    neutralized_confidence = details.get("neutralized_confidence")
+    neutralized_b64 = details.get("neutralized_image_base64")
+    image_col, neutralized_col = st.columns(2)
+    with image_col:
+        st.caption(
+            "Original prediction: "
+            f"{original_label}; confidence: "
+            f"{original_confidence:.1%}"
+            if isinstance(original_confidence, (int, float))
+            else f"Original prediction: {original_label}; confidence: not available"
+        )
+        if original_image is not None:
+            st.image(original_image, use_container_width=True)
+        else:
+            st.info("Original image: not available.")
+    with neutralized_col:
+        if neutralized_b64 and neutralized_label:
+            st.caption(
+                "Mean-fill neutralized prediction: "
+                f"{neutralized_label}; confidence: "
+                f"{neutralized_confidence:.1%}"
+                if isinstance(neutralized_confidence, (int, float))
+                else (
+                    f"Mean-fill neutralized prediction: {neutralized_label}; "
+                    "confidence: not available"
+                )
+            )
+            try:
+                st.image(
+                    Image.open(io.BytesIO(base64.b64decode(neutralized_b64))),
+                    use_container_width=True,
+                )
+            except Exception:
+                st.info("Neutralized image: not available from the API response.")
+        else:
+            st.caption("Mean-fill neutralized prediction: not available.")
+            st.info(
+                "The API did not return a neutralized image for this background sensitivity result."
+            )
+
+    change = details.get("confidence_change")
+    if isinstance(change, (int, float)):
+        st.caption(f"Confidence change after mean-fill neutralization: {change:+.4f}.")
+    else:
+        st.caption("Confidence change after mean-fill neutralization: not available.")
 
 # ---------------------------------------------------------------------------
 # Page config
@@ -114,14 +192,17 @@ st.caption(
 
 # Backend health — small line, no jargon
 _backend_ok = False
+_health_payload = None
 try:
     _hr = requests.get(f"{API_URL}/health", timeout=2)
-    if _hr.status_code == 200 and _hr.json().get("status") == "ok":
-        _device    = _hr.json().get("device", "cpu").upper()
+    if _hr.status_code == 200:
+        _health_payload = _hr.json()
+    if _hr.status_code == 200 and _health_payload.get("status") == "ok":
+        _device = _health_payload.get("device", "unknown").upper()
         _backend_ok = True
         st.caption(
             f"API: connected ({API_URL}) · Inference device: {_device} · "
-            "Model: ResNet-18 v2, 99.3% test accuracy"
+            f"Serving model version: {_health_payload.get('model_version', 'not available')}"
         )
     else:
         st.warning(f"API returned HTTP {_hr.status_code}.")
@@ -237,6 +318,8 @@ with tab_dx:
         else:
             data   = st.session_state["last_diagnosis"]
             status = data.get("status", "ok")
+            _render_trust_panel(data, st.session_state.get("last_image"))
+            st.write("")
 
             # Rejected / OOD
             if status == "rejected_not_a_leaf":
@@ -272,8 +355,8 @@ with tab_dx:
                 with st.container(border=True):
                     st.markdown("**Where the model looked — Explainability**")
                     st.caption(
-                        "Three independent attribution methods confirm the model focuses on "
-                        "diseased leaf tissue rather than image background."
+                        "Attribution maps are visual aids. Background sensitivity is "
+                        "reported separately using a mean-colour background replacement."
                     )
                     st.write("")
                     col_cam, col_shap, col_lime = st.columns(3)
@@ -595,13 +678,32 @@ with tab_mlops:
         "model registry, serving, monitoring, explainability, and cloud architecture."
     )
 
-    # ── System KPIs ─────────────────────────────────────────────────────────
-    k1, k2, k3, k4, k5 = st.columns(5)
-    k1.metric("Test Accuracy",     "99.3%")
-    k2.metric("Macro F1",          "99.2%")
-    k3.metric("API Latency (p50)", "~27 ms")
-    k4.metric("Verified Advisories","26 / 26")
-    k5.metric("Automated Tests",   "24 passing")
+    st.subheader("Saved model and trust evidence")
+    evidence = load_saved_mlops_evidence(REPORTS_DIR, _health_payload)
+    st.write("Serving model version from /health:")
+    if evidence["serving_model_version"] is None:
+        st.info(evidence["serving_message"])
+    else:
+        st.write(str(evidence["serving_model_version"]))
+
+    st.markdown("**Champion and candidate runs**")
+    if evidence["models"]:
+        st.dataframe(pd.DataFrame(evidence["models"]), use_container_width=True)
+    else:
+        st.info(evidence["models_message"])
+
+    st.markdown("**Promotion decisions**")
+    if evidence["promotions"]:
+        st.dataframe(pd.DataFrame(evidence["promotions"]), use_container_width=True)
+    else:
+        st.info(evidence["promotions_message"])
+
+    st.markdown("**Latest drift status**")
+    if evidence["drift"] is not None:
+        st.json(evidence["drift"])
+    else:
+        st.info(evidence["drift_message"])
+
     st.write("")
 
     # ── Data Pipeline ────────────────────────────────────────────────────────
@@ -676,18 +778,9 @@ prior version a single command.
 """)
         with c2:
             st.markdown("""
-**Promotion gate — 4 criteria, all must pass**
-
-| Criterion | Threshold | Result |
-|---|---|---|
-| Test Accuracy | ≥ 99.0% | 99.3% |
-| Macro F1 | ≥ 99.0% | 99.2% |
-| AUROC (OOD) | ≥ 0.90 | 0.97 |
-| Background retention | ≥ 85% | 91.0% |
-
-A model that passes all four gates is tagged `Production` in the registry and
-deployed automatically. A model that fails any gate is rejected and logged
-for investigation.
+Candidate evidence and promotion decisions are shown above from saved reports.
+The serving version is read from the API health response. TEST metrics are for
+reporting only; selection is based on VAL evidence.
 """)
             repro_f = REPORTS_DIR / "reproduce_check.json"
             if st.button("View reproducibility report", key="repro_btn"):
@@ -708,27 +801,10 @@ for investigation.
 and pull request. The pipeline:
 
 1. Installs dependencies in a clean Python 3.11 environment
-2. Runs the full test suite — **24 automated tests** covering:
-   - API endpoints (`/predict`, `/health`, `/metrics`)
-   - Model inference correctness
-   - OOD filter (rejects non-leaf images)
-   - Advisory engine (correct disease-to-chemical mapping)
-   - Data validation suite
-   - Reproducibility check
-3. Fails the build if any test fails — prevents broken code from reaching production
+2. Runs the test suite configured for the repository
+3. Fails the build if a test fails
 
-The same test suite is available locally via `pytest tests/ -q`.
-""")
-        ci_col1, ci_col2 = st.columns([2, 1])
-        with ci_col1:
-            st.markdown("""
-| Test module | Tests | Scope |
-|---|---|---|
-| `test_api.py` | 8 | REST endpoint correctness |
-| `test_model.py` | 4 | Forward pass, output shape |
-| `test_advisory.py` | 5 | Advisory engine matching |
-| `test_ood.py` | 4 | OOD rejection on non-leaf inputs |
-| `test_data_validation.py` | 3 | Validation suite assertions |
+Run the repository test suite locally with `pytest -q`.
 """)
 
     # ── Serving & Deployment ─────────────────────────────────────────────────
@@ -748,7 +824,6 @@ Request pipeline:
 6. Advisory knowledge-base lookup — returns chemical options, cultural controls
 7. Append to request log (JSONL) for telemetry
 
-Median latency: **~27 ms** (CPU). Batch endpoint: **317 fps** (GPU, batch=64).
 """)
         with c2:
             st.markdown("""
@@ -841,25 +916,11 @@ The simulation below runs each task locally without an Airflow server.
         c1, c2 = st.columns([1, 1], gap="large")
         with c1:
             st.markdown("""
-**Three-method XAI benchmark**
+Attribution methods provide visual explanations for individual predictions; they do not
+establish that a prediction relies only on leaf tissue. Background sensitivity is reported
+separately in the Diagnostic Screening trust panel using the API's returned comparison.
 
-All three methods independently confirm that the model localises leaf lesions
-rather than background artefacts:
-
-| Method | Latency | Leaf Attribution Mass |
-|---|---|---|
-| Grad-CAM | 308 ms | 84.7% |
-| SHAP | 1105 ms | 77.2% |
-| LIME | 668 ms | 92.3% |
-
-Grad-CAM is used for real-time display (fastest). SHAP and LIME are available
-on-demand in the Diagnostic Screening tab.
-
-**Capture-bias attack** (robustness test)
-The leaf foreground is extracted with Woebbecke ExG segmentation and placed on
-three unseen backgrounds (solid colour, natural photograph, synthetic gradient).
-Prediction swap rate = **91.0%** — confirming the model uses leaf tissue features,
-not background colour or texture.
+SHAP and LIME visualizations are available on demand in the Diagnostic Screening tab.
 """)
         with c2:
             xai_f = FIGURES_DIR / "xai_trio_comparison.png"

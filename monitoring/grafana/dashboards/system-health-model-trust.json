@@ -99,6 +99,26 @@
         {"refId": "A", "expr": "drift_replay_share"}
       ],
       "gridPos": {"h": 6, "w": 4, "x": 20, "y": 24}
+    },
+    {
+      "id": 10,
+      "title": "Background sensitivity outcomes per second",
+      "type": "timeseries",
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "targets": [
+        {"refId": "A", "expr": "sum by (result) (rate(bg_check_total[5m]))", "legendFormat": "{{result}}"}
+      ],
+      "gridPos": {"h": 6, "w": 12, "x": 0, "y": 30}
+    },
+    {
+      "id": 11,
+      "title": "Background sensitivity outcomes in recent window",
+      "type": "timeseries",
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "targets": [
+        {"refId": "A", "expr": "sum by (result) (increase(bg_check_total[15m]))", "legendFormat": "{{result}}"}
+      ],
+      "gridPos": {"h": 6, "w": 12, "x": 12, "y": 30}
     }
   ]
 }
