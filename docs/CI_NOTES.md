@@ -8,7 +8,7 @@ The fixture-model API test creates randomly initialized weights in a temporary d
 
 The tracked-file job rejects tracked `.env`, `.pth`, and `.db` files, plus files larger than the size configured by `check-added-large-files` in `.pre-commit-config.yaml`.
 
-The `detect-private-key` hook blocks common PEM private-key formats. `detect-secrets` scans changed files locally and all tracked files in CI for additional credential patterns with heuristics. These checks can miss some secret formats and may require review of false positives; they are not a guarantee. See the [detect-secrets v1.5.0 documentation](https://github.com/Yelp/detect-secrets/tree/v1.5.0) and its [hook definition](https://raw.githubusercontent.com/Yelp/detect-secrets/v1.5.0/.pre-commit-hooks.yaml).
+The `detect-private-key` hook blocks common PEM private-key formats. `detect-secrets` scans changed files locally and all tracked files in CI for additional credential patterns with heuristics. `.secrets.baseline` records reviewed matches from DVC/data hashes, MLflow run identifiers, and the test credential placeholder; new findings still fail the hook. These checks can miss some secret formats and may require review of false positives; they are not a guarantee. See the [detect-secrets v1.5.0 documentation](https://github.com/Yelp/detect-secrets/tree/v1.5.0) and its [hook definition](https://raw.githubusercontent.com/Yelp/detect-secrets/v1.5.0/.pre-commit-hooks.yaml).
 
 ## Manual GHCR image publishing
 
