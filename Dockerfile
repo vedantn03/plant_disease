@@ -10,7 +10,7 @@
 #   docker compose up          (builds both via docker-compose.yml)
 
 # ── Shared base ───────────────────────────────────────────────────────────────
-FROM python:3.11-slim AS base
+FROM python:3.12-slim AS base
 
 WORKDIR /app
 
@@ -37,11 +37,13 @@ RUN pip install --no-cache-dir \
     seaborn==0.13.2 \
     scikit-learn==1.7.1 \
     mlflow==3.17.1 \
+    prometheus-client \
     python-dotenv==1.2.1
 
 COPY src/ /app/src/
 COPY configs/ /app/configs/
 COPY kb/ /app/kb/
+COPY scripts/drift_exporter.py /app/scripts/drift_exporter.py
 
 # ── API target ────────────────────────────────────────────────────────────────
 FROM base AS api

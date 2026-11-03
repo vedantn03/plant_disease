@@ -1,18 +1,8 @@
-# docker-compose.yml
-# Plant Disease Pipeline — one-command stack
-# Usage: docker compose up  (or: make up)
-#
-# Services:
-#   api  — FastAPI + ResNet18 inference (port 8000)
-#   ui   — Streamlit dashboard (port 8501)
-#
-# Notes:
-#   - Dataset is NOT mounted; the API loads only models/best_model.pth and kb/
-#   - models/ is read-only; logs/ is writable
-#   - Both services restart unless explicitly stopped
+# Local Plant Disease API, UI, Prometheus, and Grafana services.
 
 services:
   api:
+    profiles: [core]
     build:
       context: .
       dockerfile: Dockerfile
@@ -24,8 +14,6 @@ services:
       - ./models:/app/models:ro
       - ./kb:/app/kb:ro
       - ./logs:/app/logs
-    environment:
-      - DATA_ROOT=/app/data
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
@@ -35,6 +23,7 @@ services:
       start_period: 30s
 
   ui:
+    profiles: [core]
     build:
       context: .
       dockerfile: Dockerfile
@@ -47,7 +36,7 @@ services:
       - ./reports:/app/reports:ro
       - ./logs:/app/logs:ro
     environment:
-      - API_URL=http://api:8000
+      API_URL: http://api:8000
     depends_on:
       api:
         condition: service_healthy
@@ -58,3 +47,78 @@ services:
       timeout: 5s
       retries: 3
       start_period: 20s
+
+  prometheus:
+    profiles: [monitoring]
+    image: prom/prometheus:v3.13.2
+    container_name: plant_disease_prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./monitoring/rules:/etc/prometheus/rules:ro
+      - prometheus_data:/prometheus
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+    depends_on:
+      drift-exporter:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "promtool", "check", "healthy", "--url=http://localhost:9090"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+  drift-exporter:
+    profiles: [monitoring]
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: api
+    container_name: plant_disease_drift_exporter
+    command: ["python", "/app/scripts/drift_exporter.py"]
+    volumes:
+      - ./logs:/app/logs:ro
+      - ./reports:/app/reports
+    depends_on:
+      api:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9101/metrics"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+  grafana:
+    profiles: [monitoring]
+    image: grafana/grafana:13.2.1
+    container_name: plant_disease_grafana
+    ports:
+      - "3000:3000"
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:?Set GRAFANA_ADMIN_USER in .env}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:?Set GRAFANA_ADMIN_PASSWORD in .env}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro
+    depends_on:
+      prometheus:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://localhost:3000/api/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+volumes:
+  prometheus_data:
+  grafana_data:

@@ -1,0 +1,11 @@
+apiVersion: 1
+
+providers:
+  - name: Plant disease monitoring
+    orgId: 1
+    folder: Plant disease
+    type: file
+    disableDeletion: true
+    editable: false
+    options:
+      path: /var/lib/grafana/dashboards

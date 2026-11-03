@@ -1,0 +1,11 @@
+groups:
+  - name: plant-disease-drift
+    rules:
+      - alert: PlantDiseaseFeatureDrift
+        expr: drift_flag == 1
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Provisional drift rule detected a feature shift"
+          description: "The provisional PSI AND KS rule has flagged at least one feature."

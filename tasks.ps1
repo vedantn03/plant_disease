@@ -8,6 +8,7 @@
     .\tasks.ps1 verify-gpu
     .\tasks.ps1 train
     .\tasks.ps1 serve
+    .\tasks.ps1 mlflow-ui
     .\tasks.ps1 ui
     .\tasks.ps1 evaluate
     .\tasks.ps1 promote
@@ -42,13 +43,16 @@ function Show-Help {
     Write-Host "  train       - Train ResNet-18 classifier (8 epochs, AMP)"
     Write-Host "  candidate   - Train a candidate with an explicit seed; never promotes"
     Write-Host "  serve       - Start FastAPI backend directly on port 8000"
+    Write-Host "  mlflow-ui   - Start the host MLflow UI on port 5000"
     Write-Host "  ui          - Start Streamlit dashboard on port 8501"
     Write-Host "  evaluate    - Run comprehensive evaluation suite and generate reports"
     Write-Host "  promote     - Execute MLflow Model Registry promotion gate"
     Write-Host "  rollback    - Rollback champion alias to previous model version in registry"
     Write-Host "  test        - Run pytest test suite"
     Write-Host "  drift       - Execute dataset drift simulation"
-    Write-Host "  up          - Start core stack using Docker Compose"
+    Write-Host "  up-core     - Build and start API and UI Docker Compose services"
+    Write-Host "  up-monitoring - Start core, Prometheus, and Grafana Compose services"
+    Write-Host "  logs        - Follow logs for core and monitoring services"
     Write-Host "  down        - Stop Docker Compose stack"
     Write-Host "  clean       - Clean local run caches, logs, and temp report files"
 }
@@ -90,6 +94,10 @@ switch ($Target.ToLower()) {
         Write-Host "Starting FastAPI backend on http://127.0.0.1:8000 ..." -ForegroundColor Cyan
         & $UVICORN src.api:app --host 127.0.0.1 --port 8000
     }
+    "mlflow-ui" {
+        Write-Host "Starting host MLflow UI on http://127.0.0.1:5000 ..." -ForegroundColor Cyan
+        & ..\.venv\Scripts\mlflow.exe ui --backend-store-uri sqlite:///mlflow.db --host 127.0.0.1 --port 5000
+    }
     "ui" {
         Write-Host "Starting Streamlit dashboard on http://localhost:8501 ..." -ForegroundColor Cyan
         & $STREAMLIT run app/ui.py --server.port 8501
@@ -115,14 +123,32 @@ switch ($Target.ToLower()) {
         & $PYTHON scripts/simulate_drift.py
     }
     "up" {
-        Write-Host "Starting Docker Compose stack..." -ForegroundColor Cyan
-        docker compose up --build -d
+        Write-Host "Starting Docker Compose core profile..." -ForegroundColor Cyan
+        docker compose --profile core up --build -d
+        if ($LASTEXITCODE -ne 0) { throw "Docker Compose core startup failed with exit code $LASTEXITCODE." }
         Write-Host "API: http://localhost:8000/health"
         Write-Host "UI:  http://localhost:8501"
     }
+    "up-core" {
+        Write-Host "Building and starting Docker Compose core profile..." -ForegroundColor Cyan
+        docker compose --profile core up --build -d
+        if ($LASTEXITCODE -ne 0) { throw "Docker Compose core startup failed with exit code $LASTEXITCODE." }
+        Write-Host "API: http://localhost:8000/health"
+        Write-Host "UI:  http://localhost:8501"
+    }
+    "up-monitoring" {
+        Write-Host "Starting Docker Compose core and monitoring profiles..." -ForegroundColor Cyan
+        docker compose --profile core --profile monitoring up --build -d
+        if ($LASTEXITCODE -ne 0) { throw "Docker Compose platform startup failed with exit code $LASTEXITCODE." }
+        Write-Host "Prometheus: http://localhost:9090/targets"
+        Write-Host "Grafana:    http://localhost:3000"
+    }
+    "logs" {
+        docker compose --profile core --profile monitoring logs -f
+    }
     "down" {
         Write-Host "Stopping Docker Compose stack..." -ForegroundColor Cyan
-        docker compose down
+        docker compose --profile core --profile monitoring down
     }
     "clean" {
         Write-Host "Cleaning temporary artifacts..." -ForegroundColor Cyan
