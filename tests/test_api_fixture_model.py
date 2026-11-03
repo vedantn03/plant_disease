@@ -36,6 +36,9 @@ class TinyFixtureModel(nn.Module):
 
 
 class FakeGradCAM:
+    def __init__(self, _model) -> None:
+        pass
+
     def generate(self, *_args, **_kwargs):
         return None
 
