@@ -1,0 +1,15 @@
+global:
+  scrape_interval: 15s
+
+rule_files:
+  - rules/drift.yml
+
+scrape_configs:
+  - job_name: plant-disease-api
+    static_configs:
+      - targets: ["api:8000"]
+    metrics_path: /metrics
+  - job_name: plant-disease-drift-exporter
+    static_configs:
+      - targets: ["drift-exporter:9101"]
+    metrics_path: /metrics

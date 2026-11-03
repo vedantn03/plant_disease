@@ -34,5 +34,10 @@ def api_artifact_skip_reason(project_root: Path | None = None) -> str | None:
     return None
 
 
+def api_model_skip_reason(project_root: Path | None = None) -> str | None:
+    """Shared skip reason for API integration tests that need local model weights."""
+    return api_artifact_skip_reason(project_root)
+
+
 if not os.environ.get("DATA_ROOT", "").strip():
     os.environ["DATA_ROOT"] = str(project_root / "data")

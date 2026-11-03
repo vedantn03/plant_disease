@@ -1,5 +1,5 @@
 """
-simulate_drift.py
+SIMULATION ONLY: simulate_drift.py
 =================
 Step 6: Drift simulation demo.
 
@@ -7,7 +7,7 @@ Takes a sample of test images, creates a "drifted" copy (Gaussian blur + brightn
 sends both sets through the /predict API, and compares logged feature distributions using
 scipy KS tests and PSI.
 
-Outputs:
+SIMULATION OUTPUTS (not production monitoring):
   - reports/drift_report.md  – human-readable summary
   - reports/drift_plot.png   – side-by-side distribution plots
 
@@ -15,7 +15,6 @@ Usage:
   python scripts/simulate_drift.py
   python scripts/simulate_drift.py --n 30 --host http://localhost:8000
 
-Runs in < 1 minute on a few dozen images.
 """
 
 import argparse
@@ -31,37 +30,23 @@ from PIL import Image, ImageFilter
 from scipy import stats
 
 from src.config_loader import load_config
+from src.image_features import blur_score as blur_score_local
+from src.image_features import image_brightness
 from src.utils import ensure_dir, get_logger
 
 log = get_logger("drift")
 
 
-# ── Feature extraction helpers (match api.py) ─────────────────────────────────
-
-def image_brightness(img: Image.Image) -> float:
-    gray = np.array(img.convert("L"), dtype=np.float32)
-    return float(gray.mean())
-
-
-def blur_score_local(img: Image.Image) -> float:
-    from scipy.ndimage import laplace
-    gray = np.array(img.convert("L"), dtype=np.float32)
-    return float(laplace(gray).var())
-
-
 # ── PSI (Population Stability Index) ─────────────────────────────────────────
 
-def compute_psi(reference: np.ndarray, current: np.ndarray, n_bins: int = 10) -> float:
+def compute_psi(
+    reference: np.ndarray, current: np.ndarray, n_bins: int, epsilon: float
+) -> float:
     """
     Compute PSI between reference and current distributions.
-    PSI < 0.1: no significant shift
-    PSI 0.1-0.2: moderate shift
-    PSI > 0.2: significant shift
-
-    Source: standard actuarial / ML monitoring formula.
+    SIMULATION ONLY. This helper is not used by the real-log exporter.
     """
     # Bin edges based on reference
-    eps = 1e-6
     lo = min(reference.min(), current.min())
     hi = max(reference.max(), current.max())
     bins = np.linspace(lo, hi, n_bins + 1)
@@ -69,8 +54,8 @@ def compute_psi(reference: np.ndarray, current: np.ndarray, n_bins: int = 10) ->
     ref_counts, _ = np.histogram(reference, bins=bins)
     cur_counts, _ = np.histogram(current, bins=bins)
 
-    ref_pct = (ref_counts + eps) / (len(reference) + n_bins * eps)
-    cur_pct = (cur_counts + eps) / (len(current) + n_bins * eps)
+    ref_pct = (ref_counts + epsilon) / (len(reference) + n_bins * epsilon)
+    cur_pct = (cur_counts + epsilon) / (len(current) + n_bins * epsilon)
 
     psi = np.sum((cur_pct - ref_pct) * np.log(cur_pct / ref_pct))
     return float(psi)
@@ -108,6 +93,7 @@ def main() -> None:
     args = parser.parse_args()
 
     cfg = load_config()
+    log.warning("SIMULATION ONLY: transformed TEST images are staged, not real-user traffic.")
     reports_dir = ensure_dir(Path(__file__).resolve().parent.parent / "reports")
 
     # ── Collect test images ───────────────────────────────────────────────────
@@ -206,8 +192,13 @@ def main() -> None:
             continue
 
         ks_stat, ks_pvalue = stats.ks_2samp(ref_arr, drift_arr)
-        psi = compute_psi(ref_arr, drift_arr)
-        drift_detected = ks_pvalue < alpha or psi > 0.2
+        psi = compute_psi(
+            ref_arr,
+            drift_arr,
+            n_bins=int(cfg.drift.psi_bins),
+            epsilon=float(cfg.drift.psi_epsilon),
+        )
+        drift_detected = ks_pvalue < alpha and psi > float(cfg.drift.psi_threshold)
 
         results[feature] = {
             "ref_mean": round(float(ref_arr.mean()), 3),
@@ -258,12 +249,12 @@ def main() -> None:
 
     # ── Write markdown report ─────────────────────────────────────────────────
     report_lines = [
-        "# Drift Simulation Report",
+        "# SIMULATION: Drift Report",
         "",
         f"**Reference images**: {len(ref_features['confidence'])}  |  "
         f"**Drifted images**: {len(drift_features['confidence'])}",
         f"**Drift applied**: Gaussian blur σ={blur_sigma}, brightness factor={brightness_factor}",
-        f"**KS test α**: {alpha}  |  **PSI threshold**: 0.2",
+        f"**SIMULATION only — KS α**: {alpha}  |  **Provisional PSI proposal**: {cfg.drift.psi_threshold}",
         "",
         "## Results",
         "",
@@ -281,8 +272,7 @@ def main() -> None:
     report_lines += [
         "",
         "## Interpretation",
-        "- **KS test p < 0.05** → statistically significant difference in the feature distribution.",
-        "- **PSI > 0.2** → significant population shift (standard actuarial threshold).",
+        "- This SIMULATION applies the configured PSI AND KS rule; values remain proposed, not approved.",
         "- Blur score and brightness show the applied drift; confidence drop confirms the model",
         "  degrades on blurry/dark images that differ from the training distribution.",
         "",

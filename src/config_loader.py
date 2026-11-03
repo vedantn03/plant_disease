@@ -31,7 +31,11 @@ class _AttrDict(dict):
         self[key] = value
 
 
-def load_config(config_path: str | Path | None = None) -> _AttrDict:
+def load_config(
+    config_path: str | Path | None = None,
+    *,
+    require_data_root: bool = True,
+) -> _AttrDict:
     """
     Load YAML config and apply env-var overrides.
 
@@ -42,6 +46,9 @@ def load_config(config_path: str | Path | None = None) -> _AttrDict:
     Args:
         config_path: Path to the YAML file. Defaults to
                      <project_root>/configs/config.yaml.
+        require_data_root: Keep the dataset-path validation enabled for training
+                           and audit tools. Serving can disable it because inference
+                           reads the mounted checkpoint, not the training dataset.
 
     Returns:
         _AttrDict with dot-access to nested keys.
@@ -67,7 +74,7 @@ def load_config(config_path: str | Path | None = None) -> _AttrDict:
         cfg["mlflow"]["tracking_uri"] = mlflow_uri
 
     # Validate that data root is set
-    if not cfg["data"]["root"]:
+    if require_data_root and not cfg["data"]["root"]:
         raise EnvironmentError(
             "DATA_ROOT is not set. Copy .env.example to .env and fill in DATA_ROOT."
         )

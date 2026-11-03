@@ -208,7 +208,8 @@ def compute_per_crop_metrics(
     for crop in sorted(crop_true.keys()):
         ct = np.array(crop_true[crop])
         cp = np.array(crop_preds[crop])
-        macro_f1 = f1_score(ct, cp, average="macro", zero_division=0)
+        # Only classes present in this crop's ground truth belong in its macro average.
+        macro_f1 = f1_score(ct, cp, labels=np.unique(ct), average="macro", zero_division=0)
         accuracy = (ct == cp).mean()
         results[crop] = {"macro_f1": round(float(macro_f1), 4), "accuracy": round(float(accuracy), 4), "n": len(ct)}
 
@@ -402,6 +403,8 @@ def main() -> None:
         save_per_class_metrics(test_labels, test_preds, class_names, per_class_path, idx_to_class)
         mlflow.log_artifact(str(per_class_path))
 
+        # Historical per_crop_metrics_<run8>.json files predate scoped labels and are stale;
+        # regenerate them from the source run or mark stale, never patch their values by hand.
         candidate_per_crop = compute_per_crop_metrics(test_labels, test_preds, idx_to_class)
         per_crop_path = reports_dir / f"per_crop_metrics_{run_id[:8]}.json"
         per_crop_path.write_text(json.dumps(candidate_per_crop, indent=2))

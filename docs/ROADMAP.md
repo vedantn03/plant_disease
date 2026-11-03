@@ -51,9 +51,10 @@ This document is the merged single-source engineering plan for the Plant Disease
   - *Manual (M11.1)*: View Grafana at `http://localhost:3000`.
   - *Artifacts*: `monitoring/prometheus.yml`, `monitoring/grafana/`.
 - **T12 — Production Drift Monitoring on Real Request Logs**
-  - *Agent*: `scripts/monitor_drift.py` analyzing `logs/requests.jsonl` against `data/splits/train.csv` baseline using two-sample KS test and PSI on brightness, blur, and prediction entropy. Trigger alert if drift breaches threshold.
-  - *Manual (M12.1)*: Run drift benchmark and view trigger output.
-  - *Artifacts*: `scripts/monitor_drift.py`, `reports/drift_report.json`.
+  - *Status*: Implemented locally as a request-log exporter; thresholds are provisional and local validation remains.
+  - *Agent*: `scripts/drift_exporter.py` compares brightness, blur, and confidence in `logs/requests.jsonl` with a TRAIN-split baseline using KS and PSI. Prometheus evaluates the configured alert.
+  - *Manual (M12.1)*: Generate the baseline, send staged replay traffic, and inspect `reports/drift_latest.json`, Prometheus, and Grafana.
+  - *Artifacts*: `scripts/compute_baseline_features.py`, `scripts/drift_exporter.py`, `reports/baseline_features.json`, `reports/drift_latest.json`. Legacy `reports/drift_report.md` is SIMULATION ONLY.
 
 ---
 

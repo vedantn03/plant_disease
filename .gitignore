@@ -23,6 +23,8 @@ env/
 data/splits/*.csv
 models/*
 !models/best_model.pth.dvc
+!models/champion_manifest.json
+!models/champion_manifest.json.dvc
 *.pth
 *.pt
 *.onnx
@@ -37,6 +39,9 @@ reports/*.html
 reports/*.json
 reports/*.csv
 reports/*.md
+!reports/candidate_gate_*.json
+!reports/seed_variance.json
+!reports/seed_variance.md
 # Keep the reports dir itself
 !reports/.gitkeep
 

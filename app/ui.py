@@ -564,10 +564,11 @@ with tab_tel:
             # Drift section
             st.write("")
             with st.container(border=True):
-                st.markdown("**Drift Detection & Automated Retraining**")
+                st.markdown("**SIMULATION ONLY — Legacy Drift Trigger**")
                 st.caption(
-                    "KS-test and PSI (Population Stability Index) monitor covariate shift "
-                    "in image blur scores. A significant shift can trigger a retraining run."
+                    "This panel reads a legacy simulation artifact. It is not the real-log drift "
+                    "monitor and does not establish a live retraining trigger. See Prometheus and "
+                    "Grafana for the provisional request-log drift alert."
                 )
                 drift_f = REPORTS_DIR / "retraining_trigger.json"
                 if drift_f.exists():
@@ -580,7 +581,7 @@ with tab_tel:
                     with st.expander("Full drift report"):
                         st.json(dt)
                 else:
-                    st.info("Run `make drift` to simulate camera degradation and generate a drift report.")
+                    st.info("No legacy simulation artifact is present. The real-log monitor is the WP4 exporter.")
 
 
 # ===========================================================================
