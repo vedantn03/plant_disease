@@ -33,7 +33,7 @@ def main():
             "task_id": "check_drift_trigger",
             "operator": "PythonOperator",
             "command": "python scripts/check_drift_and_trigger.py",
-            "description": "Inspects reports/drift_report.json for KS / PSI distribution shift",
+            "description": "SIMULATION ONLY: summarizes legacy simulated drift metrics",
         },
         {
             "task_id": "data_audit_and_split",
