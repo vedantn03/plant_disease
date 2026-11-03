@@ -82,6 +82,7 @@ def test_metrics_names_after_prediction_or_skip(client):
     assert "predict_requests_total" in body
     assert "predict_latency_seconds" in body
     assert "predict_confidence" in body
+    assert "bg_check_total" in body
     assert 'traffic_source="replay"' in body
     assert "model_info" in body
 
@@ -136,6 +137,9 @@ def test_predict_schema(client):
     assert "disclaimer" in body
     assert "top_k" in body
     assert isinstance(body["top_k"], list)
+    assert {"quality", "ood_status", "bg_check", "bg_check_details"} <= body.keys()
+    assert body["bg_check"] in {"consistent", "inconsistent", "unknown"}
+    assert body["bg_check_details"]["result"] == body["bg_check"]
 
     if body["status"] == "ok":
         assert "crop" in body

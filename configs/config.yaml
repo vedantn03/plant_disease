@@ -66,6 +66,17 @@ serving:
   port: 8000
   log_file: "logs/requests.jsonl"
 
+background_check:
+  bg_check_enabled: true
+  abstain_on_bg_inconsistent: false
+  min_mask_area_fraction: 0.05  # Provisional guard; pending review
+  max_mask_area_fraction: 0.95  # Provisional guard; pending review
+  val_sample_size: 100
+  rates_report_path: "reports/bg_check_rates.json"
+  field_probe_dir: "data/field_probe"
+  field_probe_report_path: "reports/field_probe.json"
+  request_timeout_seconds: 30
+
 drift:
   blur_sigma: 3.0          # Gaussian blur sigma for drift simulation
   brightness_factor: 0.6   # multiply pixel values by this

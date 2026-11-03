@@ -67,6 +67,7 @@ import sys
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from src.advisory_engine import AdvisoryEngine, DISCLAIMER
+from src.background_check import build_trust_response_fields, run_background_sensitivity
 from src.calibration import probs_from_logits
 from src.config_loader import load_config
 from src.image_features import blur_score, image_brightness
@@ -84,6 +85,9 @@ PREDICT_REQUESTS = Counter(
 ABSTAIN_REQUESTS = Counter(
     "predict_abstain_total", "Uncertain or rejected requests by reason and source",
     ["reason", "traffic_source"],
+)
+BG_CHECK_TOTAL = Counter(
+    "bg_check_total", "Background sensitivity check outcomes", ["result"]
 )
 PREDICT_LATENCY = Histogram(
     "predict_latency_seconds", "Prediction request latency in seconds", ["traffic_source"]
@@ -342,10 +346,30 @@ async def predict(
     # Image quality features (for request log / drift detection)
     brightness = image_brightness(img)
     b_score = blur_score(img)
+    bg_result = {
+        "result": "unknown",
+        "reason": "not_evaluated",
+        "mask_area_fraction": None,
+        "original_label": None,
+        "neutralized_label": None,
+        "original_confidence": None,
+        "neutralized_confidence": None,
+        "confidence_change": None,
+        "neutralized_image_base64": None,
+        "elapsed_ms": 0.0,
+    }
 
     # ── Layer 1 OOD & Heuristic Pre-Check ────────────────────────────────────
     is_valid_leaf, reason_code, reason_msg = check_image_heuristics(img)
     if not is_valid_leaf:
+        bg_result["reason"] = "ood_rejected"
+        BG_CHECK_TOTAL.labels(result="unknown").inc()
+        trust_fields = build_trust_response_fields(
+            brightness=brightness,
+            blur_score=b_score,
+            ood_status="rejected",
+            bg_result=bg_result,
+        )
         latency_ms = (time.perf_counter() - t_start) * 1000
         _record_prediction("rejected_not_a_leaf", latency_ms, 0.0, reason_code, source_header)
         _log_request(
@@ -360,6 +384,7 @@ async def predict(
             "top_k": [],
             "latency_ms": round(latency_ms, 1),
             "disclaimer": DISCLAIMER,
+            **trust_fields,
         })
 
     # ── Inference ─────────────────────────────────────────────────────────────
@@ -416,6 +441,33 @@ async def predict(
     best_class = idx_to_class[top_idxs[0]]
     best_prob = top_probs[0]
 
+    bg_cfg = cfg.background_check
+    bg_result = run_background_sensitivity(
+        img,
+        model,
+        device=device,
+        image_size=cfg.data.image_size,
+        idx_to_class=idx_to_class,
+        original_label=best_class,
+        original_confidence=best_prob,
+        min_mask_area_fraction=float(bg_cfg.min_mask_area_fraction),
+        max_mask_area_fraction=float(bg_cfg.max_mask_area_fraction),
+        allowed_class_names=(
+            valid_classes if target_crop and target_crop in _state["crop_to_classes"] else None
+        ),
+        enabled=bool(bg_cfg.bg_check_enabled),
+    )
+    bg_result_name = bg_result.get("result", "unknown")
+    if bg_result_name not in {"consistent", "inconsistent", "unknown"}:
+        bg_result_name = "unknown"
+    BG_CHECK_TOTAL.labels(result=bg_result_name).inc()
+    trust_fields = build_trust_response_fields(
+        brightness=brightness,
+        blur_score=b_score,
+        ood_status="accepted",
+        bg_result=bg_result,
+    )
+
     # Parse predicted crop and condition
     try:
         pred_crop, pred_condition = parse_class_name(best_class)
@@ -430,6 +482,27 @@ async def predict(
                 coverage_caveat = c_info.get("caveat")
                 break
 
+    if bool(bg_cfg.abstain_on_bg_inconsistent) and bg_result_name == "inconsistent":
+        latency_ms = (time.perf_counter() - t_start) * 1000
+        reason = "background_sensitivity_inconsistent"
+        _record_prediction("uncertain", latency_ms, best_prob, reason, source_header)
+        _log_request(
+            best_class, best_prob, brightness, b_score, latency_ms, "uncertain", source_header
+        )
+        _update_stats(best_class, best_prob, latency_ms)
+        return JSONResponse({
+            "status": "uncertain",
+            "reason_code": reason,
+            "message": "Prediction abstained because background sensitivity was inconsistent.",
+            "crop": pred_crop,
+            "condition": pred_condition,
+            "confidence": round(best_prob, 4),
+            "top_k": top_k_list,
+            "coverage_caveat": coverage_caveat,
+            "disclaimer": DISCLAIMER,
+            **trust_fields,
+        })
+
     # ── Rejection / Uncertainty Check ─────────────────────────────────────────
     if best_prob < threshold:
         latency_ms = (time.perf_counter() - t_start) * 1000
@@ -438,6 +511,7 @@ async def predict(
         _update_stats(best_class, best_prob, latency_ms)
         return JSONResponse({
             "status": "uncertain",
+            "reason_code": "confidence_below_threshold",
             "message": (
                 f"Diagnostic confidence ({best_prob:.1%}) is below the minimum threshold ({threshold:.1%}). "
                 "Please submit a sharper, well-lit photograph or confirm the crop type explicitly."
@@ -448,6 +522,7 @@ async def predict(
             "top_k": top_k_list,
             "coverage_caveat": coverage_caveat,
             "disclaimer": DISCLAIMER,
+            **trust_fields,
         })
 
     # ── Grad-CAM ──────────────────────────────────────────────────────────────
@@ -482,6 +557,7 @@ async def predict(
         "advisory": advisory,
         "latency_ms": round(latency_ms, 1),
         "disclaimer": DISCLAIMER,
+        **trust_fields,
     })
 
 
