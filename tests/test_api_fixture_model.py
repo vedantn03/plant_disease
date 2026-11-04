@@ -152,6 +152,7 @@ def test_fixture_model_exercises_health_predict_and_metrics(
             assert prediction.status_code == 200
             body = prediction.json()
             assert body["status"] == "ok"
+            assert body["predicted_class"].lower().startswith(f"{body['crop']}___")
             assert isinstance(body["confidence"], float)
             assert isinstance(body["top_k"], list)
             assert "advisory" in body

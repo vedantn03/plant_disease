@@ -145,6 +145,8 @@ def test_predict_schema(client):
     assert body["bg_check_details"]["result"] == body["bg_check"]
 
     if body["status"] == "ok":
+        assert isinstance(body["predicted_class"], str)
+        assert body["predicted_class"].lower().startswith(f"{body['crop']}___")
         assert "crop" in body
         assert "condition" in body
         assert "confidence" in body

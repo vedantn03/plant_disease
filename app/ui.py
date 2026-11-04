@@ -23,6 +23,7 @@ from app.ui_helpers import (
     explanation_text,
     import_optional_explainer,
     load_saved_mlops_evidence,
+    optional_explainer_available,
     parse_prediction_trust,
     prediction_explanation_values,
     saved_explainer_figures,
@@ -38,11 +39,11 @@ REPORTS_DIR      = PROJECT_ROOT / "reports"
 FIGURES_DIR      = REPORTS_DIR / "figures"
 
 
-def _render_saved_explainer_figure(kind: str, streamlit_module) -> None:
+def _render_saved_explainer_figure(kind: str, streamlit_module, language: str) -> None:
     """Show repository-generated offline figures when an optional package is absent."""
-    streamlit_module.info(
-        f"{kind.upper()} not installed in this image: shown from saved offline results"
-    )
+    streamlit_module.info(explanation_text(
+        "explainer_not_installed", language, name=kind.upper()
+    )[0])
     figures = saved_explainer_figures(FIGURES_DIR, kind)
     if not figures:
         streamlit_module.caption("Not generated yet.")
@@ -50,37 +51,42 @@ def _render_saved_explainer_figure(kind: str, streamlit_module) -> None:
     for figure in figures[:4]:
         streamlit_module.image(
             figure,
-            caption=f"{figure.name} — saved offline comparison; not generated for this upload",
+            caption=explanation_text("offline_figure", language, name=figure.name)[0],
             use_container_width=True,
         )
 
 
-def _render_trust_panel(payload: dict, original_image: Image.Image | None) -> None:
+def _render_trust_panel(
+    payload: dict, original_image: Image.Image | None, language: str
+) -> None:
     """Render API-returned trust fields and background-neutralized output only."""
     trust = parse_prediction_trust(payload)
     details = trust["bg_check_details"]
-    st.markdown("**Prediction trust and background sensitivity**")
+    st.markdown(f"**{explanation_text('trust_heading', language)[0]}**")
     label_col, confidence_col, ood_col, bg_col = st.columns(4)
-    label_col.metric("Returned label", trust["label"])
+    label_col.metric(explanation_text("returned_label", language)[0], trust["label"])
     confidence = trust["confidence"]
     confidence_col.metric(
-        "Unscaled confidence",
+        explanation_text("confidence_label", language)[0],
         f"{confidence:.1%}" if confidence is not None else "not available",
     )
-    ood_col.metric("OOD status", str(trust["ood_status"]))
-    bg_col.metric("Background sensitivity", trust["bg_check"])
+    ood_col.metric(explanation_text("ood_status", language)[0], str(trust["ood_status"]))
+    bg_col.metric(
+        explanation_text("background_sensitivity", language)[0], trust["bg_check"]
+    )
 
     quality = trust["quality"]
     if quality is None:
-        st.caption("Image quality: not available from the API.")
+        st.caption(explanation_text("quality_not_available", language)[0])
     else:
         brightness = quality.get("brightness")
         blur = quality.get("blur_score")
-        st.caption(
-            "Image quality values returned by API — "
-            f"brightness: {brightness if brightness is not None else 'not available'}; "
-            f"blur score: {blur if blur is not None else 'not available'}."
-        )
+        st.caption(explanation_text(
+            "quality_values",
+            language,
+            brightness=brightness if brightness is not None else "not available",
+            blur=blur if blur is not None else "not available",
+        )[0])
 
     original_label = details.get("original_label") or trust["label"]
     original_confidence = details.get("original_confidence", confidence)
@@ -89,29 +95,32 @@ def _render_trust_panel(payload: dict, original_image: Image.Image | None) -> No
     neutralized_b64 = details.get("neutralized_image_base64")
     image_col, neutralized_col = st.columns(2)
     with image_col:
-        st.caption(
-            "Original prediction: "
-            f"{original_label}; confidence: "
+        original_confidence_display = (
             f"{original_confidence:.1%}"
-            if isinstance(original_confidence, (int, float))
-            else f"Original prediction: {original_label}; confidence: not available"
+            if isinstance(original_confidence, (int, float)) else "not available"
         )
+        st.caption(explanation_text(
+            "original_prediction",
+            language,
+            label=original_label,
+            confidence=original_confidence_display,
+        )[0])
         if original_image is not None:
             st.image(original_image, use_container_width=True)
         else:
             st.info("Original image: not available.")
     with neutralized_col:
         if neutralized_b64 and neutralized_label:
-            st.caption(
-                "Mean-fill neutralized prediction: "
-                f"{neutralized_label}; confidence: "
+            neutralized_confidence_display = (
                 f"{neutralized_confidence:.1%}"
-                if isinstance(neutralized_confidence, (int, float))
-                else (
-                    f"Mean-fill neutralized prediction: {neutralized_label}; "
-                    "confidence: not available"
-                )
+                if isinstance(neutralized_confidence, (int, float)) else "not available"
             )
+            st.caption(explanation_text(
+                "neutralized_prediction",
+                language,
+                label=neutralized_label,
+                confidence=neutralized_confidence_display,
+            )[0])
             try:
                 st.image(
                     Image.open(io.BytesIO(base64.b64decode(neutralized_b64))),
@@ -120,14 +129,16 @@ def _render_trust_panel(payload: dict, original_image: Image.Image | None) -> No
             except Exception:
                 st.info("Neutralized image: not available from the API response.")
         else:
-            st.caption("Mean-fill neutralized prediction: not available.")
+            st.caption(explanation_text("neutralized_not_available", language)[0])
             st.info(
                 "The API did not return a neutralized image for this background sensitivity result."
             )
 
     change = details.get("confidence_change")
     if isinstance(change, (int, float)):
-        st.caption(f"Confidence change after mean-fill neutralization: {change:+.4f}.")
+        st.caption(explanation_text(
+            "confidence_change", language, change=f"{change:+.4f}"
+        )[0])
     else:
         st.caption("Confidence change after mean-fill neutralization: not available.")
 
@@ -207,7 +218,7 @@ table.comp tr:nth-child(even) td { background:rgba(100,116,139,.04); }
 st.title("Crop Leaf Disease Diagnostic & Treatment Advisory System")
 st.caption(
     "ResNet-18 deep learning classifier · 26 crop-disease classes · "
-    "Grad-CAM / SHAP / LIME explainability · Audited agronomic advisory knowledge base"
+    "Grad-CAM / SHAP / LIME explanation methods · Source-aware advisory knowledge base"
 )
 
 # Backend health — small line, no jargon
@@ -248,7 +259,7 @@ explanation_language = st.selectbox(
     key="explanation_language",
 )
 language_code = SUPPORTED_EXPLANATION_LANGUAGES[explanation_language]
-_, has_reviewed_copy = explanation_text("explanation_scope", language_code)
+_, is_reviewed_language = explanation_text("explanation_scope", language_code)
 
 CROPS_LIST = [
     "Auto (infer from image)", "Apple", "Blueberry", "Cherry", "Corn",
@@ -345,12 +356,9 @@ with tab_dx:
         else:
             data   = st.session_state["last_diagnosis"]
             status = data.get("status", "ok")
-            if not has_reviewed_copy:
-                st.info(
-                    "Reviewed Marathi/Hindi explanation text is not available yet. "
-                    "Showing the English explanation; prediction values and evidence are unchanged."
-                )
-            _render_trust_panel(data, st.session_state.get("last_image"))
+            if not is_reviewed_language:
+                st.info(explanation_text("draft_translation_notice", language_code)[0])
+            _render_trust_panel(data, st.session_state.get("last_image"), language_code)
             st.write("")
 
             # Rejected / OOD
@@ -387,10 +395,19 @@ with tab_dx:
                 with st.container(border=True):
                     st.markdown(f"**{explanation_text('explainability_title', language_code)[0]}**")
                     st.caption(explanation_text("explanation_scope", language_code)[0])
-                    st.caption(
-                        f"Prediction: {data.get('predicted_class', 'not available')} · "
-                        f"Unscaled confidence: {data.get('confidence', 'not available')}"
+                    explanation_values = prediction_explanation_values(data)
+                    confidence_value = explanation_values["confidence"]
+                    confidence_display = (
+                        f"{confidence_value:.1%}"
+                        if isinstance(confidence_value, (int, float))
+                        else "not available"
                     )
+                    st.caption(explanation_text(
+                        "prediction_line",
+                        language_code,
+                        label=explanation_values["label"],
+                        confidence=confidence_display,
+                    )[0])
                     with st.expander("Original English explanation and evidence"):
                         st.write("Where the model looked — Explainability")
                         st.write(
@@ -408,13 +425,9 @@ with tab_dx:
                         if data.get("gradcam_png_base64"):
                             cam_bytes = base64.b64decode(data["gradcam_png_base64"])
                             st.image(Image.open(io.BytesIO(cam_bytes)), use_container_width=True)
-                            st.caption(
-                                "Highlighted regions show where this model's activation was "
-                                "strong for this output. They do not prove the diagnosis is "
-                                "correct or explain why the disease occurred."
-                            )
+                            st.caption(explanation_text("gradcam_caption", language_code)[0])
                         else:
-                            st.caption("Not returned by API.")
+                            st.caption(explanation_text("no_gradcam", language_code)[0])
 
                     # SHAP
                     with col_shap:
@@ -428,6 +441,8 @@ with tab_dx:
                                 "for this model output; it does not confirm the diagnosis or its "
                                 f"cause.{mass_txt}"
                             )
+                        elif not optional_explainer_available("shap"):
+                            _render_saved_explainer_figure("shap", st, language_code)
                         else:
                             st.button("Compute SHAP", key="shap_btn", use_container_width=True)
                             if st.session_state.get("shap_btn"):
@@ -467,7 +482,7 @@ with tab_dx:
                                         st.session_state["shap_map"] = Image.open(b2).copy()
                                         st.rerun()
                                     except ImportError:
-                                        _render_saved_explainer_figure("shap", st)
+                                        _render_saved_explainer_figure("shap", st, language_code)
                                     except Exception as e:
                                         st.error(f"SHAP explanation unavailable: {e}")
 
@@ -481,6 +496,8 @@ with tab_dx:
                                 "contributions; it does not confirm the diagnosis or explain "
                                 "disease cause."
                             )
+                        elif not optional_explainer_available("lime.lime_image"):
+                            _render_saved_explainer_figure("lime", st, language_code)
                         else:
                             st.button("Compute LIME", key="lime_btn", use_container_width=True)
                             if st.session_state.get("lime_btn"):
@@ -535,7 +552,7 @@ with tab_dx:
                                         st.session_state["lime_fig"] = Image.open(b3).copy()
                                         st.rerun()
                                     except ImportError:
-                                        _render_saved_explainer_figure("lime", st)
+                                        _render_saved_explainer_figure("lime", st, language_code)
                                     except Exception as e:
                                         st.error(f"LIME explanation unavailable: {e}")
 
@@ -543,12 +560,7 @@ with tab_dx:
                 advisory = data.get("advisory", {})
                 trace = data.get("advice_trace", {})
                 with st.container(border=True):
-                    st.markdown("**Advice passport**")
-                    if not has_reviewed_copy:
-                        st.caption(
-                            "Advice remains in its cited source language until a reviewed "
-                            "translation is available."
-                        )
+                    st.markdown(f"**{explanation_text('advice_passport', language_code)[0]}**")
                     st.caption(
                         f"Tier: {trace.get('tier', 'unknown')} · "
                         f"Evidence: {trace.get('evidence_grade', 'unknown')} · "
@@ -558,7 +570,9 @@ with tab_dx:
                         st.markdown(f"Source: [{trace.get('kb_entry_id', 'cited entry')}]({trace['source_url']})")
                     if trace.get("retrieved_on"):
                         st.caption(f"Source retrieved: {trace['retrieved_on']}")
-                    if advisory.get("message"):
+                    if trace.get("evidence_grade") == "C":
+                        st.warning(explanation_text("no_reviewed_advice", language_code)[0])
+                    elif advisory.get("message"):
                         st.info(advisory["message"])
                     for key, heading in (("scouting", "Scouting"), ("cultural", "Cultural guidance")):
                         items = advisory.get(key) or []
@@ -577,13 +591,18 @@ with tab_dx:
                             if item.get("source_location"):
                                 st.caption(item["source_location"])
                     label_reminder = advisory.get("label_reminder", "Consult a local agronomist.")
+                    if trace.get("evidence_grade") == "C" and not isinstance(label_reminder, dict):
+                        label_reminder = explanation_text("consult_expert", language_code)[0]
                     if isinstance(label_reminder, dict):
                         st.caption(label_reminder.get("quote", "Consult a local agronomist."))
                         if label_reminder.get("source_location"):
                             st.caption(label_reminder["source_location"])
                     else:
                         st.caption(label_reminder)
-                    st.caption(advisory.get("weather_note", "risk unknown"))
+                    weather_note = advisory.get("weather_note", "risk unknown")
+                    if weather_note == "risk unknown":
+                        weather_note = explanation_text("risk_unknown", language_code)[0]
+                    st.caption(weather_note)
                     for hint in data.get("confusable_hints", []):
                         st.info(hint.get("hint", "May be confused with an unlisted class."))
                         if hint.get("how_to_tell_apart") and hint.get("source_url"):
@@ -591,6 +610,8 @@ with tab_dx:
                     st.caption(f"Rules fired: {', '.join(trace.get('rules_fired') or []) or 'none'}")
 
                 disc = data.get("disclaimer", "")
+                if language_code != "en" and disc:
+                    disc = explanation_text("advice_disclaimer", language_code)[0]
                 if disc:
                     st.markdown(f'<div class="disclaimer-box">{disc}</div>', unsafe_allow_html=True)
 
