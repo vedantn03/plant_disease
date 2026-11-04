@@ -61,6 +61,8 @@ with a temporary fixture model; that is not an accuracy evaluation.
 
 ## Known limitations
 
+- Marathi and Hindi selectable; text falls back to English until reviewed translations are added.
+
 - Evaluation images are lab-style; field performance has not been validated.
 - Background-fill results vary with the fill and segmentation. Black-fill drops include masking
   artifacts and are not proof of shortcut learning.

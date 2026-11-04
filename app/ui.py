@@ -1,9 +1,4 @@
-"""
-app/ui.py
-=========
-Crop Leaf Disease Diagnostic & Treatment Advisory System.
-Professional MLOps dashboard — three operational tabs.
-"""
+"""Streamlit UI for diagnosis, model trust, and operational evidence."""
 
 import base64
 import io
@@ -26,9 +21,11 @@ from PIL import Image
 from app.ui_helpers import (
     SUPPORTED_EXPLANATION_LANGUAGES,
     explanation_text,
+    import_optional_explainer,
     load_saved_mlops_evidence,
     parse_prediction_trust,
     prediction_explanation_values,
+    saved_explainer_figures,
 )
 
 # ---------------------------------------------------------------------------
@@ -39,6 +36,23 @@ DEMO_SAMPLES_DIR = PROJECT_ROOT / "demo_samples"
 LOGS_FILE        = PROJECT_ROOT / "logs" / "requests.jsonl"
 REPORTS_DIR      = PROJECT_ROOT / "reports"
 FIGURES_DIR      = REPORTS_DIR / "figures"
+
+
+def _render_saved_explainer_figure(kind: str, streamlit_module) -> None:
+    """Show repository-generated offline figures when an optional package is absent."""
+    streamlit_module.info(
+        f"{kind.upper()} not installed in this image: shown from saved offline results"
+    )
+    figures = saved_explainer_figures(FIGURES_DIR, kind)
+    if not figures:
+        streamlit_module.caption("Not generated yet.")
+        return
+    for figure in figures[:4]:
+        streamlit_module.image(
+            figure,
+            caption=f"{figure.name} — saved offline comparison; not generated for this upload",
+            use_container_width=True,
+        )
 
 
 def _render_trust_panel(payload: dict, original_image: Image.Image | None) -> None:
@@ -218,7 +232,6 @@ except Exception:
         "Start the backend with: "
         "`cd plant_disease && ..\\.venv\\Scripts\\uvicorn.exe src.api:app --host 127.0.0.1 --port 8000`"
     )
-    st.stop()
 
 # ---------------------------------------------------------------------------
 # Tabs
@@ -395,11 +408,10 @@ with tab_dx:
                         if data.get("gradcam_png_base64"):
                             cam_bytes = base64.b64decode(data["gradcam_png_base64"])
                             st.image(Image.open(io.BytesIO(cam_bytes)), use_container_width=True)
-                            st.markdown(
-                                '<div class="xai-caption">Red/yellow areas are the '
-                                'convolutional regions most activated for this prediction. '
-                                'Generated from the last ResNet-18 block in real time.</div>',
-                                unsafe_allow_html=True,
+                            st.caption(
+                                "Highlighted regions show where this model's activation was "
+                                "strong for this output. They do not prove the diagnosis is "
+                                "correct or explain why the disease occurred."
                             )
                         else:
                             st.caption("Not returned by API.")
@@ -411,11 +423,10 @@ with tab_dx:
                             st.image(st.session_state["shap_map"], use_container_width=True)
                             mass = st.session_state.get("shap_mass")
                             mass_txt = f" Leaf attribution mass: {mass:.1%}." if mass else ""
-                            st.markdown(
-                                f'<div class="xai-caption">Bright pixels have the highest '
-                                f'positive Shapley value — they pushed the model toward '
-                                f'<em>{cond_disp}</em>.{mass_txt}</div>',
-                                unsafe_allow_html=True,
+                            st.caption(
+                                "This attribution visualization reflects feature contributions "
+                                "for this model output; it does not confirm the diagnosis or its "
+                                f"cause.{mass_txt}"
                             )
                         else:
                             st.button("Compute SHAP", key="shap_btn", use_container_width=True)
@@ -423,7 +434,9 @@ with tab_dx:
                                 with st.spinner("Computing Shapley values (~5 s)..."):
                                     try:
                                         import torch
-                                        import shap as shap_lib
+                                        shap_lib = import_optional_explainer("shap")
+                                        if shap_lib is None:
+                                            raise ImportError("shap is not installed")
                                         from src.model import build_model, preprocess_image
                                         ckpt = torch.load(
                                             PROJECT_ROOT / "models" / "best_model.pth",
@@ -453,20 +466,20 @@ with tab_dx:
                                         b2.seek(0)
                                         st.session_state["shap_map"] = Image.open(b2).copy()
                                         st.rerun()
+                                    except ImportError:
+                                        _render_saved_explainer_figure("shap", st)
                                     except Exception as e:
-                                        st.error(f"SHAP failed: {e}")
+                                        st.error(f"SHAP explanation unavailable: {e}")
 
                     # LIME
                     with col_lime:
                         st.markdown('<div class="xai-title">LIME</div>', unsafe_allow_html=True)
                         if "lime_fig" in st.session_state:
                             st.image(st.session_state["lime_fig"], use_container_width=True)
-                            st.markdown(
-                                f'<div class="xai-caption">Green-outlined superpixels most '
-                                f'strongly support the <em>{cond_disp}</em> prediction. '
-                                f'Non-contributing regions are dimmed. '
-                                f'100 perturbation samples used.</div>',
-                                unsafe_allow_html=True,
+                            st.caption(
+                                "This LIME visualization reflects the method's local feature "
+                                "contributions; it does not confirm the diagnosis or explain "
+                                "disease cause."
                             )
                         else:
                             st.button("Compute LIME", key="lime_btn", use_container_width=True)
@@ -475,7 +488,9 @@ with tab_dx:
                                     try:
                                         import torch
                                         from torchvision import transforms
-                                        from lime import lime_image
+                                        lime_image = import_optional_explainer("lime.lime_image")
+                                        if lime_image is None:
+                                            raise ImportError("lime is not installed")
                                         from skimage.segmentation import mark_boundaries
                                         from src.model import build_model
                                         ckpt = torch.load(
@@ -519,8 +534,10 @@ with tab_dx:
                                         b3.seek(0)
                                         st.session_state["lime_fig"] = Image.open(b3).copy()
                                         st.rerun()
+                                    except ImportError:
+                                        _render_saved_explainer_figure("lime", st)
                                     except Exception as e:
-                                        st.error(f"LIME failed: {e}")
+                                        st.error(f"LIME explanation unavailable: {e}")
 
                 # ── ADVICE PASSPORT ──────────────────────────────────────────
                 advisory = data.get("advisory", {})

@@ -32,6 +32,14 @@ def test_compose_profiles_healthchecks_and_read_only_model_mount():
     assert "./reports:/app/reports:ro" in services["api"]["volumes"]
     assert "DATA_ROOT" not in services["api"].get("environment", {})
     assert {"prometheus_data", "grafana_data"} <= set(compose["volumes"])
+    ui_build = services["ui"].get("build", {})
+    assert ui_build.get("target") == "ui"
+    assert "lime" not in str(services["ui"]).lower()
+    assert "shap" not in str(services["ui"]).lower()
+    dockerfile = (ROOT / "Dockerfile").read_text(encoding="utf-8").lower()
+    assert not re.search(r"(?m)^\s*(lime|shap)\s*(?:\\)?$", dockerfile)
+    ci_requirements = (ROOT / "requirements-ci.txt").read_text(encoding="utf-8")
+    assert "streamlit==1.45.1" in ci_requirements
 
 
 def test_prometheus_config_scrapes_api_and_has_empty_rules():

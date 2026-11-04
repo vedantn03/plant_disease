@@ -61,9 +61,7 @@ FROM base AS ui
 RUN pip install --no-cache-dir \
     streamlit==1.45.1 \
     pandas==2.3.1 \
-    requests==2.32.4 \
-    lime \
-    shap
+    requests==2.32.4
 
 COPY app/ /app/app/
 COPY demo_samples/ /app/demo_samples/

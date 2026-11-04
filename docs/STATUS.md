@@ -1,5 +1,7 @@
 # Current Status
 
+Marathi and Hindi selectable; text falls back to English until reviewed translations are added.
+
 | Area | Status | Evidence / limitation |
 |---|---|---|
 | Data/versioning pipeline | Implemented | `dvc.yaml`; execution requires local dataset and DVC state. |
