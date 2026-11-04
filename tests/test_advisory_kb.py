@@ -98,3 +98,42 @@ def test_only_retained_corn_rust_text_is_verified(advisories):
     assert [(item["crop"], item["condition"]) for item in verified] == [
         ("corn_(maize)", "common_rust_")
     ]
+
+
+def test_audit_inventory_matches_every_kb_entry_once(advisories):
+    audit = (ROOT / "docs" / "ADVISORY_AUDIT.md").read_text(encoding="utf-8")
+    inventory = audit.split("## Entry-by-entry inventory", 1)[1].split(
+        "## Manual source checks requested", 1
+    )[0]
+    rows = []
+    for line in inventory.splitlines():
+        if not line.startswith("| ") or line.startswith("|---"):
+            continue
+        cells = [cell.strip() for cell in line.strip("|").split("|")]
+        if cells[0] in {"Crop", ""}:
+            continue
+        assert len(cells) == 8, f"Malformed audit inventory row: {line}"
+        rows.append(cells)
+
+    expected = {(entry["crop"], entry["condition"]) for entry in advisories}
+    actual = [(row[0], row[1]) for row in rows]
+    assert len(actual) == len(set(actual))
+    assert set(actual) == expected
+    assert len(rows) == len(advisories)
+
+    audit_counts = {"VERIFIED": 0, "UNVERIFIED-SOURCE": 0, "PLACEHOLDER": 0}
+    active_counts = {"VERIFIED": 0, "PLACEHOLDER": 0}
+    for row in rows:
+        audit_counts[row[2]] += 1
+        active_counts[row[3]] += 1
+        assert row[4] != "—" if row[2] == "UNVERIFIED-SOURCE" else True
+    assert audit_counts == {"VERIFIED": 1, "UNVERIFIED-SOURCE": 25, "PLACEHOLDER": 12}
+    assert active_counts == {"VERIFIED": 1, "PLACEHOLDER": 37}
+    manual_urls = audit.split("<!-- UNVERIFIED_URLS_BEGIN -->", 1)[1].split(
+        "<!-- UNVERIFIED_URLS_END -->", 1
+    )[0]
+    listed_urls = re.findall(r"https?://\S+", manual_urls)
+    unverified_urls = [row[4] for row in rows if row[2] == "UNVERIFIED-SOURCE"]
+    assert len(listed_urls) == 25
+    assert set(listed_urls) == set(unverified_urls)
+    assert "`plantdisease.net` is not a Cornell domain" in audit
