@@ -131,8 +131,21 @@ def test_environment_overrides_apply_when_sections_exist(tmp_path, monkeypatch):
     )
     monkeypatch.setenv("MLFLOW_TRACKING_URI", "sqlite:///override.db")
     monkeypatch.setenv("SERVING_MODEL_SOURCE", "registry")
+    monkeypatch.setenv("DATA_ROOT", "D:/datasets/plant_disease")
 
     config = load_config(config_path, require_data_root=False)
 
     assert config.mlflow.tracking_uri == "sqlite:///override.db"
     assert config.serving.model_source == "registry"
+    assert config.data.root == "D:/datasets/plant_disease"
+
+
+def test_data_root_environment_override_creates_missing_section(tmp_path, monkeypatch):
+    _clear_loader_environment(monkeypatch)
+    config_path = tmp_path / "config.yaml"
+    config_path.write_text("serving:\n  model_source: local\n", encoding="utf-8")
+    monkeypatch.setenv("DATA_ROOT", "D:/datasets/plant_disease")
+
+    config = load_config(config_path)
+
+    assert config.data.root == "D:/datasets/plant_disease"
