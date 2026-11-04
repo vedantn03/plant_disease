@@ -119,6 +119,44 @@
         {"refId": "A", "expr": "sum by (result) (increase(bg_check_total[15m]))", "legendFormat": "{{result}}"}
       ],
       "gridPos": {"h": 6, "w": 12, "x": 12, "y": 30}
+    },
+    {
+      "id": 12,
+      "title": "Advice coverage",
+      "type": "row",
+      "collapsed": false,
+      "panels": [],
+      "gridPos": {"h": 1, "w": 24, "x": 0, "y": 36}
+    },
+    {
+      "id": 13,
+      "title": "Advice decisions by tier and evidence grade",
+      "type": "timeseries",
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "targets": [
+        {"refId": "A", "expr": "sum by (tier, evidence_grade) (increase(advice_total[15m]))", "legendFormat": "{{tier}} / {{evidence_grade}}"}
+      ],
+      "gridPos": {"h": 6, "w": 12, "x": 0, "y": 37}
+    },
+    {
+      "id": 14,
+      "title": "Advice withheld by reason",
+      "type": "timeseries",
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "targets": [
+        {"refId": "A", "expr": "sum by (reason) (increase(advice_withheld_total[15m]))", "legendFormat": "{{reason}}"}
+      ],
+      "gridPos": {"h": 6, "w": 12, "x": 12, "y": 37}
+    },
+    {
+      "id": 15,
+      "title": "Requests for classes without grade A or B advice",
+      "type": "timeseries",
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "targets": [
+        {"refId": "A", "expr": "sum by (class) (increase(advice_gap_total[15m]))", "legendFormat": "{{class}}"}
+      ],
+      "gridPos": {"h": 6, "w": 24, "x": 0, "y": 43}
     }
   ]
 }

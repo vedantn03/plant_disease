@@ -2,1370 +2,842 @@ advisories:
 - crop: tomato
   condition: early_blight
   pathogen_type: fungal
-  recommendation_text: 'Tomato early blight (Alternaria solani) is managed by removing
-    infected lower leaves, improving air circulation, avoiding overhead irrigation,
-    and applying registered fungicides when disease pressure is high. Copper-based
-    fungicides and chlorothalonil are listed as options in the referenced source.
-    Begin scouting at transplanting and treat when the first symptoms appear. Rotate
-    fungicides to reduce resistance risk. Do not apply fungicides during heat stress.
-    Consult the full extension guide for timing intervals and resistance management
-    groups.
-
-    '
-  caution_text: 'Specific products and application rates must come from the product
-    label and local registration. This text does not specify concentrations or application
-    intervals. Resistance to fungicides has been reported; use Integrated Pest Management
-    (IPM).
-
-    '
-  weather_rule:
-    humidity_min: 75
-    temp_min: 24
-    temp_max: 32
-    note: 'Current conditions (warm temperature, high humidity) are favourable for
-      Alternaria sporulation and spread. Consider increasing scouting frequency. (Source:
-      UC IPM, https://ipm.ucanr.edu/PMG/r783300111.html)
-
-      '
-    source: UC IPM
-  source_name: UC IPM — University of California Statewide Integrated Pest Management
-    Program
-  source_url: https://ipm.ucanr.edu/PMG/r783300111.html
-  last_verified: '2026-10-14'
-  status: VERIFIED
-  region: US (UC IPM) & India (ICAR-IIHR / TNAU)
-  recommendation_scope: both
-  cultural_controls:
-  - practice: Remove lower infected foliage to reduce primary inoculum splash.
-    source_id: uc_ipm_eb
-  - practice: Employ drip irrigation or furrow irrigation; avoid sprinkler foliage
-      wetting.
-    source_id: tnau_eb
-  - practice: 2 to 3-year crop rotation with non-solanaceous crops.
-    source_id: uc_ipm_eb
-  chemical_options:
-  - active_ingredient: Chlorothalonil (FRAC M05) or Mancozeb (FRAC M03)
-    rate_text: Apply according to registered local product label (e.g. 2.0-2.5 g/L
-      water)
-    label_caveat: Protective contact fungicide; apply prior to infection or at first
-      sign of lower leaf lesion.
-    source_id: uc_ipm_eb
-  - active_ingredient: Difenoconazole 25% EC (FRAC 3)
-    rate_text: 0.5 ml per liter of water as per CIBRC approved label recommendation
-    label_caveat: Systemic triazole fungicide; rotate with multisite contact fungicides
-      to prevent resistance.
-    source_id: tnau_eb
-  sources:
-  - id: uc_ipm_eb
-    publisher: University of California IPM
-    url: https://ipm.ucanr.edu/PMG/r783300111.html
-    access_date: '2026-10-14'
-  - id: tnau_eb
-    publisher: Tamil Nadu Agricultural University (TNAU) Agritech Portal
-    url: https://agritech.tnau.ac.in/crop_protection/crop_prot_crop%20diseases_veg_tomato_1.html
-    access_date: '2026-10-28'
-  resistance_management_note: Rotate FRAC group 3 (Difenoconazole) with multisite
-    protectants (FRAC M03/M05). Maximum 2 sequential applications of Group 3 fungicides.
-  monitoring_or_thresholds_note: Scout weekly beginning at transplanting. Focus scouting
-    on bottom 30 cm of canopy after rainfall.
+  recommendation_text: ''
+  caution_text: ''
+  source_name: ''
+  source_url: ''
+  last_verified: ''
+  status: PLACEHOLDER
+  cultural_controls: []
+  chemical_options: []
+  id: tomato__early_blight
+  publisher: ''
+  retrieved_on: ''
+  reviewed_by: ''
+  expires_after_days: null
+  guidance:
+    scouting: []
+    cultural: []
+    chemical_options: []
+    label_reminder: Consult a local agronomist.
+  confusable_pairs: []
 - crop: tomato
   condition: late_blight
   pathogen_type: fungal
-  recommendation_text: 'Tomato late blight (Phytophthora infestans) is a serious oomycete
-    (water mould) disease. Management includes using certified disease-free seed/transplants,
-    removing volunteer potato plants nearby (shared host), improving air circulation,
-    and avoiding prolonged leaf wetness. Fungicides (oomyceticides) are recommended
-    preventively before or at first sign of infection; curative activity is limited.
-    The referenced source lists mancozeb, chlorothalonil, and copper-based materials
-    as protective options; systemic products (e.g., metalaxyl-based) are listed for
-    curative activity. Check local registrations and resistance status before use.
-
-    '
-  caution_text: 'P. infestans strains vary in fungicide sensitivity. Do not rely on
-    a single mode of action. Rotate chemical groups according to FRAC codes. Specific
-    rates and intervals must be taken from the product label. This advisory does not
-    specify concentrations.
-
-    '
-  weather_rule:
-    humidity_min: 90
-    temp_min: 10
-    temp_max: 25
-    note: 'Cool, wet conditions (10-25°C, RH ≥ 90%) are highly favourable for late
-      blight development and spread. Disease can progress very rapidly under these
-      conditions; consider immediate scouting and preventive spray application if
-      not already done. (Source: Cornell CALS, https://plantdisease.net/tomato_late_blight)
-
-      '
-    source: Cornell CALS
-  source_name: Cornell Cooperative Extension — Vegetable Disease ID
-  source_url: https://plantdisease.net/tomato_late_blight
-  last_verified: '2026-10-14'
-  status: VERIFIED
-  region: US (Cornell CALS) & India (ICAR-IIHR / CPRI)
-  recommendation_scope: both
-  cultural_controls:
-  - practice: Destroy all volunteer potato and tomato plants within 1 km (shared oomycete
-      host).
-    source_id: cornell_lb
-  - practice: Select resistant cultivars (e.g. Mountain Magic, Defiant PHR, Kufri
-      series).
-    source_id: cornell_lb
-  chemical_options:
-  - active_ingredient: Mancozeb 75% WP or Chlorothalonil 75% WP
-    rate_text: 2.0 - 2.5 g per liter of water
-    label_caveat: Apply preventatively prior to cool, rainy weather. Limited curative
-      activity.
-    source_id: cornell_lb
-  - active_ingredient: Cymoxanil 8% + Mancozeb 64% WP
-    rate_text: 1.5 - 2.0 g per liter of water
-    label_caveat: Kickback curative activity within 48 hours of infection; follow
-      strict re-entry intervals.
-    source_id: icar_lb
-  sources:
-  - id: cornell_lb
-    publisher: Cornell Cooperative Extension CALS
-    url: https://plantdisease.net/tomato_late_blight
-    access_date: '2026-10-14'
-  - id: icar_lb
-    publisher: ICAR - Central Potato Research Institute (CPRI)
-    url: https://cpri.icar.gov.in/
-    access_date: '2026-10-28'
-  resistance_management_note: Oomycete strains (A2 mating type) develop resistance
-    rapidly. Alternate systemic translaminar chemistry with multisite contact protectants.
-  monitoring_or_thresholds_note: Consult regional BLITECAST or weather alerts. Daily
-    scouting required during cool, humid periods (RH > 90%, 12-22°C).
+  recommendation_text: ''
+  caution_text: ''
+  source_name: ''
+  source_url: ''
+  last_verified: ''
+  status: PLACEHOLDER
+  cultural_controls: []
+  chemical_options: []
+  id: tomato__late_blight
+  publisher: ''
+  retrieved_on: ''
+  reviewed_by: ''
+  expires_after_days: null
+  guidance:
+    scouting: []
+    cultural: []
+    chemical_options: []
+    label_reminder: Consult a local agronomist.
+  confusable_pairs: []
 - crop: tomato
   condition: bacterial_spot
   pathogen_type: bacterial
-  recommendation_text: 'Tomato bacterial spot (Xanthomonas vesicatoria and related
-    species) is managed by using certified pathogen-free seed and transplants, crop
-    rotation (at least two years away from solanaceous crops), avoiding overhead irrigation,
-    and removing infected plant debris after harvest. Fixed copper bactericides are
-    listed as a management option in the referenced source; effectiveness may be reduced
-    where copper-resistant strains have developed. Mixing copper with mancozeb may
-    improve efficacy according to the source. Fungicide applications are NOT effective
-    against this bacterial pathogen.
-
-    '
-  caution_text: 'Copper resistance in Xanthomonas has been reported widely. This advisory
-    does not specify application rates or intervals; consult the product label and
-    a local extension specialist. No dosages are given here.
-
-    '
-  source_name: University of Florida IFAS Extension
-  source_url: https://edis.ifas.ufl.edu/publication/VH014
-  last_verified: '2026-10-14'
-  status: VERIFIED
-  region: Global (UF/IFAS & ICAR-IIHR)
-  recommendation_scope: both
-  cultural_controls:
-  - practice: Use certified pathogen-free seed and disease-free transplants.
-    source_id: primary_source
-  - practice: Minimum 2-year rotation away from solanaceous crops (tomato, pepper,
-      eggplant).
-    source_id: primary_source
-  chemical_options:
-  - active_ingredient: Copper Hydroxide (FRAC M01) + Mancozeb (FRAC M03) tank mix
-    rate_text: Apply at label rates preventatively during humid weather. Standard
-      fungicides alone are ineffective against bacteria.
-    label_caveat: Fixed copper protectant bactericide; mancozeb enhances copper ion
-      activity against copper-tolerant Xanthomonas.
-    source_id: primary_source
-  sources:
-  - id: primary_source
-    publisher: University of Florida IFAS Extension
-    url: https://edis.ifas.ufl.edu/publication/VH014
-    access_date: '2026-10-14'
+  recommendation_text: ''
+  caution_text: ''
+  source_name: ''
+  source_url: ''
+  last_verified: ''
+  status: PLACEHOLDER
+  cultural_controls: []
+  chemical_options: []
+  id: tomato__bacterial_spot
+  publisher: ''
+  retrieved_on: ''
+  reviewed_by: ''
+  expires_after_days: null
+  guidance:
+    scouting: []
+    cultural: []
+    chemical_options: []
+    label_reminder: Consult a local agronomist.
+  confusable_pairs: []
 - crop: potato
   condition: early_blight
   pathogen_type: fungal
-  recommendation_text: 'Potato early blight (Alternaria solani) is managed by maintaining
-    plant vigour through balanced fertilisation (low-nitrogen stress increases susceptibility),
-    using certified seed potatoes, rotating crops (two to three year rotation), and
-    applying fungicides at first symptom appearance or based on regional forecasting
-    models. The referenced source lists chlorothalonil, mancozeb, and copper-based
-    products as options. Start applications when lower leaves show first lesions and
-    conditions favour disease spread.
-
-    '
-  caution_text: 'Specific rates and timing intervals must be obtained from the product
-    label and local extension recommendations. This text does not provide concentrations.
-
-    '
-  weather_rule:
-    humidity_min: 70
-    temp_min: 24
-    temp_max: 29
-    note: 'Warm temperatures (24-29°C) with moderate humidity favour Alternaria sporulation.
-      Scout lower canopy leaves; early intervention is more effective. (Source: UMaine
-      Extension, https://extension.umaine.edu/publications/2436e/)
-
-      '
-    source: UMaine Extension
-  source_name: University of Maine Cooperative Extension
-  source_url: https://extension.umaine.edu/publications/2436e/
-  last_verified: '2026-10-14'
-  status: VERIFIED
-  region: US (UMaine Extension) & India (ICAR-CPRI)
-  recommendation_scope: both
-  cultural_controls:
-  - practice: Maintain optimal nitrogen fertilization; early blight severity increases
-      under nutrient deficiency.
-    source_id: umaine_pe
-  - practice: Harvest tubers only after vine maturity to prevent skinning and spore
-      transmission.
-    source_id: cpri_pe
-  chemical_options:
-  - active_ingredient: Mancozeb 75% WP
-    rate_text: 2.0 - 2.5 kg/ha in 500 L water (or 2.5 g/L)
-    label_caveat: Multisite surface protectant. Apply at first sign of concentric
-      ring lesions on lower leaves.
-    source_id: cpri_pe
-  sources:
-  - id: umaine_pe
-    publisher: University of Maine Cooperative Extension
-    url: https://extension.umaine.edu/publications/2436e/
-    access_date: '2026-10-14'
-  - id: cpri_pe
-    publisher: ICAR - Central Potato Research Institute
-    url: https://cpri.icar.gov.in/
-    access_date: '2026-10-28'
-  resistance_management_note: Alternaria solani exhibits resistance to QoI (FRAC 11)
-    strobilurins in multiple production regions. Rely primarily on multisite protectants.
-  monitoring_or_thresholds_note: Begin surveillance post-tuber initiation (45-50 days
-    after planting).
+  recommendation_text: ''
+  caution_text: ''
+  source_name: ''
+  source_url: ''
+  last_verified: ''
+  status: PLACEHOLDER
+  cultural_controls: []
+  chemical_options: []
+  id: potato__early_blight
+  publisher: ''
+  retrieved_on: ''
+  reviewed_by: ''
+  expires_after_days: null
+  guidance:
+    scouting: []
+    cultural: []
+    chemical_options: []
+    label_reminder: Consult a local agronomist.
+  confusable_pairs: []
 - crop: potato
   condition: late_blight
   pathogen_type: fungal
-  recommendation_text: 'Potato late blight (Phytophthora infestans) is one of the
-    most destructive plant diseases. Management relies on: certified disease-free
-    seed potatoes, resistant varieties where available, destroying volunteer potato
-    plants, prompt removal of infected foliage (haulm destruction), and a preventive
-    fungicide program. The referenced source lists protective fungicides (e.g., mancozeb,
-    chlorothalonil) and systemic oomyceticides; start applications before disease
-    appears and continue on a schedule based on weather conditions and regional forecasts.
-
-    '
-  caution_text: 'Do not rely on a single chemical mode of action — resistance to metalaxyl
-    is widespread in some regions. Rotate FRAC groups. Specific rates and intervals
-    are on the product label. This advisory does not provide concentrations.
-
-    '
-  weather_rule:
-    humidity_min: 90
-    temp_min: 10
-    temp_max: 24
-    note: 'Cool, wet conditions are ideal for P. infestans. These conditions may justify
-      shortening spray intervals and increasing scouting frequency. (Source: UMaine
-      Extension, https://extension.umaine.edu/publications/2436e/)
-
-      '
-    source: UMaine Extension
-  source_name: University of Maine Cooperative Extension
-  source_url: https://extension.umaine.edu/publications/2436e/
-  last_verified: '2026-10-14'
-  status: VERIFIED
-  region: US (UMass Extension) & India (ICAR-CPRI)
-  recommendation_scope: both
-  cultural_controls:
-  - practice: Plant certified disease-free seed tubers with zero late blight tolerance.
-    source_id: umass_plb
-  - practice: High hilling / earthing-up to build 10-15 cm soil barrier over developing
-      tubers.
-    source_id: cpri_plb
-  chemical_options:
-  - active_ingredient: Mancozeb 75% WP
-    rate_text: 2.5 g per liter of water as prophylactic spray
-    label_caveat: Multisite contact protectant; ensure complete adaxial and abaxial
-      foliar coverage.
-    source_id: cpri_plb
-  - active_ingredient: Dimethomorph 50% WP
-    rate_text: 1.0 g per liter of water (CIBRC approved rate)
-    label_caveat: Translaminar oomyceticide; apply only in mixture with protective
-      mancozeb.
-    source_id: cpri_plb
-  sources:
-  - id: umass_plb
-    publisher: University of Massachusetts Amherst Extension
-    url: https://ag.umass.edu/vegetable/fact-sheets/potato-late-blight
-    access_date: '2026-10-14'
-  - id: cpri_plb
-    publisher: ICAR - Central Potato Research Institute
-    url: https://cpri.icar.gov.in/
-    access_date: '2026-10-28'
-  resistance_management_note: Metalaxyl resistance is widespread in Indian hills and
-    plains; use mixed-mode translaminar partnerships.
-  monitoring_or_thresholds_note: Monitor regional Indo-Blightcast meteorological forecasting
-    advisories.
-- crop: apple
-  condition: healthy
-  pathogen_type: none
-  recommendation_text: 'No disease detected. Continue routine monitoring, maintain
-    good orchard sanitation, and follow seasonal IPM calendar recommendations from
-    your local extension service.
-
-    '
+  recommendation_text: ''
   caution_text: ''
   source_name: ''
   source_url: ''
   last_verified: ''
   status: PLACEHOLDER
-  region: global
-  recommendation_scope: none
   cultural_controls: []
   chemical_options: []
-  sources: []
+  id: potato__late_blight
+  publisher: ''
+  retrieved_on: ''
+  reviewed_by: ''
+  expires_after_days: null
+  guidance:
+    scouting: []
+    cultural: []
+    chemical_options: []
+    label_reminder: Consult a local agronomist.
+  confusable_pairs: []
+- crop: apple
+  condition: healthy
+  pathogen_type: none
+  recommendation_text: ''
+  caution_text: ''
+  source_name: ''
+  source_url: ''
+  last_verified: ''
+  status: PLACEHOLDER
+  cultural_controls: []
+  chemical_options: []
+  id: apple__healthy
+  publisher: ''
+  retrieved_on: ''
+  reviewed_by: ''
+  expires_after_days: null
+  guidance:
+    scouting: []
+    cultural: []
+    chemical_options: []
+    label_reminder: Consult a local agronomist.
+  confusable_pairs: []
 - crop: blueberry
   condition: healthy
   pathogen_type: none
-  recommendation_text: 'No disease detected. Continue routine monitoring and consult
-    your local extension service for seasonal management advice.
-
-    '
+  recommendation_text: ''
   caution_text: ''
   source_name: ''
   source_url: ''
   last_verified: ''
   status: PLACEHOLDER
-  region: global
-  recommendation_scope: none
   cultural_controls: []
   chemical_options: []
-  sources: []
+  id: blueberry__healthy
+  publisher: ''
+  retrieved_on: ''
+  reviewed_by: ''
+  expires_after_days: null
+  guidance:
+    scouting: []
+    cultural: []
+    chemical_options: []
+    label_reminder: Consult a local agronomist.
+  confusable_pairs: []
 - crop: cherry_(including_sour)
   condition: healthy
   pathogen_type: none
-  recommendation_text: 'No disease detected. Continue routine monitoring and consult
-    your local extension service for seasonal management advice.
-
-    '
+  recommendation_text: ''
   caution_text: ''
   source_name: ''
   source_url: ''
   last_verified: ''
   status: PLACEHOLDER
-  region: global
-  recommendation_scope: none
   cultural_controls: []
   chemical_options: []
-  sources: []
+  id: cherry_(including_sour)__healthy
+  publisher: ''
+  retrieved_on: ''
+  reviewed_by: ''
+  expires_after_days: null
+  guidance:
+    scouting: []
+    cultural: []
+    chemical_options: []
+    label_reminder: Consult a local agronomist.
+  confusable_pairs: []
 - crop: corn_(maize)
   condition: healthy
   pathogen_type: none
-  recommendation_text: 'No disease detected. Continue routine monitoring and consult
-    your local extension service for seasonal management advice.
-
-    '
+  recommendation_text: ''
   caution_text: ''
   source_name: ''
   source_url: ''
   last_verified: ''
   status: PLACEHOLDER
-  region: global
-  recommendation_scope: none
   cultural_controls: []
   chemical_options: []
-  sources: []
+  id: corn_(maize)__healthy
+  publisher: ''
+  retrieved_on: ''
+  reviewed_by: ''
+  expires_after_days: null
+  guidance:
+    scouting: []
+    cultural: []
+    chemical_options: []
+    label_reminder: Consult a local agronomist.
+  confusable_pairs: []
 - crop: grape
   condition: healthy
   pathogen_type: none
-  recommendation_text: 'No disease detected. Continue routine monitoring and consult
-    your local extension service for seasonal management advice.
-
-    '
+  recommendation_text: ''
   caution_text: ''
   source_name: ''
   source_url: ''
   last_verified: ''
   status: PLACEHOLDER
-  region: global
-  recommendation_scope: none
   cultural_controls: []
   chemical_options: []
-  sources: []
+  id: grape__healthy
+  publisher: ''
+  retrieved_on: ''
+  reviewed_by: ''
+  expires_after_days: null
+  guidance:
+    scouting: []
+    cultural: []
+    chemical_options: []
+    label_reminder: Consult a local agronomist.
+  confusable_pairs: []
 - crop: peach
   condition: healthy
   pathogen_type: none
-  recommendation_text: 'No disease detected. Continue routine monitoring and consult
-    your local extension service for seasonal management advice.
-
-    '
+  recommendation_text: ''
   caution_text: ''
   source_name: ''
   source_url: ''
   last_verified: ''
   status: PLACEHOLDER
-  region: global
-  recommendation_scope: none
   cultural_controls: []
   chemical_options: []
-  sources: []
+  id: peach__healthy
+  publisher: ''
+  retrieved_on: ''
+  reviewed_by: ''
+  expires_after_days: null
+  guidance:
+    scouting: []
+    cultural: []
+    chemical_options: []
+    label_reminder: Consult a local agronomist.
+  confusable_pairs: []
 - crop: pepper,_bell
   condition: healthy
   pathogen_type: none
-  recommendation_text: 'No disease detected. Continue routine monitoring and consult
-    your local extension service for seasonal management advice.
-
-    '
+  recommendation_text: ''
   caution_text: ''
   source_name: ''
   source_url: ''
   last_verified: ''
   status: PLACEHOLDER
-  region: global
-  recommendation_scope: none
   cultural_controls: []
   chemical_options: []
-  sources: []
+  id: pepper,_bell__healthy
+  publisher: ''
+  retrieved_on: ''
+  reviewed_by: ''
+  expires_after_days: null
+  guidance:
+    scouting: []
+    cultural: []
+    chemical_options: []
+    label_reminder: Consult a local agronomist.
+  confusable_pairs: []
 - crop: potato
   condition: healthy
   pathogen_type: none
-  recommendation_text: 'No disease detected. Continue routine monitoring and consult
-    your local extension service for seasonal management advice.
-
-    '
+  recommendation_text: ''
   caution_text: ''
   source_name: ''
   source_url: ''
   last_verified: ''
   status: PLACEHOLDER
-  region: global
-  recommendation_scope: none
   cultural_controls: []
   chemical_options: []
-  sources: []
+  id: potato__healthy
+  publisher: ''
+  retrieved_on: ''
+  reviewed_by: ''
+  expires_after_days: null
+  guidance:
+    scouting: []
+    cultural: []
+    chemical_options: []
+    label_reminder: Consult a local agronomist.
+  confusable_pairs: []
 - crop: raspberry
   condition: healthy
   pathogen_type: none
-  recommendation_text: 'No disease detected. Continue routine monitoring and consult
-    your local extension service for seasonal management advice.
-
-    '
+  recommendation_text: ''
   caution_text: ''
   source_name: ''
   source_url: ''
   last_verified: ''
   status: PLACEHOLDER
-  region: global
-  recommendation_scope: none
   cultural_controls: []
   chemical_options: []
-  sources: []
+  id: raspberry__healthy
+  publisher: ''
+  retrieved_on: ''
+  reviewed_by: ''
+  expires_after_days: null
+  guidance:
+    scouting: []
+    cultural: []
+    chemical_options: []
+    label_reminder: Consult a local agronomist.
+  confusable_pairs: []
 - crop: soybean
   condition: healthy
   pathogen_type: none
-  recommendation_text: 'No disease detected. Continue routine monitoring and consult
-    your local extension service for seasonal management advice.
-
-    '
+  recommendation_text: ''
   caution_text: ''
   source_name: ''
   source_url: ''
   last_verified: ''
   status: PLACEHOLDER
-  region: global
-  recommendation_scope: none
   cultural_controls: []
   chemical_options: []
-  sources: []
+  id: soybean__healthy
+  publisher: ''
+  retrieved_on: ''
+  reviewed_by: ''
+  expires_after_days: null
+  guidance:
+    scouting: []
+    cultural: []
+    chemical_options: []
+    label_reminder: Consult a local agronomist.
+  confusable_pairs: []
 - crop: strawberry
   condition: healthy
   pathogen_type: none
-  recommendation_text: 'No disease detected. Continue routine monitoring and consult
-    your local extension service for seasonal management advice.
-
-    '
+  recommendation_text: ''
   caution_text: ''
   source_name: ''
   source_url: ''
   last_verified: ''
   status: PLACEHOLDER
-  region: global
-  recommendation_scope: none
   cultural_controls: []
   chemical_options: []
-  sources: []
+  id: strawberry__healthy
+  publisher: ''
+  retrieved_on: ''
+  reviewed_by: ''
+  expires_after_days: null
+  guidance:
+    scouting: []
+    cultural: []
+    chemical_options: []
+    label_reminder: Consult a local agronomist.
+  confusable_pairs: []
 - crop: tomato
   condition: healthy
   pathogen_type: none
-  recommendation_text: 'No disease detected. Continue routine monitoring and consult
-    your local extension service for seasonal management advice.
-
-    '
+  recommendation_text: ''
   caution_text: ''
   source_name: ''
   source_url: ''
   last_verified: ''
   status: PLACEHOLDER
-  region: global
-  recommendation_scope: none
   cultural_controls: []
   chemical_options: []
-  sources: []
+  id: tomato__healthy
+  publisher: ''
+  retrieved_on: ''
+  reviewed_by: ''
+  expires_after_days: null
+  guidance:
+    scouting: []
+    cultural: []
+    chemical_options: []
+    label_reminder: Consult a local agronomist.
+  confusable_pairs: []
 - crop: apple
   condition: apple_scab
   pathogen_type: fungal
-  recommendation_text: 'Apple scab (Venturia inaequalis) is managed by applying protectant
-    fungicides starting at green tip through primary ascospore discharge. Captan and
-    mancozeb are standard protectant options cited in university guides; systemic
-    fungicides are reserved for post-infection reach-back within recommended label
-    hours. In autumn, flail-mow or shred fallen leaves to accelerate decomposition
-    and reduce overwintering pseudothecia inoculum.
-
-    '
-  caution_text: 'Venturia inaequalis populations have documented resistance to strobilurin
-    (FRAC 11) and DMI (FRAC 3) fungicides. Rotate chemical groups according to regional
-    FRAC recommendations. Product application rates must be taken from the manufacturer
-    label.
-
-    '
-  weather_rule:
-    humidity_min: 80
-    temp_min: 16
-    temp_max: 24
-    note: 'Prolonged leaf wetness (6-9 hours) at moderate temperatures (16-24°C) satisfies
-      Mills infection criteria for primary apple scab penetration. (Source: Cornell
-      CALS Tree Fruit Pathology, https://blogs.cornell.edu/plantpathhvl/apple-diseases/apple-scab/)
-
-      '
-    source: Cornell CALS
-  source_name: Cornell CALS Tree Fruit Pathology
-  source_url: https://blogs.cornell.edu/plantpathhvl/apple-diseases/apple-scab/
-  last_verified: '2026-10-14'
-  status: VERIFIED
-  region: US (Cornell CALS) & India (SKUAST / ICAR-CITH)
-  recommendation_scope: both
-  cultural_controls:
-  - practice: Rake and flail-mow or shred fallen apple leaves in autumn to accelerate
-      decomposition and reduce ascospore inoculum.
-    source_id: primary_source
-  - practice: Prune canopy branches annually to improve sunlight penetration and air
-      movement, reducing wetting periods.
-    source_id: primary_source
-  chemical_options:
-  - active_ingredient: Captan 50% WP or Mancozeb 75% WP (FRAC M04 / M03)
-    rate_text: Apply protectant sprays starting at green-tip according to regional
-      spray advisory schedules.
-    label_caveat: Protectant contact fungicide with multisite mode of action; apply
-      prior to rain events.
-    source_id: primary_source
-  - active_ingredient: Difenoconazole 25% EC (FRAC 3)
-    rate_text: Apply at label-specified rates with 72-96 hour post-infection reach-back
-      window.
-    label_caveat: Systemic DMI fungicide; rotate chemistry to prevent resistance development.
-    source_id: primary_source
-  sources:
-  - id: primary_source
-    publisher: Cornell CALS Tree Fruit Pathology
-    url: https://blogs.cornell.edu/plantpathhvl/apple-diseases/apple-scab/
-    access_date: '2026-10-14'
+  recommendation_text: ''
+  caution_text: ''
+  source_name: ''
+  source_url: ''
+  last_verified: ''
+  status: PLACEHOLDER
+  cultural_controls: []
+  chemical_options: []
+  id: apple__apple_scab
+  publisher: ''
+  retrieved_on: ''
+  reviewed_by: ''
+  expires_after_days: null
+  guidance:
+    scouting: []
+    cultural: []
+    chemical_options: []
+    label_reminder: Consult a local agronomist.
+  confusable_pairs: []
 - crop: apple
   condition: black_rot
   pathogen_type: fungal
-  recommendation_text: Apple black rot (Botryosphaeria obtusa) causes 'frog-eye' foliar
-    lesions and fruit rot. Primary management requires pruning dead wood, mummified
-    apples, and fire-blight cankers which serve as fungal reservoirs. Apply protectant
-    fungicides from silver tip through post-bloom petal fall.
-  caution_text: Chemical sprays alone fail if dead wood reservoirs remain in the orchard
-    canopy.
-  source_name: Cornell CALS Tree Fruit Pathology Guidelines
-  source_url: https://blogs.cornell.edu/plantpathhvl/apple-diseases/black-rot/
-  last_verified: '2026-10-28'
-  status: VERIFIED
-  region: US (Cornell Tree Fruit) & India (SKUAST / ICAR-CITH)
-  recommendation_scope: both
-  cultural_controls:
-  - practice: Prune out dead wood, cankered twigs, and remove mummified fruit during
-      winter dormant season.
-    source_id: cornell_apple
-  - practice: Flail-mow or rake dropped leaves and prunings to reduce overwintering
-      pycnidia.
-    source_id: cornell_apple
-  chemical_options:
-  - active_ingredient: Captan 50% WP or Mancozeb 75% WP (FRAC M04 / M03)
-    rate_text: 2.0 - 2.5 g per liter of water at pink bud through petal fall
-    label_caveat: Broad-spectrum contact protectant; apply before wetting infection
-      events.
-    source_id: cornell_apple
-  - active_ingredient: Thiophanate-methyl (FRAC 1) + Captan tank mix
-    rate_text: Apply at registered label rate during early cover sprays
-    label_caveat: Systemic benzimidazole for rot suppression; must be tank-mixed with
-      protectant to manage resistance.
-    source_id: cornell_apple
-  sources: []
-  region_caveat: 'Source region: US (Cornell Tree Fruit) & India (SKUAST / ICAR-CITH);
-    verify local regulatory registrations, label rates, and pre-harvest intervals
-    (PHI) before use.'
+  recommendation_text: ''
+  caution_text: ''
+  source_name: ''
+  source_url: ''
+  last_verified: ''
+  status: PLACEHOLDER
+  cultural_controls: []
+  chemical_options: []
+  id: apple__black_rot
+  publisher: ''
+  retrieved_on: ''
+  reviewed_by: ''
+  expires_after_days: null
+  guidance:
+    scouting: []
+    cultural: []
+    chemical_options: []
+    label_reminder: Consult a local agronomist.
+  confusable_pairs: []
 - crop: apple
   condition: cedar_apple_rust
   pathogen_type: fungal
-  recommendation_text: Cedar-apple rust requires alternate juniper/red cedar hosts
-    to complete its life cycle. Foliar symptoms appear as vivid yellow-orange spots
-    with pycnia. Eradicate nearby eastern red cedar trees where feasible, or apply
-    DMI triazole fungicides during tight cluster to petal fall.
-  caution_text: Protectant fungicides like Captan alone have poor efficacy against
-    rust; use DMI or strobilurins.
-  source_name: Penn State Extension Tree Fruit Disease Guide
-  source_url: https://extension.psu.edu/cedar-apple-rust
-  last_verified: '2026-10-28'
-  status: VERIFIED
-  region: US (Penn State / Purdue Extension)
-  recommendation_scope: both
-  cultural_controls:
-  - practice: Remove red cedar trees or galls within 1-2 miles of commercial orchard
-      boundary where practical.
-    source_id: psu_rust
-  - practice: Plant rust-resistant apple cultivars (e.g. Liberty, Freedom, Enterprise).
-    source_id: psu_rust
-  chemical_options:
-  - active_ingredient: Myclobutanil (FRAC 3) or Difenoconazole 25% EC (FRAC 3)
-    rate_text: 0.5 - 1.0 ml per liter of water as per registered label
-    label_caveat: Highly effective systemic triazole; apply from pink through petal
-      fall.
-    source_id: psu_rust
-  - active_ingredient: Mancozeb 75% WP (FRAC M03)
-    rate_text: 2.0 - 2.5 g per liter of water
-    label_caveat: Apply as protective barrier on emerging foliage. Observe 77-day
-      PHI.
-    source_id: psu_rust
-  sources: []
-  region_caveat: 'Source region: US (Penn State / Purdue Extension); verify local
-    regulatory registrations, label rates, and pre-harvest intervals (PHI) before
-    use.'
+  recommendation_text: ''
+  caution_text: ''
+  source_name: ''
+  source_url: ''
+  last_verified: ''
+  status: PLACEHOLDER
+  cultural_controls: []
+  chemical_options: []
+  id: apple__cedar_apple_rust
+  publisher: ''
+  retrieved_on: ''
+  reviewed_by: ''
+  expires_after_days: null
+  guidance:
+    scouting: []
+    cultural: []
+    chemical_options: []
+    label_reminder: Consult a local agronomist.
+  confusable_pairs: []
 - crop: cherry_(including_sour)
   condition: powdery_mildew
   pathogen_type: fungal
-  recommendation_text: Cherry powdery mildew forms white powdery patches on young
-    expanding leaves and fruit stems. Maintain an open canopy to maximize sunlight
-    penetration. Begin fungicide applications at shuck fall when young fruit is most
-    vulnerable.
-  caution_text: Do not apply sulfur at temperatures above 30°C to avoid severe foliar
-    phytotoxicity.
-  source_name: Washington State University Extension Tree Fruit Guidelines
-  source_url: https://treefruit.wsu.edu/crop-protection/opm/cherry-powdery-mildew/
-  last_verified: '2026-10-28'
-  status: VERIFIED
-  region: US (WSU / OSU Extension) & India (SKUAST)
-  recommendation_scope: both
-  cultural_controls:
-  - practice: Prune interior shoots to open the tree canopy to sunlight and rapid
-      air drying.
-    source_id: wsu_cherry
-  - practice: Avoid excessive nitrogen fertilization which stimulates succulent susceptible
-      foliage.
-    source_id: wsu_cherry
-  chemical_options:
-  - active_ingredient: Micronized Wettable Sulfur 80% WDG (FRAC M02)
-    rate_text: 2.0 - 3.0 g per liter of water at shuck fall
-    label_caveat: Inexpensive multi-site protectant. Do not apply within 2 weeks of
-      oil sprays or in heat (>30°C).
-    source_id: wsu_cherry
-  - active_ingredient: Tebuconazole 25.9% EC (FRAC 3) or Triflumizole (FRAC 3)
-    rate_text: 0.75 - 1.0 ml per liter of water
-    label_caveat: Systemic DMI fungicide; highly effective against mildew conidia.
-      Rotate FRAC groups.
-    source_id: wsu_cherry
-  - active_ingredient: Quinoxyfen (FRAC 13) or Fluxapyroxad (FRAC 7)
-    rate_text: Apply according to registered local stone fruit label
-    label_caveat: Specialist mildewcide for resistance rotation programs.
-    source_id: wsu_cherry
-  sources: []
-  region_caveat: 'Source region: US (WSU / OSU Extension) & India (SKUAST); verify
-    local regulatory registrations, label rates, and pre-harvest intervals (PHI) before
-    use.'
+  recommendation_text: ''
+  caution_text: ''
+  source_name: ''
+  source_url: ''
+  last_verified: ''
+  status: PLACEHOLDER
+  cultural_controls: []
+  chemical_options: []
+  id: cherry_(including_sour)__powdery_mildew
+  publisher: ''
+  retrieved_on: ''
+  reviewed_by: ''
+  expires_after_days: null
+  guidance:
+    scouting: []
+    cultural: []
+    chemical_options: []
+    label_reminder: Consult a local agronomist.
+  confusable_pairs: []
 - crop: corn_(maize)
   condition: cercospora_leaf_spot gray_leaf_spot
   pathogen_type: fungal
-  recommendation_text: Gray leaf spot causes rectangular necrotic lesions strictly
-    bounded by leaf veins. Inoculum overwinters in corn residue; no-till continuous
-    corn is at highest risk. Deploy resistant hybrids and rotate crops. Fungicide
-    application between VT (tasseling) and R2 (blister) is recommended when weather
-    is warm and humid.
-  caution_text: Avoid late-season fungicide applications after R3 (milk stage) as
-    economic yield response declines sharply.
-  source_name: 'Purdue Extension - Diseases of Corn: Gray Leaf Spot'
-  source_url: https://www.extension.purdue.edu/extmedia/BP/BP-56-W.pdf
-  last_verified: '2026-10-28'
-  status: VERIFIED
-  region: US (Purdue / Iowa State) & India (ICAR-IIMR)
-  recommendation_scope: both
-  cultural_controls:
-  - practice: Plant hybrids with high Gray Leaf Spot tolerance ratings.
-    source_id: purdue_gls
-  - practice: Practice 2-year rotation with soybean or legumes to break the saprophytic
-      residue cycle.
-    source_id: purdue_gls
-  chemical_options:
-  - active_ingredient: Trifloxystrobin + Prothioconazole (FRAC 11 + 3)
-    rate_text: Apply as per registered field corn label at VT/R1 stage
-    label_caveat: Broad-spectrum systemic fungicide; prevents leaf canopy blighting
-      during grain fill.
-    source_id: purdue_gls
-  - active_ingredient: Azoxystrobin (FRAC 11) or Pyraclostrobin (FRAC 11)
-    rate_text: 1.0 ml per liter of water according to product label
-    label_caveat: Strobilurin class; do not apply without surfactant or adjuvant unless
-      specified on label.
-    source_id: purdue_gls
-  sources: []
-  region_caveat: 'Source region: US (Purdue / Iowa State) & India (ICAR-IIMR); verify
-    local regulatory registrations, label rates, and pre-harvest intervals (PHI) before
-    use.'
+  recommendation_text: ''
+  caution_text: ''
+  source_name: ''
+  source_url: ''
+  last_verified: ''
+  status: PLACEHOLDER
+  cultural_controls: []
+  chemical_options: []
+  id: corn_(maize)__cercospora_leaf_spot_gray_leaf_spot
+  publisher: ''
+  retrieved_on: ''
+  reviewed_by: ''
+  expires_after_days: null
+  guidance:
+    scouting: []
+    cultural: []
+    chemical_options: []
+    label_reminder: Consult a local agronomist.
+  confusable_pairs: []
 - crop: corn_(maize)
   condition: common_rust_
   pathogen_type: fungal
-  recommendation_text: 'Common rust (Puccinia sorghi) is primarily managed by planting
-    resistant corn hybrids. In seed corn production or susceptible sweet corn, foliar
-    fungicides may be beneficial if rust pustules appear on upper leaves prior to
-    tasseling and environmental conditions favor continuous disease development. Triazole
-    and strobilurin fungicide classes are listed as management options in extension
-    guides.
-
-    '
-  caution_text: 'Fungicide treatment in commercial field corn is rarely cost-effective
-    unless disease pressure is extreme and occurs prior to silking. Specific rates
-    and pre-harvest intervals must be consulted on the registered label.
-
-    '
-  weather_rule:
-    humidity_min: 85
-    temp_min: 16
-    temp_max: 25
-    note: 'Moderate temperatures (16-25°C) and high relative humidity (>= 85%) favor
-      Puccinia sorghi urediniospore germination and secondary spread. (Source: Purdue
-      Extension, https://www.extension.purdue.edu/extmedia/BP/BP-82-W.pdf)
-
-      '
-    source: Purdue Extension
-  source_name: Purdue University Cooperative Extension
+  recommendation_text: ''
+  caution_text: ''
+  source_name: Purdue Extension
   source_url: https://www.extension.purdue.edu/extmedia/BP/BP-82-W.pdf
-  last_verified: '2026-10-14'
+  last_verified: ''
   status: VERIFIED
-  region: US (Purdue Extension) & India (ICAR-IIMR)
-  recommendation_scope: both
-  cultural_controls:
-  - practice: Plant certified resistant or tolerant corn hybrids with major gene or
-      adult-plant resistance.
-    source_id: primary_source
-  - practice: Early planting to escape peak late-season airborne urediniospore showers.
-    source_id: primary_source
-  chemical_options:
-  - active_ingredient: Azoxystrobin (FRAC 11) + Difenoconazole (FRAC 3)
-    rate_text: Apply if rust pustules appear on upper canopy leaves prior to tasseling.
-    label_caveat: Broad-spectrum dual-action fungicide; follow label guidelines for
-      sweet vs field corn.
-    source_id: primary_source
-  sources:
-  - id: primary_source
-    publisher: Purdue University Cooperative Extension
-    url: https://www.extension.purdue.edu/extmedia/BP/BP-82-W.pdf
-    access_date: '2026-10-14'
+  cultural_controls: []
+  chemical_options: []
+  id: corn_(maize)__common_rust_
+  publisher: Purdue Extension
+  retrieved_on: '2026-11-04'
+  reviewed_by: ''
+  expires_after_days: null
+  guidance:
+    scouting:
+    - text: Hybrid resistance ratings and early planting can reduce risk.
+      source_location: PDF page 4, ‘Managing the Disease’
+    cultural: []
+    chemical_options:
+    - quote: Fungicides are available for in-season rust management.
+      source_location: PDF page 4, ‘Managing the Disease’
+    label_reminder:
+      quote: Follow label directions and restrictions.
+      source_location: PDF page 4
+  confusable_pairs: []
 - crop: corn_(maize)
   condition: northern_leaf_blight
   pathogen_type: fungal
-  recommendation_text: Northern corn leaf blight causes large, cigar-shaped grayish-green
-    to tan lesions (1-6 inches long). Use resistant hybrids with Ht genes, practice
-    minimum 1-year crop rotation, and deep-till infected corn debris. Foliar fungicides
-    are justified in seed corn or susceptible sweet corn if lesions appear before
-    silking.
-  caution_text: Economic thresholds rarely justify spraying commercial field corn
-    unless upper leaves show lesions before VT stage.
-  source_name: Purdue University Extension - Northern Corn Leaf Blight
-  source_url: https://extension.entm.purdue.edu/fieldcropsipm/diseases/northern-corn-leaf-blight.php
-  last_verified: '2026-10-28'
-  status: VERIFIED
-  region: US (Purdue / Iowa State) & India (ICAR-IIMR)
-  recommendation_scope: both
-  cultural_controls:
-  - practice: Select corn hybrids with certified resistance (Ht1, Ht2, Ht3, or multi-gene
-      resistance).
-    source_id: purdue_nlb
-  - practice: Rotate to non-host crops (soybean, alfalfa) to reduce residue-borne
-      inoculum.
-    source_id: purdue_nlb
-  chemical_options:
-  - active_ingredient: Azoxystrobin 18.2% + Difenoconazole 11.4% SC (FRAC 11 + 3)
-    rate_text: 1.0 ml per liter of water at VT/R1 silking stage
-    label_caveat: Dual mode of action (QoI + DMI); provides preventative and early
-      curative control.
-    source_id: purdue_nlb
-  - active_ingredient: Pyraclostrobin (FRAC 11) or Propiconazole 25% EC (FRAC 3)
-    rate_text: Apply as per registered cereal label rate
-    label_caveat: Observe strict Pre-Harvest Interval and REI specified on container
-      label.
-    source_id: purdue_nlb
-  sources: []
-  region_caveat: 'Source region: US (Purdue / Iowa State) & India (ICAR-IIMR); verify
-    local regulatory registrations, label rates, and pre-harvest intervals (PHI) before
-    use.'
+  recommendation_text: ''
+  caution_text: ''
+  source_name: ''
+  source_url: ''
+  last_verified: ''
+  status: PLACEHOLDER
+  cultural_controls: []
+  chemical_options: []
+  id: corn_(maize)__northern_leaf_blight
+  publisher: ''
+  retrieved_on: ''
+  reviewed_by: ''
+  expires_after_days: null
+  guidance:
+    scouting: []
+    cultural: []
+    chemical_options: []
+    label_reminder: Consult a local agronomist.
+  confusable_pairs: []
 - crop: grape
   condition: black_rot
   pathogen_type: fungal
-  recommendation_text: 'Grape black rot (Guignardia bidwellii) is managed through
-    vineyard sanitation and fungicide applications during early shoot growth through
-    fruit set. Destroy or remove overwintered mummified berries from the canopy and
-    vineyard floor during dormant pruning. Protectant fungicides (e.g. mancozeb) applied
-    from pre-bloom through early berry development prevent cluster infection.
-
-    '
-  caution_text: 'Berries become immune to black rot infection approximately 4-5 weeks
-    after bloom. Post-bloom spray timing is critical. Specific dosages and spray intervals
-    must follow label instructions; resistance management requires alternating FRAC
-    codes.
-
-    '
-  weather_rule:
-    humidity_min: 85
-    temp_min: 21
-    temp_max: 28
-    note: 'Warm temperatures (21-28°C) combined with prolonged leaf wetness (6-8 hours)
-      trigger rapid black rot ascospore and conidia infection cycles. (Source: Ohio
-      State University Extension, https://ohioline.osu.edu/factsheet/plpath-fru-24)
-
-      '
-    source: OSU Extension
-  source_name: Ohio State University Extension FactSheet
-  source_url: https://ohioline.osu.edu/factsheet/plpath-fru-24
-  last_verified: '2026-10-14'
-  status: VERIFIED
-  region: US (OSU Extension) & India (ICAR-NRCG Pune)
-  recommendation_scope: both
-  cultural_controls:
-  - practice: Remove and destroy all overwintered mummified berries from vine trellises
-      and ground during winter pruning.
-    source_id: primary_source
-  - practice: Canopy shoot positioning and summer leaf pulling around fruit clusters
-      to speed up dew drying.
-    source_id: primary_source
-  chemical_options:
-  - active_ingredient: Mancozeb 75% WP (FRAC M03)
-    rate_text: Apply from pre-bloom (1-3 inch shoot growth) through early berry development.
-    label_caveat: Protectant fungicide; observe strict 66-day pre-harvest interval
-      on grapes.
-    source_id: primary_source
-  - active_ingredient: Tebuconazole 25.9% EC (FRAC 3)
-    rate_text: Apply as per label recommendation during post-infection risk window.
-    label_caveat: Systemic fungicide; rotate FRAC groups to prevent resistance.
-    source_id: primary_source
-  sources:
-  - id: primary_source
-    publisher: Ohio State University Extension FactSheet
-    url: https://ohioline.osu.edu/factsheet/plpath-fru-24
-    access_date: '2026-10-14'
+  recommendation_text: ''
+  caution_text: ''
+  source_name: ''
+  source_url: ''
+  last_verified: ''
+  status: PLACEHOLDER
+  cultural_controls: []
+  chemical_options: []
+  id: grape__black_rot
+  publisher: ''
+  retrieved_on: ''
+  reviewed_by: ''
+  expires_after_days: null
+  guidance:
+    scouting: []
+    cultural: []
+    chemical_options: []
+    label_reminder: Consult a local agronomist.
+  confusable_pairs: []
 - crop: grape
   condition: esca_(black_measles)
   pathogen_type: fungal
-  recommendation_text: Grape Esca is a vascular trunk disease complex (Phaeomoniella
-    chlamydospora, Phaeoacremonium minimum, and basidiomycetes). Leaves exhibit interveinal
-    'tiger-stripe' necrosis and berries show speckled measles. No curative foliar
-    fungicide exists. Protect pruning wounds immediately after cutting and rogue severely
-    infected dying cordons.
-  caution_text: Foliar fungicide sprays DO NOT cure Esca. The pathogen resides internally
-    within woody trunk tissue.
-  source_name: 'UC IPM Pest Management Guidelines: Grape Esca'
-  source_url: https://ipm.ucanr.edu/PMG/r302100511.html
-  last_verified: '2026-10-28'
-  status: VERIFIED
-  region: US (UC IPM) & India (ICAR-NRCG Pune)
-  recommendation_scope: both
-  cultural_controls:
-  - practice: Delay pruning until late winter when wound healing is rapid and spore
-      discharge is lower.
-    source_id: uc_esca
-  - practice: Apply wound protectants (paste with tebuconazole, thiophanate-methyl,
-      or Trichoderma) within 24 hours of pruning.
-    source_id: uc_esca
-  - practice: Retrain a new healthy sucker to replace cankered cordons; excise diseased
-      wood 10cm below symptom.
-    source_id: uc_esca
-  chemical_options:
-  - active_ingredient: Tebuconazole 25.9% EC or Thiophanate-methyl (Wound Sealant)
-    rate_text: Apply directly as paint/paste onto fresh pruning cuts (>2cm diameter)
-    label_caveat: Pruning wound protectant only; foliar spray is ineffective against
-      trunk vascular disease.
-    source_id: uc_esca
-  - active_ingredient: Trichoderma atroviride / T. asperellum (Biological Wound Protectant)
-    rate_text: Spray or paint onto pruning wounds as per manufacturer instructions
-    label_caveat: Beneficial bio-control agent that colonizes fresh cuts, preventing
-      wood-canker fungi penetration.
-    source_id: uc_esca
-  sources: []
-  region_caveat: 'Source region: US (UC IPM) & India (ICAR-NRCG Pune); verify local
-    regulatory registrations, label rates, and pre-harvest intervals (PHI) before
-    use.'
+  recommendation_text: ''
+  caution_text: ''
+  source_name: ''
+  source_url: ''
+  last_verified: ''
+  status: PLACEHOLDER
+  cultural_controls: []
+  chemical_options: []
+  id: grape__esca_(black_measles)
+  publisher: ''
+  retrieved_on: ''
+  reviewed_by: ''
+  expires_after_days: null
+  guidance:
+    scouting: []
+    cultural: []
+    chemical_options: []
+    label_reminder: Consult a local agronomist.
+  confusable_pairs: []
 - crop: grape
   condition: leaf_blight_(isariopsis_leaf_spot)
   pathogen_type: fungal
-  recommendation_text: Isariopsis leaf spot produces irregular, angular brown spots
-    on leaves with velvety olivaceous fungal growth on the underside. High humidity
-    and post-monsoon conditions favor spread. Prune congested shoots, remove infected
-    fallen leaves, and apply copper or DMI fungicides.
-  caution_text: Observe strict Pre-Harvest Intervals (PHI) on table and wine grapes.
-  source_name: ICAR - National Research Centre for Grapes (NRCG) & TNAU Agritech
-  source_url: https://nrcgrapes.icar.gov.in/
-  last_verified: '2026-10-28'
-  status: VERIFIED
-  region: US (Extension) & India (ICAR-NRCG Pune / TNAU)
-  recommendation_scope: both
-  cultural_controls:
-  - practice: Summer pruning and canopy de-leafing to enhance spray penetration and
-      air circulation.
-    source_id: nrcg_grape
-  - practice: Collect and destroy fallen leaf litter post-harvest to reduce primary
-      inoculum.
-    source_id: nrcg_grape
-  chemical_options:
-  - active_ingredient: Mancozeb 75% WP (FRAC M03) or Copper Oxychloride 50% WP (FRAC
-      M01)
-    rate_text: 2.0 - 2.5 g per liter of water preventatively during active vegetative
-      flush
-    label_caveat: Protective contact fungicide; wash off risk if heavy rain occurs
-      within 4 hours.
-    source_id: nrcg_grape
-  - active_ingredient: Difenoconazole 25% EC (FRAC 3) or Kresoxim-methyl 44.3% SC
-      (FRAC 11)
-    rate_text: 0.5 - 1.0 ml per liter of water as per registered grape label
-    label_caveat: Systemic action against fungal mycelium; rotate modes of action
-      to delay resistance.
-    source_id: nrcg_grape
-  sources: []
-  region_caveat: 'Source region: US (Extension) & India (ICAR-NRCG Pune / TNAU); verify
-    local regulatory registrations, label rates, and pre-harvest intervals (PHI) before
-    use.'
+  recommendation_text: ''
+  caution_text: ''
+  source_name: ''
+  source_url: ''
+  last_verified: ''
+  status: PLACEHOLDER
+  cultural_controls: []
+  chemical_options: []
+  id: grape__leaf_blight_(isariopsis_leaf_spot)
+  publisher: ''
+  retrieved_on: ''
+  reviewed_by: ''
+  expires_after_days: null
+  guidance:
+    scouting: []
+    cultural: []
+    chemical_options: []
+    label_reminder: Consult a local agronomist.
+  confusable_pairs: []
 - crop: orange
   condition: haunglongbing_(citrus_greening)
   pathogen_type: bacterial
-  recommendation_text: Citrus Greening (HLB) is caused by the unculturable phloem
-    bacterium Candidatus Liberibacter asiaticus, vectored by the Asian Citrus Psyllid
-    (Diaphorina citri). Foliar symptoms show asymmetrical blotchy mottle crossing
-    leaf veins. NO FUNGICIDE OR CHEMICAL CURES THE BACTERIA. Management requires aggressive
-    psyllid vector suppression, certified nursery stock, and rogueing infected trees.
-  caution_text: 'NEGATIVE ASSERTION: Fungicides must NEVER be sprayed for HLB. They
-    have zero bactericidal efficacy.'
-  source_name: University of Florida IFAS Citrus Extension Guide
-  source_url: https://crec.ifas.ufl.edu/research/citrus-production/disease-management/huanglongbing/
-  last_verified: '2026-10-28'
-  status: VERIFIED
-  region: Global (UF/IFAS / USDA-ARS / ICAR-CCRI)
-  recommendation_scope: both
-  cultural_controls:
-  - practice: Scout for and rogue (physically remove and destroy) confirmed HLB-positive
-      trees to protect adjacent orchard.
-    source_id: uf_hlb
-  - practice: Plant only certified disease-free grafted trees propagated in insect-proof
-      screenhouses.
-    source_id: uf_hlb
-  chemical_options:
-  - active_ingredient: Imidacloprid 17.8% SL or Thiamethoxam (FRAC 4A Insecticide
-      - Vector Control)
-    rate_text: 0.3 - 0.5 ml per liter of water applied during new vegetative flush
-      to control psyllid vector
-    label_caveat: INSECTICIDE for psyllid vector suppression; does not cure infected
-      tree tissue. Comply with pollinator protections.
-    source_id: uf_hlb
-  - active_ingredient: Horticultural Mineral Spray Oil (2% v/v)
-    rate_text: 20 ml per liter of water as seasonal flush spray
-    label_caveat: Suffocates psyllid nymphs and deters female oviposition. Safe for
-      beneficial predators.
-    source_id: uf_hlb
-  sources: []
-  region_caveat: 'Source region: Global (UF/IFAS / USDA-ARS / ICAR-CCRI); verify local
-    regulatory registrations, label rates, and pre-harvest intervals (PHI) before
-    use.'
+  recommendation_text: ''
+  caution_text: ''
+  source_name: ''
+  source_url: ''
+  last_verified: ''
+  status: PLACEHOLDER
+  cultural_controls: []
+  chemical_options: []
+  id: orange__haunglongbing_(citrus_greening)
+  publisher: ''
+  retrieved_on: ''
+  reviewed_by: ''
+  expires_after_days: null
+  guidance:
+    scouting: []
+    cultural: []
+    chemical_options: []
+    label_reminder: Consult a local agronomist.
+  confusable_pairs: []
 - crop: peach
   condition: bacterial_spot
   pathogen_type: bacterial
-  recommendation_text: Peach bacterial spot causes shot-hole leaf perforation, defoliation,
-    and cracked fruit lesions. Favored by frequent rains and blowing sand/wind abrasion.
-    Select resistant cultivars. Fixed copper sprays applied at low rates or oxytetracycline
-    bactericide are utilized during active growth.
-  caution_text: Peach leaves are extremely sensitive to copper phytotoxicity. Never
-    apply high rates after bloom.
-  source_name: Penn State Extension Tree Fruit Production Guide
-  source_url: https://extension.psu.edu/bacterial-spot-of-peach
-  last_verified: '2026-10-28'
-  status: VERIFIED
-  region: US (Penn State / Clemson) & Global
-  recommendation_scope: both
-  cultural_controls:
-  - practice: Plant tolerant or resistant peach varieties (e.g. Redhaven, Madison,
-      Reliance).
-    source_id: psu_peach
-  - practice: Plant orchard windbreaks in sandy soils to reduce windblown sand abrasions
-      that facilitate bacterial ingress.
-    source_id: psu_peach
-  chemical_options:
-  - active_ingredient: Fixed Copper Hydroxide (Low Dose) (FRAC M01)
-    rate_text: 0.5 - 1.0 g per liter of water (apply very low rate from petal fall
-      through shuck split)
-    label_caveat: Bactericide protectant; strictly observe low rate to prevent phytotoxic
-      leaf chlorosis and shot-holing.
-    source_id: psu_peach
-  - active_ingredient: Oxytetracycline (Mycoshield) (FRAC 41 Bactericide)
-    rate_text: Apply according to registered stone fruit label under high disease
-      pressure
-    label_caveat: Agricultural antibiotic for bacterial suppression; rotate to prevent
-      resistant Xanthomonas strains.
-    source_id: psu_peach
-  sources: []
-  region_caveat: 'Source region: US (Penn State / Clemson) & Global; verify local
-    regulatory registrations, label rates, and pre-harvest intervals (PHI) before
-    use.'
+  recommendation_text: ''
+  caution_text: ''
+  source_name: ''
+  source_url: ''
+  last_verified: ''
+  status: PLACEHOLDER
+  cultural_controls: []
+  chemical_options: []
+  id: peach__bacterial_spot
+  publisher: ''
+  retrieved_on: ''
+  reviewed_by: ''
+  expires_after_days: null
+  guidance:
+    scouting: []
+    cultural: []
+    chemical_options: []
+    label_reminder: Consult a local agronomist.
+  confusable_pairs: []
 - crop: pepper,_bell
   condition: bacterial_spot
   pathogen_type: bacterial
-  recommendation_text: Bell pepper bacterial spot (Xanthomonas campestris pv. vesicatoria)
-    is managed through hot-water seed sanitation (50°C for 25 minutes), certified
-    disease-free transplants, and avoiding overhead irrigation. Fixed copper bactericides
-    combined with mancozeb provide protective suppression. Chemical fungicides are
-    completely ineffective against this bacterial pathogen.
-  caution_text: Do not apply synthetic fungicides as Xanthomonas is a bacterial pathogen.
-    Copper-tolerant strains are documented; strictly observe local product labels
-    and pre-harvest intervals.
-  source_name: TNAU Agritech Portal — Horticultural Crop Protection
-  source_url: https://agritech.tnau.ac.in/crop_protection/crop_prot_crop_diseases_veg_chillies.html
-  last_verified: '2026-10-28'
-  status: VERIFIED
-  region: India (ICAR-IIHR / TNAU) & US (UC IPM)
-  recommendation_scope: both
-  cultural_controls:
-  - practice: Seed treatment with hot water at 50°C for 25 minutes prior to sowing.
-    source_id: tnau_pbs
-  - practice: Eradicate solanaceous weed hosts (e.g. Solanum nigrum) along field borders.
-    source_id: tnau_pbs
-  chemical_options:
-  - active_ingredient: Copper Oxychloride 50% WP + Streptocycline
-    rate_text: 2.5 g Copper Oxychloride + 100 ppm Streptocycline per liter water
-    label_caveat: Bactericidal protective spray; apply at first symptom sign and repeat
-      at 10-12 day intervals.
-    source_id: tnau_pbs
-  sources:
-  - id: tnau_pbs
-    publisher: TNAU Agritech Portal - Crop Protection Guidelines
-    url: https://agritech.tnau.ac.in/crop_protection/crop_prot_crop_diseases_veg_chillies.html
-    access_date: '2026-10-28'
-  resistance_management_note: Streptomycin/Streptocycline use is strictly regulated.
-    Check national CIBRC and local agricultural department guidelines.
-  monitoring_or_thresholds_note: Inspect undersides of young leaves for water-soaked
-    lesions following warm rainstorms.
+  recommendation_text: ''
+  caution_text: ''
+  source_name: ''
+  source_url: ''
+  last_verified: ''
+  status: PLACEHOLDER
+  cultural_controls: []
+  chemical_options: []
+  id: pepper,_bell__bacterial_spot
+  publisher: ''
+  retrieved_on: ''
+  reviewed_by: ''
+  expires_after_days: null
+  guidance:
+    scouting: []
+    cultural: []
+    chemical_options: []
+    label_reminder: Consult a local agronomist.
+  confusable_pairs: []
 - crop: squash
   condition: powdery_mildew
   pathogen_type: fungal
-  recommendation_text: Squash powdery mildew forms talcum powder-like fungal patches
-    on upper and lower leaf surfaces, causing premature senescence. Unlike downy mildew,
-    powdery mildew sporulates even in dry weather if humidity around canopy is moderate.
-    Plant resistant hybrids and initiate fungicide sprays when the first colony appears
-    on lower mature leaves.
-  caution_text: Spray both upper and lower leaf surfaces thoroughly; mildew colonizes
-    shaded lower lamina aggressively.
-  source_name: Cornell CALS Vegetable MD Online - Powdery Mildew of Cucurbits
-  source_url: https://vegetablemdonline.ppath.cornell.edu/factsheets/Cucurbits_PM.htm
-  last_verified: '2026-10-28'
-  status: VERIFIED
-  region: US (Cornell / UC IPM) & India (ICAR-IIVR)
-  recommendation_scope: both
-  cultural_controls:
-  - practice: Plant cucurbit varieties with PMR (Powdery Mildew Resistant) gene traits.
-    source_id: cornell_squash
-  - practice: Maintain wide in-row spacing and weed-free beds to minimize dense microclimates.
-    source_id: cornell_squash
-  chemical_options:
-  - active_ingredient: Micronized Wettable Sulfur 80% WP (FRAC M02)
-    rate_text: 2.0 g per liter of water preventatively
-    label_caveat: Contact multi-site protectant. Do not apply when temperatures exceed
-      32°C to prevent sulfur burn.
-    source_id: cornell_squash
-  - active_ingredient: Difenoconazole 25% EC (FRAC 3) or Triflumizole (FRAC 3)
-    rate_text: 0.5 ml per liter of water as per registered cucurbit label
-    label_caveat: Systemic triazole with translaminar movement to lower leaf surface.
-    source_id: cornell_squash
-  - active_ingredient: Potassium Bicarbonate (FRAC NC) / Horticultural Oil
-    rate_text: 3.0 - 5.0 g per liter of water as organic knockdown
-    label_caveat: Osmotic cell membrane disruptor; kills existing mildew spores on
-      contact.
-    source_id: cornell_squash
-  sources: []
-  region_caveat: 'Source region: US (Cornell / UC IPM) & India (ICAR-IIVR); verify
-    local regulatory registrations, label rates, and pre-harvest intervals (PHI) before
-    use.'
+  recommendation_text: ''
+  caution_text: ''
+  source_name: ''
+  source_url: ''
+  last_verified: ''
+  status: PLACEHOLDER
+  cultural_controls: []
+  chemical_options: []
+  id: squash__powdery_mildew
+  publisher: ''
+  retrieved_on: ''
+  reviewed_by: ''
+  expires_after_days: null
+  guidance:
+    scouting: []
+    cultural: []
+    chemical_options: []
+    label_reminder: Consult a local agronomist.
+  confusable_pairs: []
 - crop: strawberry
   condition: leaf_scorch
   pathogen_type: fungal
-  recommendation_text: Strawberry leaf scorch (Diplocarpon earlianum) produces purplish-brown
-    blotches with dark margins on leaves. Manage by planting resistant cultivars,
-    avoiding overhead sprinkler irrigation, mowing old leaves after harvest, and applying
-    protectant or systemic fungicides early in the season prior to major rainfall.
-  caution_text: Apply prior to disease establishment in spring. Observe strict Pre-Harvest
-    Intervals (PHI) on strawberry fruit.
-  source_name: Penn State Extension & UC IPM Strawberry Disease Guidelines
-  source_url: https://extension.psu.edu/strawberry-diseases-leaf-scorch
-  last_verified: '2026-10-28'
-  status: VERIFIED
-  region: US (UC IPM / Penn State) & India (ICAR-IIHR)
-  recommendation_scope: both
-  cultural_controls:
-  - practice: Renovate beds immediately after harvest by mowing old foliage and incorporating
-      debris.
-    source_id: psu_straw
-  - practice: Use drip irrigation or maintain wide plant spacing to accelerate canopy
-      drying.
-    source_id: uc_straw
-  chemical_options:
-  - active_ingredient: Captan 50% WP (FRAC M04)
-    rate_text: 2.0 - 2.5 g per liter of water (apply preventatively prior to bloom
-      and rainy periods)
-    label_caveat: 'Multi-site protective fungicide; essential partner to prevent resistance.
-      PHI: 0 days.'
-    source_id: psu_straw
-  - active_ingredient: Azoxystrobin 23% SC (FRAC 11) or Pyraclostrobin (FRAC 11)
-    rate_text: 1.0 ml per liter of water as per registered strawberry label
-    label_caveat: Systemic QoI fungicide; alternate with Captan or Thiram to avoid
-      resistance.
-    source_id: uc_straw
-  - active_ingredient: Myclobutanil 10% WP (FRAC 3) / Difenoconazole
-    rate_text: 0.5 - 1.0 g per liter of water as per registered label
-    label_caveat: Systemic triazole with reach-back curative activity against foliar
-      fungi.
-    source_id: uc_straw
-  sources: []
-  region_caveat: 'Source region: US (UC IPM / Penn State) & India (ICAR-IIHR); verify
-    local regulatory registrations, label rates, and pre-harvest intervals (PHI) before
-    use.'
+  recommendation_text: ''
+  caution_text: ''
+  source_name: ''
+  source_url: ''
+  last_verified: ''
+  status: PLACEHOLDER
+  cultural_controls: []
+  chemical_options: []
+  id: strawberry__leaf_scorch
+  publisher: ''
+  retrieved_on: ''
+  reviewed_by: ''
+  expires_after_days: null
+  guidance:
+    scouting: []
+    cultural: []
+    chemical_options: []
+    label_reminder: Consult a local agronomist.
+  confusable_pairs: []
 - crop: tomato
   condition: leaf_mold
   pathogen_type: fungal
-  recommendation_text: Tomato leaf mold produces pale green to yellow spots on the
-    upper leaf surface with dense, olive-green velvety mold on the underside. Predominantly
-    a high-humidity greenhouse and polytunnel disease (RH > 85%). Improve greenhouse
-    ventilation, use drip irrigation, prune bottom foliage, and apply protectant or
-    systemic fungicides.
-  caution_text: Lower relative humidity below 85% via venting and heating; leaf mold
-    sporulation halts below 85% RH.
-  source_name: 'Cornell CALS Vegetable Disease ID: Tomato Leaf Mold'
-  source_url: https://plantdisease.net/tomato_leaf_mold
-  last_verified: '2026-10-28'
-  status: VERIFIED
-  region: US (Cornell / Umass) & India (ICAR-IIHR)
-  recommendation_scope: both
-  cultural_controls:
-  - practice: Ventilate high tunnels and greenhouses with exhaust fans to keep relative
-      humidity below 85%.
-    source_id: cornell_mold
-  - practice: Prune suckers and lower foliage to improve air circulation within canopy.
-    source_id: cornell_mold
-  chemical_options:
-  - active_ingredient: Chlorothalonil 75% WP (FRAC M05) or Mancozeb 75% WP (FRAC M03)
-    rate_text: 2.0 - 2.5 g per liter of water at first symptom
-    label_caveat: Protective contact fungicide; ensure complete under-leaf coverage
-      where mold sporulates.
-    source_id: cornell_mold
-  - active_ingredient: Difenoconazole 25% EC (FRAC 3) or Azoxystrobin (FRAC 11)
-    rate_text: 0.5 - 1.0 ml per liter of water
-    label_caveat: Translaminar and systemic activity; rotate chemical groups to prevent
-      resistance.
-    source_id: cornell_mold
-  sources: []
-  region_caveat: 'Source region: US (Cornell / Umass) & India (ICAR-IIHR); verify
-    local regulatory registrations, label rates, and pre-harvest intervals (PHI) before
-    use.'
+  recommendation_text: ''
+  caution_text: ''
+  source_name: ''
+  source_url: ''
+  last_verified: ''
+  status: PLACEHOLDER
+  cultural_controls: []
+  chemical_options: []
+  id: tomato__leaf_mold
+  publisher: ''
+  retrieved_on: ''
+  reviewed_by: ''
+  expires_after_days: null
+  guidance:
+    scouting: []
+    cultural: []
+    chemical_options: []
+    label_reminder: Consult a local agronomist.
+  confusable_pairs: []
 - crop: tomato
   condition: septoria_leaf_spot
   pathogen_type: fungal
-  recommendation_text: Septoria leaf spot produces numerous small, circular spots
-    (1-3mm) with gray centers, dark brown borders, and tiny black speck pycnidia within
-    the center. It progresses rapidly from lower to upper leaves. Rotate crops away
-    from solanaceous plants, mulch around base to prevent soil splash, and apply foliar
-    fungicides.
-  caution_text: Severe defoliation exposes tomato fruit to sunscald. Start treatments
-    at the first sign of lower lesions.
-  source_name: 'Purdue University Extension: Septoria Leaf Spot of Tomato'
-  source_url: https://www.extension.purdue.edu/extmedia/BP/BP-22-W.pdf
-  last_verified: '2026-10-28'
-  status: VERIFIED
-  region: US (Purdue / Cornell) & India (ICAR-IIHR)
-  recommendation_scope: both
-  cultural_controls:
-  - practice: Mulch beds with plastic or straw to prevent rain-splash of fungal spores
-      from soil onto leaves.
-    source_id: purdue_septoria
-  - practice: 2 to 3-year crop rotation with non-solanaceous hosts; remove infected
-      crop residue.
-    source_id: purdue_septoria
-  chemical_options:
-  - active_ingredient: Chlorothalonil 75% WP (FRAC M05)
-    rate_text: 2.0 g per liter of water on 7-10 day intervals
-    label_caveat: Multi-site contact protectant; apply before rainy periods.
-    source_id: purdue_septoria
-  - active_ingredient: Copper Hydroxide (FRAC M01) + Mancozeb (FRAC M03) tank mix
-    rate_text: 2.0 g + 2.0 g per liter of water
-    label_caveat: Provides dual protection against Septoria leaf spot and bacterial
-      spot simultaneously.
-    source_id: purdue_septoria
-  - active_ingredient: Azoxystrobin 23% SC (FRAC 11)
-    rate_text: 1.0 ml per liter of water
-    label_caveat: Systemic strobilurin; alternate with multisite protectants to manage
-      resistance.
-    source_id: purdue_septoria
-  sources: []
-  region_caveat: 'Source region: US (Purdue / Cornell) & India (ICAR-IIHR); verify
-    local regulatory registrations, label rates, and pre-harvest intervals (PHI) before
-    use.'
+  recommendation_text: ''
+  caution_text: ''
+  source_name: ''
+  source_url: ''
+  last_verified: ''
+  status: PLACEHOLDER
+  cultural_controls: []
+  chemical_options: []
+  id: tomato__septoria_leaf_spot
+  publisher: ''
+  retrieved_on: ''
+  reviewed_by: ''
+  expires_after_days: null
+  guidance:
+    scouting: []
+    cultural: []
+    chemical_options: []
+    label_reminder: Consult a local agronomist.
+  confusable_pairs: []
 - crop: tomato
   condition: spider_mites two-spotted_spider_mite
   pathogen_type: pest
-  recommendation_text: 'Two-spotted spider mites are arachnid arthropods that pierce
-    leaf cells, causing fine yellow stippling and webbing on the underside. Hot, dry,
-    and dusty conditions accelerate population explosions. NEGATIVE ASSERTION: DO
-    NOT SPRAY BROAD-SPECTRUM FUNGICIDES OR PYRETHROIDS, which eradicate predatory
-    mites and trigger secondary outbreaks. Use selective miticides, insecticidal soaps,
-    or predatory mites (Phytoseiulus persimilis).'
-  caution_text: 'NEGATIVE ASSERTION: Fungicides must NEVER be used for spider mites.
-    Use targeted acaricides/miticides.'
-  source_name: 'UC IPM Pest Management Guidelines: Tomato Spider Mites'
-  source_url: https://ipm.ucanr.edu/PMG/r783400111.html
-  last_verified: '2026-10-28'
-  status: VERIFIED
-  region: Global (UC IPM / UF/IFAS / TNAU)
-  recommendation_scope: both
-  cultural_controls:
-  - practice: Overhead misting or water washing of lower leaf surfaces to knock down
-      mite colonies and raise humidity.
-    source_id: uc_mite
-  - practice: Control weeds (nightshade, pigweed) around field borders that serve
-      as alternate hosts.
-    source_id: uc_mite
-  - practice: Release predatory mites (Phytoseiulus persimilis or Neoseiulus californicus)
-      in greenhouse crops.
-    source_id: uc_mite
-  chemical_options:
-  - active_ingredient: Spiromesifen 22.9% SC (Oberon - IRAC 23 Miticide)
-    rate_text: 1.0 ml per liter of water thoroughly targeting lower leaf lamina
-    label_caveat: Lipid synthesis inhibitor acaricide; highly selective for mites
-      and whiteflies, preserving beneficials.
-    source_id: uc_mite
-  - active_ingredient: Abamectin 1.9% EC (IRAC 6 Miticide)
-    rate_text: 0.5 ml per liter of water as per registered vegetable label
-    label_caveat: Translaminar avermectin; penetrates leaf cuticle to kill feeding
-      mites on underside.
-    source_id: uc_mite
-  - active_ingredient: Potassium Salts of Fatty Acids (Insecticidal Soap / Neem Oil
-      1% EC)
-    rate_text: 5.0 ml per liter of water as contact organic knockdown
-    label_caveat: Contact miticide; requires direct droplet impact on mites to dissolve
-      protective cuticle.
-    source_id: uc_mite
-  sources: []
-  region_caveat: 'Source region: Global (UC IPM / UF/IFAS / TNAU); verify local regulatory
-    registrations, label rates, and pre-harvest intervals (PHI) before use.'
+  recommendation_text: ''
+  caution_text: ''
+  source_name: ''
+  source_url: ''
+  last_verified: ''
+  status: PLACEHOLDER
+  cultural_controls: []
+  chemical_options: []
+  id: tomato__spider_mites_two-spotted_spider_mite
+  publisher: ''
+  retrieved_on: ''
+  reviewed_by: ''
+  expires_after_days: null
+  guidance:
+    scouting: []
+    cultural: []
+    chemical_options: []
+    label_reminder: Consult a local agronomist.
+  confusable_pairs: []
 - crop: tomato
   condition: target_spot
   pathogen_type: fungal
-  recommendation_text: Tomato target spot causes pinpoint brown spots on leaves that
-    enlarge into target-like lesions with concentric rings and yellow halos. It attacks
-    both foliage and fruit under warm, humid conditions. Avoid overhead irrigation,
-    stake plants to promote air circulation, and apply preventative fungicides.
-  caution_text: Target spot can be confused with early blight; target spot lesions
-    are smaller and more numerous.
-  source_name: 'University of Florida IFAS Extension: Target Spot of Tomato'
-  source_url: https://edis.ifas.ufl.edu/publication/PP316
-  last_verified: '2026-10-28'
-  status: VERIFIED
-  region: US (UF/IFAS) & India (ICAR-IIHR)
-  recommendation_scope: both
-  cultural_controls:
-  - practice: Stake and tie vines to keep foliage off the ground and facilitate fast
-      canopy drying.
-    source_id: uf_target
-  - practice: Sanitize stakes and destroy infected residue at end of cropping cycle.
-    source_id: uf_target
-  chemical_options:
-  - active_ingredient: Chlorothalonil 75% WP (FRAC M05) or Mancozeb 75% WP (FRAC M03)
-    rate_text: 2.0 - 2.5 g per liter of water preventatively
-    label_caveat: Broad-spectrum contact protectant with multisite mode of action.
-    source_id: uf_target
-  - active_ingredient: Boscalid + Pyraclostrobin (FRAC 7 + 11)
-    rate_text: Apply as per registered tomato label under high target spot pressure
-    label_caveat: Dual-action translaminar fungicide providing strong protective and
-      curative suppression.
-    source_id: uf_target
-  sources: []
-  region_caveat: 'Source region: US (UF/IFAS) & India (ICAR-IIHR); verify local regulatory
-    registrations, label rates, and pre-harvest intervals (PHI) before use.'
+  recommendation_text: ''
+  caution_text: ''
+  source_name: ''
+  source_url: ''
+  last_verified: ''
+  status: PLACEHOLDER
+  cultural_controls: []
+  chemical_options: []
+  id: tomato__target_spot
+  publisher: ''
+  retrieved_on: ''
+  reviewed_by: ''
+  expires_after_days: null
+  guidance:
+    scouting: []
+    cultural: []
+    chemical_options: []
+    label_reminder: Consult a local agronomist.
+  confusable_pairs: []
 - crop: tomato
   condition: tomato_yellow_leaf_curl_virus
   pathogen_type: viral
-  recommendation_text: 'Tomato Yellow Leaf Curl Virus (TYLCV) is a begomovirus transmitted
-    exclusively by the whitefly Bemisia tabaci. Infected plants show severe upward
-    leaf cupping, marginal chlorosis, stunted bushy growth, and flower abortion. NEGATIVE
-    ASSERTION: FUNGICIDES DO NOT CURE VIRUSES. Manage by using TYLCV-resistant hybrids,
-    insect-proof netting, reflective mulches, and whitefly vector suppression.'
-  caution_text: 'NEGATIVE ASSERTION: Fungicides must NEVER be sprayed for TYLCV. Control
-    focuses on insect vector management.'
-  source_name: 'UC IPM Pest Management Guidelines: Tomato Yellow Leaf Curl'
-  source_url: https://ipm.ucanr.edu/PMG/r783101611.html
-  last_verified: '2026-10-28'
-  status: VERIFIED
-  region: Global (UC IPM / UF/IFAS / ICAR-IIHR / TNAU)
-  recommendation_scope: both
-  cultural_controls:
-  - practice: Plant certified TYLCV-resistant tomato hybrids (e.g. Tyking, Sebring,
-      Kashi Vishesh).
-    source_id: uc_tylcv
-  - practice: Use UV-reflective silver plastic mulch to deter incoming whiteflies
-      from landing on young seedlings.
-    source_id: uc_tylcv
-  - practice: Install 50-mesh insect netting on greenhouse vents and nurseries to
-      physically exclude whiteflies.
-    source_id: uc_tylcv
-  chemical_options:
-  - active_ingredient: Spirotetramat 15.3% OD (Movento - IRAC 23 Insecticide)
-    rate_text: 1.0 ml per liter of water targeting whitefly nymphs and adults
-    label_caveat: Systemic two-way insecticide for whitefly vector control. Does not
-      cure existing viral symptoms.
-    source_id: uc_tylcv
-  - active_ingredient: Thiamethoxam 25% WG (IRAC 4A Neonicotinoid)
-    rate_text: 0.3 - 0.5 g per liter of water as drench or foliar spray at transplanting
-    label_caveat: Systemic seedling protection against whitefly feeding during vulnerable
-      early vegetative phase.
-    source_id: uc_tylcv
-  sources: []
-  region_caveat: 'Source region: Global (UC IPM / UF/IFAS / ICAR-IIHR / TNAU); verify
-    local regulatory registrations, label rates, and pre-harvest intervals (PHI) before
-    use.'
+  recommendation_text: ''
+  caution_text: ''
+  source_name: ''
+  source_url: ''
+  last_verified: ''
+  status: PLACEHOLDER
+  cultural_controls: []
+  chemical_options: []
+  id: tomato__tomato_yellow_leaf_curl_virus
+  publisher: ''
+  retrieved_on: ''
+  reviewed_by: ''
+  expires_after_days: null
+  guidance:
+    scouting: []
+    cultural: []
+    chemical_options: []
+    label_reminder: Consult a local agronomist.
+  confusable_pairs: []
 - crop: tomato
   condition: tomato_mosaic_virus
   pathogen_type: viral
-  recommendation_text: 'Tomato Mosaic Virus (ToMV) is a tobamovirus causing alternating
-    light and dark green mosaic mottle, leaf blistering, and ''shoestring'' distortion.
-    It is extremely stable and transmitted mechanically via workers'' hands, pruning
-    shears, contaminated seed, and tobacco smoke. NEGATIVE ASSERTION: FUNGICIDES DO
-    NOT CURE VIRUSES. Sanitize hands with milk or trisodium phosphate (TSP), use resistant
-    cultivars (Tm-22 gene), and discard infected plants.'
-  caution_text: 'NEGATIVE ASSERTION: Fungicides must NEVER be sprayed for ToMV. The
-    virus spreads mechanically.'
-  source_name: 'Cornell CALS Vegetable MD Online: Tomato Mosaic Virus'
-  source_url: https://vegetablemdonline.ppath.cornell.edu/factsheets/Virus_Tomato.htm
-  last_verified: '2026-10-28'
-  status: VERIFIED
-  region: Global (Cornell / UC IPM / TNAU)
-  recommendation_scope: both
-  cultural_controls:
-  - practice: Select certified ToMV-resistant cultivars with the Tm-2 or Tm-2^2 resistance
-      gene.
-    source_id: cornell_tomv
-  - practice: Wash hands and tools in skim milk (20%) or trisodium phosphate (TSP)
-      to denature virus particles during pruning.
-    source_id: cornell_tomv
-  - practice: Strictly prohibit smoking or handling tobacco products prior to handling
-      tomato transplants.
-    source_id: cornell_tomv
-  chemical_options:
-  - active_ingredient: Trisodium Phosphate (TSP) 10% solution (Tool & Hand Disinfectant)
-    rate_text: 100 g per liter of water used as disinfectant dip for shears and knives
-      between plants
-    label_caveat: SANITIZING AGENT, not a plant spray. Denatures viral protein coats
-      to prevent mechanical transmission.
-    source_id: cornell_tomv
-  sources: []
-  region_caveat: 'Source region: Global (Cornell / UC IPM / TNAU); verify local regulatory
-    registrations, label rates, and pre-harvest intervals (PHI) before use.'
+  recommendation_text: ''
+  caution_text: ''
+  source_name: ''
+  source_url: ''
+  last_verified: ''
+  status: PLACEHOLDER
+  cultural_controls: []
+  chemical_options: []
+  id: tomato__tomato_mosaic_virus
+  publisher: ''
+  retrieved_on: ''
+  reviewed_by: ''
+  expires_after_days: null
+  guidance:
+    scouting: []
+    cultural: []
+    chemical_options: []
+    label_reminder: Consult a local agronomist.
+  confusable_pairs: []

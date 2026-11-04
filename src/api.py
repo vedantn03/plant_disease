@@ -74,7 +74,7 @@ except ImportError:
 import sys
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from src.advisory_engine import AdvisoryEngine, DISCLAIMER
+from src.advisory_engine import AdvisoryEngine, DISCLAIMER, decide_advice, evidence_grade
 from src.background_check import build_trust_response_fields, run_background_sensitivity
 from src.calibration import probs_from_logits
 from src.config_loader import load_config
@@ -104,6 +104,15 @@ PREDICT_CONFIDENCE = Histogram(
     "predict_confidence", "Returned prediction confidence", ["traffic_source"]
 )
 MODEL_INFO = Gauge("model_info", "Loaded model identity", ["version", "model_source"])
+ADVICE_TOTAL = Counter(
+    "advice_total", "Advice responses by tier and evidence grade", ["tier", "evidence_grade"]
+)
+ADVICE_WITHHELD_TOTAL = Counter(
+    "advice_withheld_total", "Advice withheld by reason", ["reason"]
+)
+ADVICE_GAP_TOTAL = Counter(
+    "advice_gap_total", "Predicted classes without grade A or B advice", ["class"]
+)
 
 # ─────────────────────────────────────────────────────────────────────────────
 # App init & model loading
@@ -309,7 +318,16 @@ async def startup() -> None:
         log.error("Serving model resolution failed: %s", exc)
 
     # Advisory engine
-    _state["advisory_engine"] = AdvisoryEngine(project_root / "kb" / "advisories.yaml")
+    advisory_cfg = getattr(cfg, "advisory", {})
+    confused_pairs_path = (
+        advisory_cfg.get("confused_pairs_path", "reports/confused_pairs.csv")
+        if hasattr(advisory_cfg, "get") else "reports/confused_pairs.csv"
+    )
+    _state["advisory_engine"] = AdvisoryEngine(
+        project_root / "kb" / "advisories.yaml",
+        project_root / "kb" / "weather_rules.yaml",
+        project_root / confused_pairs_path,
+    )
 
     # Load coverage matrix
     cov_path = project_root / "kb" / "coverage.yaml"
@@ -548,6 +566,10 @@ async def predict(
             "top_k": [],
             "latency_ms": round(latency_ms, 1),
             "disclaimer": DISCLAIMER,
+            "kb_version": _kb_version(),
+            **_advice_for_prediction(
+                "rejected", None, reason_code, None, None, "unknown", brightness, b_score
+            ),
             **trust_fields,
         })
 
@@ -664,6 +686,11 @@ async def predict(
             "top_k": top_k_list,
             "coverage_caveat": coverage_caveat,
             "disclaimer": DISCLAIMER,
+            "kb_version": _kb_version(),
+            **_advice_for_prediction(
+                "uncertain", best_prob, reason, pred_crop, pred_condition,
+                bg_result_name, brightness, b_score,
+            ),
             **trust_fields,
         })
 
@@ -686,6 +713,11 @@ async def predict(
             "top_k": top_k_list,
             "coverage_caveat": coverage_caveat,
             "disclaimer": DISCLAIMER,
+            "kb_version": _kb_version(),
+            **_advice_for_prediction(
+                "uncertain", best_prob, "confidence_below_threshold", pred_crop,
+                pred_condition, bg_result_name, brightness, b_score,
+            ),
             **trust_fields,
         })
 
@@ -699,8 +731,9 @@ async def predict(
         log.warning(f"Grad-CAM failed: {exc}")
 
     # ── Advisory ──────────────────────────────────────────────────────────────
-    advisory = _state["advisory_engine"].get_advisory(
-        pred_crop, pred_condition, temperature_c, humidity_pct
+    advice_payload = _advice_for_prediction(
+        "ok", best_prob, "none", pred_crop, pred_condition,
+        bg_result_name, brightness, b_score,
     )
 
     # ── Build response ────────────────────────────────────────────────────────
@@ -718,7 +751,8 @@ async def predict(
         "top_k": top_k_list,
         "coverage_caveat": coverage_caveat,
         "gradcam_png_base64": gradcam_b64,
-        "advisory": advisory,
+        **advice_payload,
+        "kb_version": _kb_version(),
         "latency_ms": round(latency_ms, 1),
         "disclaimer": DISCLAIMER,
         **trust_fields,
@@ -808,9 +842,57 @@ def _log_request(
         "latency_ms": round(latency_ms, 1),
         "status": status,
         "traffic_source": traffic_source,
+        "kb_version": _kb_version(),
     }
     if _state["log_file"]:
         _state["log_file"].write(json.dumps(record) + "\n")
+
+
+def _kb_version() -> str:
+    engine = _state.get("advisory_engine")
+    return engine.kb_version if engine is not None else "unavailable"
+
+
+def _advice_for_prediction(
+    status: str,
+    confidence: float | None,
+    reason: str,
+    crop: str | None,
+    condition: str | None,
+    bg_check: str,
+    brightness: float | None,
+    blur_value: float | None,
+) -> dict:
+    engine = _state.get("advisory_engine")
+    entry = engine.get_entry(crop, condition) if engine and crop and condition else None
+    grade = evidence_grade(entry or {})
+    cfg = _state.get("cfg")
+    advisory_cfg = getattr(cfg, "advisory", {}) if cfg else {}
+    cutoffs = advisory_cfg.get("confidence_cutoffs", {}) if hasattr(advisory_cfg, "get") else {}
+    cutoff = cutoffs.get(crop) if hasattr(cutoffs, "get") and crop else None
+    advice, trace = decide_advice(
+        entry,
+        status=status,
+        confidence=confidence,
+        ood_status="accepted" if status not in {"rejected", "rejected_not_a_leaf"} else "rejected",
+        quality={"brightness": brightness, "blur_score": blur_value},
+        bg_check=bg_check,
+        confidence_cutoff=float(cutoff) if cutoff is not None else None,
+        kb_version=_kb_version(),
+        rules_fired=[reason] if reason not in {"", "none"} else [],
+    )
+    ADVICE_TOTAL.labels(tier=trace["tier"], evidence_grade=grade).inc()
+    if trace["tier"] != "full":
+        withheld_reason = next(
+            (rule for rule in trace["rules_fired"] if rule != reason),
+            reason if reason not in {"", "none"} else trace["tier"],
+        )
+        ADVICE_WITHHELD_TOTAL.labels(reason=withheld_reason).inc()
+    if crop and grade == "C":
+        ADVICE_GAP_TOTAL.labels(**{"class": f"{crop}___{condition or 'unknown'}"}).inc()
+    class_name = f"{crop}___{condition}" if crop and condition else ""
+    hints = engine.get_confusable_hints(class_name) if engine and class_name else []
+    return {"advisory": advice, "advice_trace": trace, "confusable_hints": hints}
 
 
 def _update_stats(cls: str, confidence: float, latency_ms: float) -> None:

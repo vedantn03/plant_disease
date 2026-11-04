@@ -74,7 +74,7 @@ def test_api_startup_uses_dataset_free_serving_config(tmp_path, monkeypatch):
             {"model_source": "local", "registry_match": "unknown"},
         ),
     )
-    monkeypatch.setattr(api, "AdvisoryEngine", lambda _path: SimpleNamespace())
+    monkeypatch.setattr(api, "AdvisoryEngine", lambda *_paths: SimpleNamespace())
 
     _run_synchronous_coroutine(api.startup())
     try:

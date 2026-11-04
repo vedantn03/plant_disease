@@ -1,188 +1,208 @@
-"""
-advisory_engine.py
-==================
-Rule-based crop-protection advisory engine for the plant disease pipeline.
+"""Source-aware, conservative advisory selection and provenance helpers."""
 
-Loads kb/advisories.yaml and kb/weather_rules.yaml, returning a structured,
-auditable advisory for a given (crop, condition) pair.
+from __future__ import annotations
 
-Design principles:
-  - Scope: CROP-PROTECTION only. Fertilizer recommendations from leaf images are PROHIBITED.
-  - Advisories come ONLY from cited university extension or regulator trials (never model-generated).
-  - Weather inputs add ONLY verified epidemiological context notes; never change chemical doses.
-  - Viral, HLB, and pest conditions explicitly exclude synthetic fungicide advice.
-  - Every response includes region disclosure and the legal advisory disclaimer.
-"""
-
+import hashlib
+import csv
+import json
+from datetime import date, timedelta
 from pathlib import Path
-from typing import Optional
+from typing import Any
+from urllib.parse import urlparse
+
 import yaml
 
 from src.utils import get_logger, parse_class_name
 
 log = get_logger("advisory")
-
 DISCLAIMER = (
-    "DISCLAIMER: This advisory is for demonstration and decision-support purposes only and is NOT a "
-    "substitute for professional agronomic advice. Always consult a licensed agronomist, "
-    "local agricultural extension office, or official registered product labels before applying any "
-    "treatment. Dosages and active ingredients vary by country, state, and specific label registration. "
-    "This tool does not diagnose field conditions."
+    "Decision support only; not a substitute for a local agronomist or official product label."
 )
 
-FUNGICIDE_KEYWORDS = {
-    "fungicide", "mancozeb", "chlorothalonil", "copper", "azoxystrobin",
-    "propiconazole", "tebuconazole", "metalaxyl", "cymoxanil", "difenoconazole",
-}
+
+def evidence_grade(entry: dict[str, Any], today: date | None = None) -> str:
+    if entry.get("status") == "PLACEHOLDER":
+        return "C"
+    if entry.get("status") != "VERIFIED":
+        return "C"
+    if not entry.get("reviewed_by"):
+        return "B"
+    expires = entry.get("expires_after_days")
+    retrieved = entry.get("retrieved_on")
+    if not expires or not retrieved:
+        return "B"
+    try:
+        retrieved_date = date.fromisoformat(retrieved)
+    except (TypeError, ValueError):
+        return "B"
+    today = today or date.today()
+    if today > retrieved_date + timedelta(days=int(expires)):
+        return "B"
+    return "A"
+
+
+def decide_advice(
+    entry: dict[str, Any] | None,
+    *,
+    status: str,
+    confidence: float | None,
+    ood_status: str,
+    quality: dict[str, Any] | None,
+    bg_check: str,
+    confidence_cutoff: float | None,
+    kb_version: str,
+    rules_fired: list[str] | None = None,
+) -> tuple[dict[str, Any], str]:
+    """Return allowed advice and its trace; chemical options are top-tier only."""
+    grade = evidence_grade(entry or {})
+    refused = status in {"rejected", "rejected_not_a_leaf", "abstained"}
+    sufficient_measurements = bool(quality) and all(
+        isinstance(quality.get(key), (int, float)) for key in ("brightness", "blur_score")
+    )
+    confidence_ok = (
+        confidence_cutoff is not None
+        and confidence is not None
+        and confidence >= confidence_cutoff
+    )
+    full = (
+        not refused
+        and status == "ok"
+        and grade in {"A", "B"}
+        and ood_status == "accepted"
+        and bg_check == "consistent"
+        and sufficient_measurements
+        and confidence_ok
+    )
+    if refused:
+        tier = "withheld"
+        text = "Consult a local agronomist."
+    elif full:
+        tier = "full"
+        text = "Cited advice is available below."
+    else:
+        tier = "scouting"
+        text = "Use scouting and cultural guidance only; retake the photo."
+
+    raw = (entry or {}).get("guidance") or {}
+    fired = list(rules_fired or [])
+    if grade == "C":
+        fired.append("evidence_grade_c_no_verified_entry")
+    if confidence_cutoff is None:
+        fired.append("confidence_cutoff_not_selected")
+    if bg_check != "consistent":
+        fired.append(f"background_sensitivity_{bg_check}")
+    if status == "uncertain":
+        fired.append("prediction_uncertain_retake_photo")
+    advice = {
+        "tier": tier,
+        "message": text,
+        "scouting": raw.get("scouting", []) if tier != "withheld" else [],
+        "cultural": raw.get("cultural", []) if tier != "withheld" else [],
+        "chemical_options": raw.get("chemical_options", []) if full else [],
+        "label_reminder": raw.get("label_reminder", "Consult a local agronomist."),
+        "weather_note": "risk unknown",
+        "disclaimer": DISCLAIMER,
+    }
+    trace = {
+        "tier": tier,
+        "evidence_grade": grade,
+        "kb_entry_id": (entry or {}).get("id"),
+        "source_url": (entry or {}).get("source_url") or None,
+        "retrieved_on": (entry or {}).get("retrieved_on") or None,
+        "kb_version": kb_version,
+        "rules_fired": fired,
+        "bg_check": bg_check if bg_check in {"consistent", "inconsistent", "unknown"} else "unknown",
+    }
+    return advice, trace
 
 
 class AdvisoryEngine:
-    """
-    Loads YAML knowledge bases and serves structured agronomic advisories.
-    """
-
     def __init__(
         self,
         kb_path: str | Path | None = None,
         weather_rules_path: str | Path | None = None,
-    ) -> None:
+        confused_pairs_path: str | Path | None = None,
+    ):
         root = Path(__file__).resolve().parent.parent
-        if kb_path is None:
-            kb_path = root / "kb" / "advisories.yaml"
-        if weather_rules_path is None:
-            weather_rules_path = root / "kb" / "weather_rules.yaml"
-
-        self.kb_path = Path(kb_path)
-        self.weather_rules_path = Path(weather_rules_path)
-        self._entries: dict[str, dict] = {}
-        self._weather_rules: list[dict] = []
-        self._last_mtime: float = 0.0
+        self.kb_path = Path(kb_path or root / "kb" / "advisories.yaml")
+        self.weather_rules_path = Path(weather_rules_path or root / "kb" / "weather_rules.yaml")
+        self.confused_pairs_path = Path(confused_pairs_path or root / "reports" / "confused_pairs.csv")
+        self._entries: dict[str, dict[str, Any]] = {}
+        self._confusable: dict[str, list[dict[str, Any]]] = {}
+        self._last_mtime = 0.0
         self._load()
 
-    def _load(self) -> None:
-        if self.kb_path.exists():
-            try:
-                self._last_mtime = self.kb_path.stat().st_mtime
-            except Exception:
-                pass
-            with open(self.kb_path, "r", encoding="utf-8") as f:
-                data = yaml.safe_load(f)
-            for entry in data.get("advisories", []):
-                key = self._make_key(entry["crop"], entry["condition"])
-                self._entries[key] = entry
-            log.info(f"Loaded {len(self._entries)} advisory entries from {self.kb_path}")
-
-        if self.weather_rules_path.exists():
-            with open(self.weather_rules_path, "r", encoding="utf-8") as f:
-                w_data = yaml.safe_load(f)
-            self._weather_rules = w_data.get("rules", [])
-            log.info(f"Loaded {len(self._weather_rules)} weather risk rules from {self.weather_rules_path}")
-
-    def _make_key(self, crop: str, condition: str) -> str:
+    @staticmethod
+    def _make_key(crop: str, condition: str) -> str:
         return f"{crop.lower()}||{condition.lower()}"
 
-    def get_advisory(
-        self,
-        crop: str,
-        condition: str,
-        temperature_c: Optional[float] = None,
-        humidity_pct: Optional[float] = None,
-    ) -> dict:
-        if self.kb_path.exists():
-            try:
-                current_mtime = self.kb_path.stat().st_mtime
-                if current_mtime > self._last_mtime:
-                    self._load()
-            except Exception:
-                pass
+    @property
+    def kb_version(self) -> str:
+        digest = hashlib.sha256()
+        for path in (self.kb_path, self.weather_rules_path):
+            if path.exists():
+                digest.update(path.read_bytes())
+        return f"{date.today().isoformat()}:{digest.hexdigest()}"
 
-        key = self._make_key(crop, condition)
-        entry = self._entries.get(key)
-
-        if entry is None:
-            return self._not_found(crop, condition)
-
-        region = entry.get("region", "US-Extension / International")
-        result = {
-            "crop": entry.get("crop"),
-            "condition": entry.get("condition"),
-            "pathogen_type": entry.get("pathogen_type", "unknown"),
-            "status": entry.get("status", "PLACEHOLDER"),
-            "region": region,
-            "region_caveat": f"Source region: {region}; verify local regulatory registrations, label rates, and pre-harvest intervals (PHI) before use.",
-            "recommendation_text": entry.get("recommendation_text", ""),
-            "caution_text": entry.get("caution_text", ""),
-            "cultural_controls": entry.get("cultural_controls", []),
-            "chemical_options": entry.get("chemical_options", []),
-            "weather_note": "",
-            "weather_urgency": "low",
-            "source_name": entry.get("source_name", ""),
-            "source_url": entry.get("source_url", ""),
-            "last_verified": entry.get("last_verified", ""),
-            "disclaimer": DISCLAIMER,
+    def _load(self) -> None:
+        if not self.kb_path.exists():
+            self._entries = {}
+            return
+        data = yaml.safe_load(self.kb_path.read_text(encoding="utf-8")) or {}
+        self._entries = {
+            self._make_key(entry["crop"], entry["condition"]): entry
+            for entry in data.get("advisories", [])
         }
+        self._last_mtime = self.kb_path.stat().st_mtime
+        self._load_confusable_pairs()
+        log.info("Loaded %s advisory entries", len(self._entries))
 
-        # Check weather rules
-        if temperature_c is not None and humidity_pct is not None:
-            # 1. Check entry-specific weather rule
-            if entry.get("weather_rule"):
-                w_rule = entry["weather_rule"]
-                if "source" in w_rule or "source_id" in w_rule:
-                    if (
-                        w_rule.get("humidity_min", 0) <= humidity_pct
-                        and w_rule.get("temp_min", -100) <= temperature_c <= w_rule.get("temp_max", 100)
-                    ):
-                        result["weather_note"] = w_rule.get("note", "")
-                        result["weather_urgency"] = w_rule.get("urgency", "elevated")
+    def _load_confusable_pairs(self) -> None:
+        self._confusable = {}
+        if not self.confused_pairs_path.is_file():
+            return
+        with self.confused_pairs_path.open(encoding="utf-8-sig", newline="") as handle:
+            reader = csv.DictReader(handle)
+            for row in reader:
+                true_label = row.get("true_label") or row.get("actual") or row.get("true")
+                predicted = row.get("predicted_label") or row.get("predicted") or row.get("prediction")
+                if not true_label or not predicted:
+                    continue
+                self._confusable.setdefault(predicted, []).append({
+                    "label": true_label,
+                    "hint": f"May be confused with {true_label}.",
+                    "how_to_tell_apart": None,
+                })
 
-            # 2. Check global weather rules from weather_rules.yaml
-            if not result["weather_note"]:
-                for rule in self._weather_rules:
-                    if (
-                        rule.get("crop", "").lower() == crop.lower()
-                        and rule.get("condition", "").lower() == condition.lower()
-                    ):
-                        if (
-                            humidity_pct >= rule.get("humidity_min", 0)
-                            and rule.get("temp_min", -100) <= temperature_c <= rule.get("temp_max", 100)
-                        ):
-                            result["weather_note"] = rule.get("note", "")
-                            result["weather_urgency"] = rule.get("urgency", "elevated")
-                            break
+    def get_entry(self, crop: str, condition: str) -> dict[str, Any] | None:
+        if self.kb_path.exists() and self.kb_path.stat().st_mtime > self._last_mtime:
+            self._load()
+        return self._entries.get(self._make_key(crop, condition))
 
-        return result
+    def get_confusable_hints(self, class_name: str) -> list[dict[str, Any]]:
+        return list(self._confusable.get(class_name, []))
 
-    def _not_found(self, crop: str, condition: str) -> dict:
-        return {
-            "crop": crop,
-            "condition": condition,
-            "pathogen_type": "unknown",
-            "status": "PLACEHOLDER",
-            "region": "global",
-            "region_caveat": "Consult a certified local agronomist or extension office.",
-            "recommendation_text": (
-                "No verified agronomic recommendation is currently recorded for this condition. "
-                "Consult local extension publications."
-            ),
-            "caution_text": "",
-            "cultural_controls": [],
-            "chemical_options": [],
-            "weather_note": "",
-            "weather_urgency": "low",
-            "source_name": "",
-            "source_url": "",
-            "last_verified": "",
-            "disclaimer": DISCLAIMER,
-        }
+    def get_advisory(self, crop: str, condition: str, **_weather: Any) -> dict[str, Any]:
+        entry = self.get_entry(crop, condition)
+        if not entry:
+            return {"status": "PLACEHOLDER", "guidance": {}, "weather_note": "risk unknown"}
+        return entry
 
-    def get_advisory_from_class_name(
-        self,
-        class_name: str,
-        temperature_c: Optional[float] = None,
-        humidity_pct: Optional[float] = None,
-    ) -> dict:
+    def get_advisory_from_class_name(self, class_name: str, **_weather: Any) -> dict[str, Any]:
         try:
             crop, condition = parse_class_name(class_name)
         except ValueError:
-            return self._not_found(class_name, "unknown")
-        return self.get_advisory(crop, condition, temperature_c, humidity_pct)
+            return {}
+        return self.get_advisory(crop, condition)
+
+    def version_metadata(self) -> dict[str, Any]:
+        return {"kb_version": self.kb_version, "entry_count": len(self._entries)}
+
+
+def is_well_formed_http_url(value: str) -> bool:
+    parsed = urlparse(value)
+    return parsed.scheme in {"http", "https"} and bool(parsed.netloc)
+
+
+def hash_json(value: Any) -> str:
+    return hashlib.sha256(json.dumps(value, sort_keys=True).encode("utf-8")).hexdigest()

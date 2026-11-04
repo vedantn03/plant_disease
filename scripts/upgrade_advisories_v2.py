@@ -1,4 +1,6 @@
 """
+DO NOT RUN: legacy generator pending source re-check and human review.
+
 scripts/upgrade_advisories_v2.py
 ================================
 Upgrades kb/advisories.yaml to Schema v2:

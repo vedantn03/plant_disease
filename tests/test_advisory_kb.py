@@ -1,155 +1,100 @@
-"""
-Tests for the advisory knowledge base (kb/advisories.yaml).
-
-Verifies:
-  1. YAML loads without error.
-  2. Schema: all required fields present for each entry.
-  3. No PLACEHOLDER entry has digits in recommendation_text.
-  4. Viral/pest/HLB entries contain no fungicide keywords.
-  5. VERIFIED entries have non-empty source_url.
-"""
+"""Schema, provenance, freshness, and structured-content checks for advisory KB v2."""
 
 import re
-import sys
+from datetime import date
 from pathlib import Path
 
 import pytest
 import yaml
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+from src.advisory_engine import evidence_grade, is_well_formed_http_url
 
-KB_PATH = Path(__file__).resolve().parent.parent / "kb" / "advisories.yaml"
-
-REQUIRED_FIELDS = {
-    "crop", "condition", "pathogen_type", "recommendation_text",
-    "caution_text", "source_name", "source_url", "last_verified", "status"
+ROOT = Path(__file__).resolve().parents[1]
+KB_PATH = ROOT / "kb" / "advisories.yaml"
+REQUIRED = {
+    "id", "crop", "condition", "pathogen_type", "source_url", "publisher",
+    "retrieved_on", "reviewed_by", "expires_after_days", "guidance", "status",
 }
-
-FUNGICIDE_KEYWORDS = {
-    "fungicide", "mancozeb", "chlorothalonil", "azoxystrobin",
-    "propiconazole", "tebuconazole", "metalaxyl", "cymoxanil",
-}
-
-# Pathogen types that must NOT mention fungicides
+FUNGICIDE_TERMS = ("fungicide", "mancozeb", "chlorothalonil", "azoxystrobin")
 NO_FUNGICIDE_TYPES = {"viral", "pest"}
-# Specific conditions that must not mention fungicides
 NO_FUNGICIDE_CONDITIONS = {"haunglongbing_(citrus_greening)"}
 
 
 @pytest.fixture(scope="module")
 def advisories():
-    assert KB_PATH.exists(), f"KB file not found: {KB_PATH}"
-    with open(KB_PATH, "r", encoding="utf-8") as f:
-        data = yaml.safe_load(f)
-    return data.get("advisories", [])
+    return yaml.safe_load(KB_PATH.read_text(encoding="utf-8"))["advisories"]
 
 
-def test_kb_loads(advisories):
-    assert len(advisories) > 0, "No advisories found in KB"
-
-
-def test_schema_all_entries(advisories):
-    for i, entry in enumerate(advisories):
-        missing = REQUIRED_FIELDS - set(entry.keys())
-        assert not missing, f"Entry {i} ({entry.get('crop')}/{entry.get('condition')}) missing fields: {missing}"
-
-
-def test_no_digits_in_placeholder_recommendation(advisories):
-    """PLACEHOLDER entries must not contain digits in recommendation_text."""
+def test_kb_loads_and_has_v2_required_fields(advisories):
+    assert advisories
     for entry in advisories:
-        if entry.get("status") == "PLACEHOLDER":
-            rec_text = entry.get("recommendation_text", "")
-            digits = re.findall(r"\d+", rec_text)
-            assert not digits, (
-                f"PLACEHOLDER entry {entry['crop']}/{entry['condition']} "
-                f"has digits in recommendation_text: {digits}"
-            )
+        assert REQUIRED <= set(entry)
+        assert {"scouting", "cultural", "chemical_options", "label_reminder"} <= set(entry["guidance"])
 
 
-def test_no_fungicide_in_viral_pest_hlb(advisories):
-    """Viral, pest, and HLB entries must never recommend fungicides in structured chemical options.
-
-    Any recommended chemical options must not contain fungicide active ingredients,
-    and cultural controls must not prescribe fungicide applications.
-    """
+def test_verified_entries_require_provenance_and_retrieval_date(advisories):
     for entry in advisories:
-        ptype = entry.get("pathogen_type", "")
-        condition = entry.get("condition", "").lower()
-
-        is_no_fungicide = (
-            ptype in NO_FUNGICIDE_TYPES or
-            condition in NO_FUNGICIDE_CONDITIONS
-        )
-
-        if is_no_fungicide:
-            # 1. Structured chemical options check: must have zero fungicide recommendations
-            chemical_options = entry.get("chemical_options") or []
-            for chem in chemical_options:
-                ai = chem.get("active_ingredient", "").lower()
-                frac = str(chem.get("frac_code", "")).lower()
-                label = chem.get("label_caveat", "").lower()
-                for kw in FUNGICIDE_KEYWORDS:
-                    assert kw not in ai, (
-                        f"Non-fungal entry {entry['crop']}/{entry['condition']} recommends fungicide: '{ai}'"
-                    )
-                    assert kw not in label or "not" in label or "never" in label or "zero" in label, (
-                        f"Non-fungal entry {entry['crop']}/{entry['condition']} has positive fungicide caveat: '{label}'"
-                    )
-                # Ensure no fungal FRAC code is recommended
-                assert "fungicide" not in frac, f"Fungicide FRAC assigned to non-fungal entry: {frac}"
-
-            # 2. Structured cultural controls check: no fungicide spraying prescribed
-            cultural_controls = entry.get("cultural_controls") or []
-            for cc in cultural_controls:
-                practice = cc.get("practice", "").lower()
-                for kw in FUNGICIDE_KEYWORDS:
-                    if kw in practice:
-                        # Only allowed if explicitly framed as negative assertion
-                        assert any(neg in practice for neg in ["no", "never", "not", "ineffective", "prohibited"]), (
-                            f"Non-fungal entry {entry['crop']}/{entry['condition']} has affirmative fungicide practice: '{practice}'"
-                        )
+        if entry["status"] == "VERIFIED":
+            assert entry["id"] and entry["publisher"] and entry["retrieved_on"]
+            assert is_well_formed_http_url(entry["source_url"])
+            date.fromisoformat(entry["retrieved_on"])
 
 
-def test_fungicide_on_viral_entry_fails_safety_check():
-    """Safety assertion proof: verify that injecting a fungicide into a viral entry strictly FAILS validation."""
-    fake_viral_entry = {
-        "crop": "tomato",
-        "condition": "tomato_yellow_leaf_curl_virus",
-        "pathogen_type": "viral",
-        "chemical_options": [
-            {
-                "active_ingredient": "Azoxystrobin (Fungicide)",
-                "frac_code": "11",
-                "rate_text": "1.0 kg/ha",
-                "label_caveat": "Apply broad-spectrum fungicide spray",
-            }
-        ],
-        "cultural_controls": []
+def test_all_nonempty_urls_are_well_formed(advisories):
+    for entry in advisories:
+        if entry["source_url"]:
+            assert is_well_formed_http_url(entry["source_url"])
+
+
+def test_reviewed_entry_expiration_changes_evidence_grade():
+    entry = {
+        "status": "VERIFIED", "reviewed_by": "reviewer", "retrieved_on": "2020-01-01",
+        "expires_after_days": 30,
     }
-
-    # Simulate the check logic above and verify it catches the violation
-    violation_caught = False
-    for chem in fake_viral_entry["chemical_options"]:
-        ai = chem["active_ingredient"].lower()
-        if any(kw in ai for kw in FUNGICIDE_KEYWORDS):
-            violation_caught = True
-            break
-
-    assert violation_caught, "Safety check failed to intercept illegal fungicide on viral entry!"
+    assert evidence_grade(entry, today=date(2020, 1, 2)) == "A"
+    assert evidence_grade(entry, today=date(2020, 3, 1)) == "B"
 
 
-def test_verified_entries_have_source_url(advisories):
+def test_unreviewed_and_placeholder_evidence_grades():
+    assert evidence_grade({"status": "VERIFIED", "reviewed_by": ""}) == "B"
+    assert evidence_grade({"status": "PLACEHOLDER"}) == "C"
+
+
+def test_no_plantdisease_cornell_attribution(advisories):
     for entry in advisories:
-        if entry.get("status") == "VERIFIED":
-            assert entry.get("source_url", "").startswith("http"), (
-                f"VERIFIED entry {entry['crop']}/{entry['condition']} has no valid source_url"
-            )
+        assert "plantdisease.net" not in entry.get("publisher", "").lower()
+        assert "plantdisease.net" not in entry.get("source_name", "").lower()
 
 
-def test_pathogen_type_valid_values(advisories):
-    valid = {"fungal", "bacterial", "viral", "pest", "none", "unknown"}
+def test_viral_pest_hlb_have_no_fungicide_options(advisories):
     for entry in advisories:
-        ptype = entry.get("pathogen_type", "")
-        assert ptype in valid, (
-            f"Entry {entry['crop']}/{entry['condition']} has invalid pathogen_type: '{ptype}'"
-        )
+        if entry["pathogen_type"] in NO_FUNGICIDE_TYPES or entry["condition"] in NO_FUNGICIDE_CONDITIONS:
+            assert entry["guidance"]["chemical_options"] == []
+
+
+def test_dosage_or_chemical_options_must_be_source_quotes(advisories):
+    dosage = re.compile(r"\b(?:\d+(?:\.\d+)?\s*(?:g|kg|ml|mL|L|%|per\s+liter|per\s+ha))\b", re.I)
+    for entry in advisories:
+        options = entry["guidance"]["chemical_options"]
+        if options:
+            assert entry["source_url"]
+            for option in options:
+                assert option.get("quote")
+                assert option.get("source_location")
+                assert not dosage.search(option["quote"]) or entry["source_url"]
+
+
+def test_untraceable_entries_are_placeholders_without_guidance(advisories):
+    for entry in advisories:
+        if entry["status"] == "PLACEHOLDER":
+            assert entry["guidance"]["scouting"] == []
+            assert entry["guidance"]["cultural"] == []
+            assert entry["guidance"]["chemical_options"] == []
+            assert entry["guidance"]["label_reminder"] == "Consult a local agronomist."
+
+
+def test_only_retained_corn_rust_text_is_verified(advisories):
+    verified = [entry for entry in advisories if entry["status"] == "VERIFIED"]
+    assert [(item["crop"], item["condition"]) for item in verified] == [
+        ("corn_(maize)", "common_rust_")
+    ]

@@ -15,6 +15,7 @@ Does NOT write models/best_model.pth.
 from __future__ import annotations
 
 import json
+import csv
 import sys
 import time
 from collections import defaultdict
@@ -240,6 +241,16 @@ def main() -> int:
 
     # A3 VAL classification + masked background
     val_preds = np.argmax(val_np, axis=1)
+    val_probabilities = softmax_np(val_np, 1.0)
+    with (reports / "val_predictions.csv").open("w", newline="", encoding="utf-8") as handle:
+        writer = csv.DictWriter(handle, fieldnames=("predicted_class", "confidence", "correct"))
+        writer.writeheader()
+        for true_idx, pred_idx, probabilities in zip(val_labels, val_preds, val_probabilities):
+            writer.writerow({
+                "predicted_class": idx_to_class[int(pred_idx)],
+                "confidence": float(probabilities[int(pred_idx)]),
+                "correct": int(true_idx == pred_idx),
+            })
     crop_block = _within_crop_macro_f1(val_labels, val_preds, idx_to_class)
     rec_map = crop_block["per_class_recall"]
     min_cls = min(rec_map.items(), key=lambda kv: (kv[1]["recall"], -kv[1]["n"]))
