@@ -680,6 +680,7 @@ async def predict(
             "status": "uncertain",
             "reason_code": reason,
             "message": "Prediction abstained because background sensitivity was inconsistent.",
+            "predicted_class": best_class,
             "crop": pred_crop,
             "condition": pred_condition,
             "confidence": round(best_prob, 4),
@@ -707,6 +708,7 @@ async def predict(
                 f"Diagnostic confidence ({best_prob:.1%}) is below the minimum threshold ({threshold:.1%}). "
                 "Please submit a sharper, well-lit photograph or confirm the crop type explicitly."
             ),
+            "predicted_class": best_class,
             "crop": pred_crop,
             "condition": pred_condition,
             "confidence": round(best_prob, 4),
@@ -744,6 +746,7 @@ async def predict(
 
     return JSONResponse({
         "status": "ok",
+        "predicted_class": best_class,
         "crop": pred_crop,
         "condition": pred_condition,
         "confidence": round(best_prob, 4),

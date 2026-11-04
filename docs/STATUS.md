@@ -1,6 +1,7 @@
 # Current Status
 
-Marathi and Hindi selectable; text falls back to English until reviewed translations are added.
+Marathi and Hindi explanation text is available as draft interface copy; a fluent speaker should
+review it before farmer-facing use. Source-backed advisory text remains in its cited language.
 
 | Area | Status | Evidence / limitation |
 |---|---|---|

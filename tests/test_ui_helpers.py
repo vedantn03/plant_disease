@@ -11,29 +11,33 @@ from app.ui_helpers import (
     explanation_text,
     import_optional_explainer,
     load_saved_mlops_evidence,
+    optional_explainer_available,
     parse_prediction_trust,
     prediction_explanation_values,
     saved_explainer_figures,
 )
 
 
-def test_explanation_languages_fall_back_to_english_until_reviewed():
+def test_explanation_language_changes_ui_copy_without_review_claim():
     english, english_available = explanation_text("explanation_scope", "en")
     marathi, marathi_available = explanation_text("explanation_scope", "mr")
     hindi, hindi_available = explanation_text("explanation_scope", "hi")
 
     assert english
     assert english_available is True
-    assert marathi == english
-    assert hindi == english
+    assert marathi != english
+    assert hindi != english
     assert marathi_available is False
     assert hindi_available is False
+    assert "मराठी" in explanation_text("draft_translation_notice", "mr")[0]
+    assert "मसौदा" in explanation_text("draft_translation_notice", "hi")[0]
 
 
 def test_explanation_values_preserve_api_prediction_and_evidence():
     advice_trace = {"tier": "scout", "source_url": "https://source.example/page"}
     payload = {
-        "predicted_class": "Tomato___Early_blight",
+        "crop": "tomato",
+        "condition": "early_blight",
         "confidence": 0.8123,
         "gradcam_png_base64": "image-data",
         "advice_trace": advice_trace,
@@ -41,7 +45,7 @@ def test_explanation_values_preserve_api_prediction_and_evidence():
     values = prediction_explanation_values(payload)
 
     assert values == {
-        "label": "Tomato___Early_blight",
+        "label": "tomato___early_blight",
         "confidence": 0.8123,
         "gradcam_available": True,
         "advice_trace": advice_trace,
@@ -49,9 +53,37 @@ def test_explanation_values_preserve_api_prediction_and_evidence():
     assert values["advice_trace"] is advice_trace
 
 
+def test_selected_language_preserves_prediction_and_evidence_values():
+    payload = {
+        "crop": "tomato",
+        "condition": "late_blight",
+        "confidence": 0.8656,
+        "gradcam_png_base64": "unchanged-figure-bytes",
+        "advice_trace": {"evidence_grade": "C", "kb_version": "kb-hash"},
+    }
+    values = prediction_explanation_values(payload)
+    lines = [
+        explanation_text("prediction_line", locale, label=values["label"], confidence="86.6%")[0]
+        for locale in ("en", "mr", "hi")
+    ]
+
+    assert values["label"] == "tomato___late_blight"
+    assert values["confidence"] == payload["confidence"]
+    assert values["gradcam_available"] is True
+    assert values["advice_trace"] is payload["advice_trace"]
+    for line in lines:
+        assert values["label"] in line
+        assert "86.6%" in line
+    assert len(set(lines)) == 3
+
+
 def test_missing_optional_explainer_is_handled(tmp_path, monkeypatch):
-    monkeypatch.setattr("app.ui_helpers.importlib.import_module", lambda _name: _raise_import())
+    import app.ui_helpers as ui_helpers
+
+    monkeypatch.setattr(ui_helpers.importlib, "import_module", lambda _name: _raise_import())
+    monkeypatch.setattr(ui_helpers.importlib.util, "find_spec", lambda _name: None)
     assert import_optional_explainer("missing_explainer") is None
+    assert optional_explainer_available("missing_explainer") is False
     assert saved_explainer_figures(tmp_path, "shap") == []
     assert saved_explainer_figures(tmp_path, "lime") == []
 

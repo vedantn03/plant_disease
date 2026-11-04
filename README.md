@@ -61,7 +61,8 @@ with a temporary fixture model; that is not an accuracy evaluation.
 
 ## Known limitations
 
-- Marathi and Hindi selectable; text falls back to English until reviewed translations are added.
+- Marathi and Hindi selectors translate generic explanation text. These translations are drafts
+  requiring fluent review; cited advisory text remains in its source language.
 
 - Evaluation images are lab-style; field performance has not been validated.
 - Background-fill results vary with the fill and segmentation. Black-fill drops include masking

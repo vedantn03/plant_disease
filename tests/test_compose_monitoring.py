@@ -15,6 +15,12 @@ def _yaml(path):
     return yaml.safe_load(path.read_text(encoding="utf-8"))
 
 
+def test_ci_pillow_range_is_compatible_with_pinned_streamlit():
+    requirements = (ROOT / "requirements-ci.txt").read_text(encoding="utf-8")
+    assert re.search(r"(?im)^pillow\s*>=\s*7\.1\.0\s*,\s*<\s*12\s*$", requirements)
+    assert re.search(r"(?im)^streamlit==1\.45\.1\s*$", requirements)
+
+
 def test_compose_profiles_healthchecks_and_read_only_model_mount():
     compose = _yaml(ROOT / "docker-compose.yml")
     services = compose["services"]
