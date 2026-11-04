@@ -1,10 +1,29 @@
-"""Pure parsing helpers for API trust responses and saved MLOps reports."""
+"""Pure UI helpers for trust data, language fallback, and optional explainability."""
 
 from __future__ import annotations
 
 import json
+import importlib
 from pathlib import Path
 from typing import Any
+
+
+def import_optional_explainer(module_name: str) -> Any | None:
+    """Import an optional XAI module on demand; return None when it is not installed."""
+    try:
+        return importlib.import_module(module_name)
+    except ImportError:
+        return None
+
+
+def saved_explainer_figures(figures_dir: Path, explainer: str) -> list[Path]:
+    """Find committed offline explanation figures without requiring XAI packages."""
+    if explainer == "shap":
+        return sorted((figures_dir / "shap").glob("compare_*.png"))
+    if explainer == "lime":
+        trio = figures_dir / "xai_trio_comparison.png"
+        return [trio] if trio.is_file() else []
+    return []
 
 
 SUPPORTED_EXPLANATION_LANGUAGES = {
