@@ -4,13 +4,19 @@ Run these steps from the project root in Windows PowerShell. Do not run training
 
 ## Generate the VAL-only confidence candidate table
 
-1. Run the diagnostics script to save the champion's per-image VAL predictions. It also runs the existing diagnostics, including TEST reporting; the confidence table itself is constructed only from VAL labels and VAL softmax confidence.
+1. Convert saved VAL logits and labels to the per-image CSV. This command reads the checkpoint's class map but performs no inference and does not use TEST rows.
+
+   ```powershell
+   ..\.venv\Scripts\python.exe scripts\export_val_predictions.py
+   ```
+
+   Expected: a row count and `reports\val_predictions.csv`. This works with `scratch\val_logits.npy` and `scratch\val_labels.npy`, which are written by `compute_val_diagnostics.py` immediately after inference. If those scratch files are absent, generate them with:
 
    ```powershell
    ..\.venv\Scripts\python.exe scripts\compute_val_diagnostics.py
    ```
 
-   Expected: the script completes and creates `reports\val_predictions.csv`. If it cannot find DATA_ROOT, the split manifests, or the champion checkpoint, check `.env`, `data\splits\val.csv`, and `models\best_model.pth`; do not substitute TEST values.
+   That broader script also computes TEST reporting and masked-background diagnostics; it can take longer. If it is interrupted after the VAL/TEST inference messages, check for the scratch files and run the exporter above instead of rerunning diagnostics unnecessarily. If DATA_ROOT, split manifests, or the champion checkpoint is missing, check `.env`, `data\splits\val.csv`, and `models\best_model.pth`; do not substitute TEST values.
 
 2. Derive the table from that saved VAL file.
 

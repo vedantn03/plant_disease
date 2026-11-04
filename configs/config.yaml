@@ -104,6 +104,9 @@ evaluation:
 
 advisory:
   # No cutoff is active until chosen from the saved VAL precision/coverage table.
+  checkpoint_path: models/best_model.pth
+  val_logits_path: scratch/val_logits.npy
+  val_labels_path: scratch/val_labels.npy
   val_predictions_path: reports/val_predictions.csv
   # Quantile positions used to derive candidate cutoffs; not approved thresholds.
   candidate_quantiles: [0.50, 0.60, 0.70, 0.80, 0.90]

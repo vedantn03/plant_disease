@@ -1,11 +1,14 @@
 import csv
 import json
 import pytest
+import numpy as np
+import torch
 import yaml
 
 from scripts.advisory_backlog import build_backlog
 from scripts.derive_confidence_tiers import derive_table
 from scripts.export_confused_pairs import export_pairs
+from scripts.export_val_predictions import export_predictions
 
 
 def test_confidence_table_uses_saved_values_and_input_hash(tmp_path):
@@ -57,3 +60,18 @@ def test_export_confused_pairs_uses_only_saved_evaluation_fields(tmp_path):
         assert next(csv.DictReader(handle)) == {
             "true_label": "A", "predicted_label": "B", "count": "3"
         }
+
+
+def test_export_val_predictions_uses_saved_arrays_and_checkpoint_map(tmp_path):
+    logits = tmp_path / "val_logits.npy"
+    labels = tmp_path / "val_labels.npy"
+    checkpoint = tmp_path / "checkpoint.pth"
+    output = tmp_path / "val_predictions.csv"
+    np.save(logits, np.array([[0.0, 2.0], [3.0, 1.0]], dtype=np.float32))
+    np.save(labels, np.array([1, 0], dtype=np.int64))
+    torch.save({"class_to_idx": {"tomato___healthy": 0, "corn___rust": 1}}, checkpoint)
+    assert export_predictions(logits, labels, checkpoint, output) == 2
+    with output.open(encoding="utf-8", newline="") as handle:
+        rows = list(csv.DictReader(handle))
+    assert [row["predicted_class"] for row in rows] == ["corn___rust", "tomato___healthy"]
+    assert [row["correct"] for row in rows] == ["1", "1"]
