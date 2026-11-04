@@ -77,8 +77,8 @@ with a temporary fixture model; that is not an accuracy evaluation.
 - Demo script: [`docs/DEMO_SCRIPT.md`](docs/DEMO_SCRIPT.md)
 - Viva Q&A: [`docs/VIVA_QA.md`](docs/VIVA_QA.md)
 - Evidence inventory: [`docs/evidence/INDEX.md`](docs/evidence/INDEX.md)
-- Model card and datasheet inputs: `reports/snapshot/` (machine-local outputs must be copied,
-  sanitized, reviewed, and committed before the card can include them)
+- Model card and datasheet inputs: committed, sanitized files in `reports/snapshot/`. Refresh them
+  with the snapshot commands below when local reports change; review generated files before commit.
 
 To prepare local evidence snapshots, use the read-only sanitized registry export, collect the
 available reports, then regenerate and check the card:
