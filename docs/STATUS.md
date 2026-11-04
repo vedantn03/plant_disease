@@ -11,7 +11,7 @@
 | Airflow workflow | Simulated | `scripts/run_airflow_simulation.py` is SIMULATION. |
 | SageMaker workflow | Planned | Local pipeline compilation exists; managed execution is not established. |
 | Advisory provenance | Partial | `docs/ADVISORY_AUDIT.md`; retained source-backed entry is unreviewed, remaining entries are placeholders. |
-| Documentation evidence pack | Partial | Generator and inventory are in repository; machine-local snapshots must be exported. |
+| Documentation evidence pack | Partial | Sanitized report snapshots are committed under `reports/snapshot/`; runtime screenshots and real promotion/rollback evidence are not in the snapshot. |
 
 ## Limitations and release notes
 

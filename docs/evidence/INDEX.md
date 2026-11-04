@@ -10,7 +10,7 @@ runtime evidence by itself.
 | Gate diagnostics transcript | `docs/evidence/gate/val_diagnostics.txt` | Saved command output present in the repository | Committed; re-check before quoting as current |
 | Preflight output | `docs/evidence/preflight/preflight_output.txt` | Saved preflight text | Committed; re-check before quoting as current |
 | Preflight collection directory | `docs/evidence/preflight/.gitkeep` | Directory placeholder only | No evidence collected |
-| Report snapshots | `reports/snapshot/` | Model-card evidence inputs | Runtime snapshots pending local export |
+| Report snapshots | `reports/snapshot/` | Model-card evidence inputs | Sanitized snapshot files are committed; refresh when local source reports change |
 | Docker runtime screenshots | `docs/evidence/monitoring/` | Compose, Prometheus and Grafana runtime | Missing from repository |
 | Drift screenshots | `docs/evidence/drift/` | Observed replay window and alert state | Missing from repository |
 | UI screenshots | `docs/evidence/ui/` | Prediction trust panel and Advice passport | Missing from repository |

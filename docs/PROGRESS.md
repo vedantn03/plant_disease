@@ -11,7 +11,7 @@ DVC remote was exercised in this checkout.
 | Compose monitoring | Implemented in repository; runtime not checked here | `docker-compose.yml`, `monitoring/` |
 | Request-log drift | Implemented for configured logs; replay is staged traffic | `scripts/drift_exporter.py`, `scripts/replay_traffic.py` |
 | Airflow | Simulated | `scripts/run_airflow_simulation.py` |
-| Model-card evidence snapshots | Pending export when source reports are unavailable in Git | `reports/snapshot/`, `scripts/snapshot_reports.py` |
+| Model-card evidence snapshots | Sanitized snapshot files are committed; refresh them when local source reports change | `reports/snapshot/`, `scripts/snapshot_reports.py` |
 
 ## Verification
 
