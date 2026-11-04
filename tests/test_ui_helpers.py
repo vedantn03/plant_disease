@@ -2,7 +2,44 @@
 
 import json
 
-from app.ui_helpers import load_saved_mlops_evidence, parse_prediction_trust
+from app.ui_helpers import (
+    explanation_text,
+    load_saved_mlops_evidence,
+    parse_prediction_trust,
+    prediction_explanation_values,
+)
+
+
+def test_explanation_languages_fall_back_to_english_until_reviewed():
+    english, english_available = explanation_text("explanation_scope", "en")
+    marathi, marathi_available = explanation_text("explanation_scope", "mr")
+    hindi, hindi_available = explanation_text("explanation_scope", "hi")
+
+    assert english
+    assert english_available is True
+    assert marathi == english
+    assert hindi == english
+    assert marathi_available is False
+    assert hindi_available is False
+
+
+def test_explanation_values_preserve_api_prediction_and_evidence():
+    advice_trace = {"tier": "scout", "source_url": "https://source.example/page"}
+    payload = {
+        "predicted_class": "Tomato___Early_blight",
+        "confidence": 0.8123,
+        "gradcam_png_base64": "image-data",
+        "advice_trace": advice_trace,
+    }
+    values = prediction_explanation_values(payload)
+
+    assert values == {
+        "label": "Tomato___Early_blight",
+        "confidence": 0.8123,
+        "gradcam_available": True,
+        "advice_trace": advice_trace,
+    }
+    assert values["advice_trace"] is advice_trace
 
 
 def test_prediction_trust_parser_uses_api_values_and_unknown_fallbacks():

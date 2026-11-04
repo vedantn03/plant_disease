@@ -23,7 +23,13 @@ import pandas as pd
 import requests
 import streamlit as st
 from PIL import Image
-from app.ui_helpers import load_saved_mlops_evidence, parse_prediction_trust
+from app.ui_helpers import (
+    SUPPORTED_EXPLANATION_LANGUAGES,
+    explanation_text,
+    load_saved_mlops_evidence,
+    parse_prediction_trust,
+    prediction_explanation_values,
+)
 
 # ---------------------------------------------------------------------------
 # Constants
@@ -223,6 +229,14 @@ tab_dx, tab_tel, tab_mlops = st.tabs([
     "MLOps System",
 ])
 
+explanation_language = st.selectbox(
+    "Explanation language / स्पष्टीकरण भाषा",
+    list(SUPPORTED_EXPLANATION_LANGUAGES),
+    key="explanation_language",
+)
+language_code = SUPPORTED_EXPLANATION_LANGUAGES[explanation_language]
+_, has_reviewed_copy = explanation_text("explanation_scope", language_code)
+
 CROPS_LIST = [
     "Auto (infer from image)", "Apple", "Blueberry", "Cherry", "Corn",
     "Grape", "Orange", "Peach", "Pepper", "Potato", "Raspberry",
@@ -318,6 +332,11 @@ with tab_dx:
         else:
             data   = st.session_state["last_diagnosis"]
             status = data.get("status", "ok")
+            if not has_reviewed_copy:
+                st.info(
+                    "Reviewed Marathi/Hindi explanation text is not available yet. "
+                    "Showing the English explanation; prediction values and evidence are unchanged."
+                )
             _render_trust_panel(data, st.session_state.get("last_image"))
             st.write("")
 
@@ -353,11 +372,20 @@ with tab_dx:
 
                 # ── EXPLAINABILITY ──────────────────────────────────────
                 with st.container(border=True):
-                    st.markdown("**Where the model looked — Explainability**")
+                    st.markdown(f"**{explanation_text('explainability_title', language_code)[0]}**")
+                    st.caption(explanation_text("explanation_scope", language_code)[0])
                     st.caption(
-                        "Attribution maps are visual aids. Background sensitivity is "
-                        "reported separately using a mean-colour background replacement."
+                        f"Prediction: {data.get('predicted_class', 'not available')} · "
+                        f"Unscaled confidence: {data.get('confidence', 'not available')}"
                     )
+                    with st.expander("Original English explanation and evidence"):
+                        st.write("Where the model looked — Explainability")
+                        st.write(
+                            "Attribution maps are visual aids. They show image regions that "
+                            "influenced this model output; they do not prove a disease, explain "
+                            "its cause, or establish that the model relied only on leaf tissue."
+                        )
+                        st.json(prediction_explanation_values(data))
                     st.write("")
                     col_cam, col_shap, col_lime = st.columns(3)
 
@@ -499,6 +527,11 @@ with tab_dx:
                 trace = data.get("advice_trace", {})
                 with st.container(border=True):
                     st.markdown("**Advice passport**")
+                    if not has_reviewed_copy:
+                        st.caption(
+                            "Advice remains in its cited source language until a reviewed "
+                            "translation is available."
+                        )
                     st.caption(
                         f"Tier: {trace.get('tier', 'unknown')} · "
                         f"Evidence: {trace.get('evidence_grade', 'unknown')} · "
@@ -829,8 +862,8 @@ without rebuilding the image.
 """)
         bench_f = REPORTS_DIR / "INFERENCE_BENCHMARK.md"
         if bench_f.exists():
-            with st.expander("Inference benchmark report"):
-                st.markdown(bench_f.read_text()[:1400])
+            st.markdown("**Inference benchmark report**")
+            st.markdown(bench_f.read_text()[:1400])
 
     # ── Monitoring & Retraining ───────────────────────────────────────────────
     with st.expander("Monitoring & Automated Retraining"):
