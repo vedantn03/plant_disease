@@ -67,18 +67,18 @@ def load_config(
     # ── Env-var overrides ──────────────────────────────────────────────
     data_root = os.environ.get("DATA_ROOT", "").strip()
     if data_root:
-        cfg["data"]["root"] = data_root
+        cfg.setdefault("data", {})["root"] = data_root
 
     mlflow_uri = os.environ.get("MLFLOW_TRACKING_URI", "").strip()
     if mlflow_uri:
-        cfg["mlflow"]["tracking_uri"] = mlflow_uri
+        cfg.setdefault("mlflow", {})["tracking_uri"] = mlflow_uri
 
     model_source = os.environ.get("SERVING_MODEL_SOURCE", "").strip()
     if model_source:
-        cfg["serving"]["model_source"] = model_source
+        cfg.setdefault("serving", {})["model_source"] = model_source
 
     # Validate that data root is set
-    if require_data_root and not cfg["data"]["root"]:
+    if require_data_root and not cfg.get("data", {}).get("root", ""):
         raise EnvironmentError(
             "DATA_ROOT is not set. Copy .env.example to .env and fill in DATA_ROOT."
         )

@@ -19,8 +19,17 @@ def _write_config(path):
     return path
 
 
+def _clear_loader_environment(monkeypatch):
+    """Prevent process and .env values from affecting config-loader tests."""
+    for name in ("DATA_ROOT", "MLFLOW_TRACKING_URI", "SERVING_MODEL_SOURCE"):
+        monkeypatch.setenv(name, "")
+
+    # load_dotenv reads the repository's .env file, which is outside tmp_path.
+    monkeypatch.setattr("src.config_loader.load_dotenv", lambda **_kwargs: None)
+
+
 def test_config_requires_data_root_by_default(tmp_path, monkeypatch):
-    monkeypatch.setenv("DATA_ROOT", "")
+    _clear_loader_environment(monkeypatch)
     config_path = _write_config(tmp_path / "config.yaml")
 
     with pytest.raises(EnvironmentError, match="DATA_ROOT is not set"):
@@ -28,7 +37,7 @@ def test_config_requires_data_root_by_default(tmp_path, monkeypatch):
 
 
 def test_config_can_skip_data_root_validation_for_serving_only(tmp_path, monkeypatch):
-    monkeypatch.setenv("DATA_ROOT", "")
+    _clear_loader_environment(monkeypatch)
     config_path = _write_config(tmp_path / "config.yaml")
 
     config = load_config(config_path, require_data_root=False)
@@ -38,7 +47,7 @@ def test_config_can_skip_data_root_validation_for_serving_only(tmp_path, monkeyp
 
 
 def test_api_startup_uses_dataset_free_serving_config(tmp_path, monkeypatch):
-    monkeypatch.setenv("DATA_ROOT", "")
+    _clear_loader_environment(monkeypatch)
     project = tmp_path / "project"
     (project / "src").mkdir(parents=True)
     (project / "configs").mkdir()
@@ -74,3 +83,69 @@ def test_api_startup_uses_dataset_free_serving_config(tmp_path, monkeypatch):
         assert (project / "logs" / "requests.jsonl").exists()
     finally:
         _run_synchronous_coroutine(api.shutdown())
+
+
+def test_empty_mlflow_override_is_independent_of_environment(tmp_path, monkeypatch):
+    _clear_loader_environment(monkeypatch)
+    config_path = _write_config(tmp_path / "config.yaml")
+    baseline = load_config(config_path, require_data_root=False)
+
+    monkeypatch.setenv("MLFLOW_TRACKING_URI", "")
+    with_empty_override = load_config(config_path, require_data_root=False)
+
+    monkeypatch.setenv("MLFLOW_TRACKING_URI", " ")
+    with_whitespace_override = load_config(config_path, require_data_root=False)
+
+    assert baseline == with_empty_override == with_whitespace_override
+    assert "mlflow" not in baseline
+
+
+def test_mlflow_environment_override_creates_missing_section(tmp_path, monkeypatch):
+    _clear_loader_environment(monkeypatch)
+    config_path = _write_config(tmp_path / "config.yaml")
+    monkeypatch.setenv("MLFLOW_TRACKING_URI", "http://tracking.example")
+
+    config = load_config(config_path, require_data_root=False)
+
+    assert config.mlflow.tracking_uri == "http://tracking.example"
+
+
+def test_serving_environment_override_creates_missing_section(tmp_path, monkeypatch):
+    _clear_loader_environment(monkeypatch)
+    config_path = _write_config(tmp_path / "config.yaml")
+    monkeypatch.setenv("SERVING_MODEL_SOURCE", "registry")
+
+    config = load_config(config_path, require_data_root=False)
+
+    assert config.serving.model_source == "registry"
+
+
+def test_environment_overrides_apply_when_sections_exist(tmp_path, monkeypatch):
+    _clear_loader_environment(monkeypatch)
+    config_path = tmp_path / "config.yaml"
+    config_path.write_text(
+        "data:\n  root: ''\n  image_size: 224\n"
+        "mlflow:\n  tracking_uri: file:./old.db\n"
+        "serving:\n  model_source: local\n",
+        encoding="utf-8",
+    )
+    monkeypatch.setenv("MLFLOW_TRACKING_URI", "sqlite:///override.db")
+    monkeypatch.setenv("SERVING_MODEL_SOURCE", "registry")
+    monkeypatch.setenv("DATA_ROOT", "D:/datasets/plant_disease")
+
+    config = load_config(config_path, require_data_root=False)
+
+    assert config.mlflow.tracking_uri == "sqlite:///override.db"
+    assert config.serving.model_source == "registry"
+    assert config.data.root == "D:/datasets/plant_disease"
+
+
+def test_data_root_environment_override_creates_missing_section(tmp_path, monkeypatch):
+    _clear_loader_environment(monkeypatch)
+    config_path = tmp_path / "config.yaml"
+    config_path.write_text("serving:\n  model_source: local\n", encoding="utf-8")
+    monkeypatch.setenv("DATA_ROOT", "D:/datasets/plant_disease")
+
+    config = load_config(config_path)
+
+    assert config.data.root == "D:/datasets/plant_disease"
