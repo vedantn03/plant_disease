@@ -1,0 +1,28 @@
+{
+  "attribution_concentration": {
+    "gradcam_bg_mass_mean": 0.2962,
+    "gradcam_leaf_mass_mean": 0.7038,
+    "gradcam_leaf_mass_std": 0.136,
+    "n_samples": 100
+  },
+  "background_probe": {
+    "center_masked_cnn_acc": 0.6867,
+    "chance_level": 0.0263,
+    "corner_rf_acc": 0.461,
+    "majority_class_rate": 0.1015,
+    "ratio_over_chance": 17.53
+  },
+  "masked_background": {
+    "bg_drop": 0.0663,
+    "clean_macro_f1": 0.9903,
+    "masked_macro_f1": 0.924,
+    "retention_rate": 0.9331
+  },
+  "segmentation_audit": {
+    "clean_rate": 1.0,
+    "failure_count": 0,
+    "failure_rate": 0.0,
+    "mean_fg_ratio": 0.509,
+    "n_samples": 40
+  }
+}

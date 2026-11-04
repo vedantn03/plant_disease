@@ -1,0 +1,10 @@
+{
+  "counts": {
+    "PLACEHOLDER": 37,
+    "UNVERIFIED-SOURCE": 0,
+    "VERIFIED": 1
+  },
+  "note": "The retained VERIFIED entry has no reviewer and is evidence grade B. Counts describe the active KB after WP8 migration.",
+  "source_date": "not recorded in source file",
+  "source_file": "docs/ADVISORY_AUDIT.md"
+}

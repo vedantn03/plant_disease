@@ -1,0 +1,105 @@
+{
+  "driving_class_counts": {
+    "champion": {
+      "correct": 70,
+      "total": 77
+    },
+    "seed_43": {
+      "correct": 68,
+      "total": 77
+    },
+    "seed_44": {
+      "correct": 69,
+      "total": 77
+    }
+  },
+  "metrics": {
+    "bg_drop_black": {
+      "champion": 0.1843,
+      "mean": 0.17213333333333333,
+      "range": 0.031899999999999984,
+      "seed_43": 0.1797,
+      "seed_44": 0.1524
+    },
+    "bg_drop_mid_grey": {
+      "champion": 0.0938,
+      "mean": 0.08326666666666667,
+      "range": 0.043399999999999994,
+      "seed_43": 0.0563,
+      "seed_44": 0.0997
+    },
+    "bg_drop_per_image_mean": {
+      "champion": 0.0364,
+      "mean": 0.03656666666666667,
+      "range": 0.0407,
+      "seed_43": 0.0163,
+      "seed_44": 0.057
+    },
+    "clean_macro_f1": {
+      "champion": 0.991907,
+      "mean": 0.9916876666666666,
+      "range": 0.002794000000000074,
+      "seed_43": 0.990181,
+      "seed_44": 0.992975
+    },
+    "ece": {
+      "champion": 0.001097,
+      "mean": 0.0013586666666666667,
+      "range": 0.000495,
+      "seed_43": 0.001387,
+      "seed_44": 0.001592
+    },
+    "min_recall": {
+      "champion": 0.909091,
+      "mean": 0.8961039999999999,
+      "range": 0.02597399999999994,
+      "seed_43": 0.883117,
+      "seed_44": 0.896104
+    },
+    "within_crop_macro_f1": {
+      "champion": 0.990758,
+      "mean": 0.991863,
+      "range": 0.0021240000000000148,
+      "seed_43": 0.992882,
+      "seed_44": 0.991949
+    }
+  },
+  "minimum_recall_driving_class": "Corn_(maize)___Cercospora_leaf_spot Gray_leaf_spot",
+  "models": {
+    "champion": {
+      "bg_drop_black": 0.1843,
+      "bg_drop_mid_grey": 0.0938,
+      "bg_drop_per_image_mean": 0.0364,
+      "clean_macro_f1": 0.991907,
+      "ece": 0.001097,
+      "min_recall": 0.909091,
+      "run_id": "<redacted-identifier>",
+      "within_crop_macro_f1": 0.990758
+    },
+    "seed_43": {
+      "bg_drop_black": 0.1797,
+      "bg_drop_mid_grey": 0.0563,
+      "bg_drop_per_image_mean": 0.0163,
+      "clean_macro_f1": 0.990181,
+      "ece": 0.001387,
+      "min_recall": 0.883117,
+      "run_id": "<redacted-identifier>",
+      "within_crop_macro_f1": 0.992882
+    },
+    "seed_44": {
+      "bg_drop_black": 0.1524,
+      "bg_drop_mid_grey": 0.0997,
+      "bg_drop_per_image_mean": 0.057,
+      "clean_macro_f1": 0.992975,
+      "ece": 0.001592,
+      "min_recall": 0.896104,
+      "run_id": "<redacted-identifier>",
+      "within_crop_macro_f1": 0.991949
+    }
+  },
+  "notes": [
+    "Three seeds are a small sample; summaries are descriptive, not a stable variance estimate.",
+    "The earlier 0.8750 (70/80) uses a different denominator from supplied VAL n=77. Current counts are derived from each report; seed 43's supplied 0.883117 is 68/77. Reconcile 70/80 against its source before comparing."
+  ],
+  "split": "VAL"
+}

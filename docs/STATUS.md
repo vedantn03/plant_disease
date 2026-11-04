@@ -1,33 +1,25 @@
-# Project Implementation Status Log (Phase 3)
+# Current Status
 
-## Current state (2026-11-03)
+| Area | Status | Evidence / limitation |
+|---|---|---|
+| Data/versioning pipeline | Implemented | `dvc.yaml`; execution requires local dataset and DVC state. |
+| Train/evaluate | Partial | Code and stages exist; this documentation task did not train or evaluate a model. |
+| Promotion gate | Implemented | `scripts/promote.py`; use dry-run for rehearsal. Approval state is separately governed. |
+| API serving and UI | Implemented | `src/api.py`, `app/ui.py`; runtime requires local model artifacts and configured secrets. |
+| Prometheus/Grafana monitoring | Implemented | Compose and provisioning files are tracked; stack runtime was not verified here. |
+| Drift monitoring | Partial | Exporter reads request logs. Replay is staged; no field deployment is claimed. |
+| Airflow workflow | Simulated | `scripts/run_airflow_simulation.py` is SIMULATION. |
+| SageMaker workflow | Planned | Local pipeline compilation exists; managed execution is not established. |
+| Advisory provenance | Partial | `docs/ADVISORY_AUDIT.md`; retained source-backed entry is unreviewed, remaining entries are placeholders. |
+| Documentation evidence pack | Partial | Generator and inventory are in repository; machine-local snapshots must be exported. |
 
-| Implemented | Partial | Simulated | Planned |
-|---|---|---|---|
-| Candidate-only training, VAL gate tooling, three-tab dashboard, Compose monitoring, WP4 baseline/exporter/rule code | WP1/WP4 data-dependent checks and full local Docker verification awaiting user-machine execution; drift thresholds provisional | `scripts/run_airflow_simulation.py`, `scripts/simulate_drift.py`, and `scripts/check_drift_and_trigger.py` outputs are SIMULATION | User approval of proposed PSI threshold; any alias movement; live production deployment |
+## Limitations and release notes
 
-WP2 and WP3 implementation is in the working tree; WP4 baseline and real-log monitor code is
-implemented, but baseline generation, alert behavior, and full Docker verification remain NOT RUN
-here. Replay traffic is staged and must not be described as real users.
-
-Candidate selection uses VAL metrics. TEST metrics are for reporting only; seed 44's higher TEST
-macro-F1 must not drive selection. The current saved comparison has champion and seed 43 only.
-The previously reported per-crop JSON values are affected by the unscoped-label F1 bug; regenerate
-from source runs or mark stale. Do not hand-edit those generated files. The historical
-`reports/per_crop_metrics_<run8>.json` files are ignored generated artifacts and should not be
-committed as part of this package.
-
-## Task T0 — Repository Audit & Baseline Truth Table
-- **Status**: COMPLETED
-- **What changed**:
-  - Full audit conducted without modifying feature code.
-  - Measured live test suite results: 23 passed, 1 failed (negative phrasing in HLB advisory triggering substring test).
-  - Verified API endpoints `/health`, `/stats`, and `/predict` with test payload.
-  - Documented ground truth on serving disconnect (local `.pth` vs MLflow Registry), drift simulation (25 vs 25), near-duplicate sampling, spurious `plantdisease.net` domain, and background shortcut bias prior art (Noyan 2022).
-  - Created `docs/AUDIT.md`.
-- **Verification Commands & Output**:
-  - `..\.venv\Scripts\pytest.exe -q` -> 23 passed, 1 failed in 19.58s
-  - `python scripts/train.py --help` -> exit 0, flags documented
-  - `GET /health` -> `200 OK`, `GET /stats` -> `200 OK`, `POST /predict` -> `200 OK`
-- **Manual / Pending Confirmation**:
-  - Awaiting user confirmation of `docs/AUDIT.md` before starting Task T1.
+- The model uses lab-style leaf images; field validation is absent.
+- Background-fill sensitivity depends on segmentation and fill choice. Black-fill drops include
+  masking artifacts and do not prove shortcut learning.
+- Corn Cercospora / Gray leaf spot is a known weak-recall class in saved evaluation; use a current
+  report snapshot for any numeric value.
+- Serving confidence is unscaled softmax at T=1; fitted temperature is not applied by the API.
+- The active advisory KB has placeholders. Verify dataset license and redistribution rights
+  before public release.
