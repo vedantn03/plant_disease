@@ -101,3 +101,21 @@ evaluation:
   promotion_margin: 0.03
   # Authoritative (still PROVISIONAL) 4-criterion floors live here:
   gate_thresholds_path: configs/gates/gate_thresholds.yaml
+
+advisory:
+  # No cutoff is active until chosen from the saved VAL precision/coverage table.
+  val_predictions_path: reports/val_predictions.csv
+  # Quantile positions used to derive candidate cutoffs; not approved thresholds.
+  candidate_quantiles: [0.50, 0.60, 0.70, 0.80, 0.90]
+  confidence_table_path: reports/confidence_tier_candidates.json
+  # Per-crop cutoff choices stay empty until manually selected from the table.
+  confidence_cutoffs: {}
+  # SHA-256 of the candidate table used to choose the cutoffs; empty until selected.
+  confidence_table_sha256: ""
+  # Expiry policy is unset pending reviewer decision; A-grade review is unavailable until set.
+  expires_after_days: null
+  # Evaluation confusions are converted to hints only; no symptom differences are generated.
+  confused_pairs_path: reports/confused_pairs.csv
+  # Source for class request-frequency counts; traffic_source=replay remains separately counted.
+  request_log_path: logs/requests.jsonl
+  backlog_report_path: reports/advisory_backlog.json

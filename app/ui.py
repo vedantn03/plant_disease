@@ -494,70 +494,51 @@ with tab_dx:
                                     except Exception as e:
                                         st.error(f"LIME failed: {e}")
 
-                # ── ADVISORY ────────────────────────────────────────────────
+                # ── ADVICE PASSPORT ──────────────────────────────────────────
                 advisory = data.get("advisory", {})
-                if advisory:
-                    with st.container(border=True):
-                        st.markdown("**Crop Protection Advisory**")
-                        adv_path   = advisory.get("pathogen_type", "").upper()
-                        adv_region = advisory.get("region", "")
-                        adv_status = advisory.get("status", "VERIFIED")
-                        st.caption(
-                            f"Pathogen: {adv_path}  |  Status: {adv_status}  |  Region: {adv_region}"
-                        )
-
-                        rec = advisory.get("recommendation_text", "")
-                        if rec:
-                            st.markdown(rec)
-
-                        cultural = advisory.get("cultural_controls", [])
-                        if cultural:
-                            st.markdown("**Cultural management**")
-                            for cc in cultural:
-                                src = f" (Ref: {cc['source_id']})" if cc.get("source_id") else ""
-                                st.markdown(
-                                    f'<div class="cultural-card">'
-                                    f'{cc.get("practice","")}'
-                                    f'<span style="font-size:.77rem;color:#64748b;">{src}</span>'
-                                    f'</div>',
-                                    unsafe_allow_html=True,
-                                )
-
-                        chems = advisory.get("chemical_options", [])
-                        if chems:
-                            st.markdown("**Chemical options**")
-                            for c in chems:
-                                st.markdown(
-                                    f'<div class="chem-card">'
-                                    f'<strong>{c.get("active_ingredient","")}</strong><br>'
-                                    f'Rate: {c.get("rate_text","")}<br>'
-                                    f'<span style="font-size:.82rem;color:#475569;">'
-                                    f'Note: {c.get("label_caveat","")}</span>'
-                                    f'</div>',
-                                    unsafe_allow_html=True,
-                                )
-                        elif adv_path.lower() in ("viral", "pest"):
-                            st.info(
-                                "Fungicide applications do not apply here. "
-                                "Focus on vector control and field sanitation."
-                            )
-
-                        if advisory.get("weather_note"):
-                            if advisory.get("weather_urgency") == "elevated":
-                                st.warning(f"Weather risk: {advisory['weather_note']}")
-                            else:
-                                st.info(f"Weather context: {advisory['weather_note']}")
-
-                        if advisory.get("source_url"):
-                            st.markdown(
-                                f"Source: [{advisory.get('source_name','Extension Guide')}]"
-                                f"({advisory['source_url']})"
-                            )
-                else:
-                    st.info(
-                        "No advisory entry matched for this condition. "
-                        "Consult a local agronomist or extension service."
+                trace = data.get("advice_trace", {})
+                with st.container(border=True):
+                    st.markdown("**Advice passport**")
+                    st.caption(
+                        f"Tier: {trace.get('tier', 'unknown')} · "
+                        f"Evidence: {trace.get('evidence_grade', 'unknown')} · "
+                        f"Knowledge base: {trace.get('kb_version', data.get('kb_version', 'unknown'))}"
                     )
+                    if trace.get("source_url"):
+                        st.markdown(f"Source: [{trace.get('kb_entry_id', 'cited entry')}]({trace['source_url']})")
+                    if trace.get("retrieved_on"):
+                        st.caption(f"Source retrieved: {trace['retrieved_on']}")
+                    if advisory.get("message"):
+                        st.info(advisory["message"])
+                    for key, heading in (("scouting", "Scouting"), ("cultural", "Cultural guidance")):
+                        items = advisory.get(key) or []
+                        if items:
+                            st.markdown(f"**{heading}**")
+                            for item in items:
+                                text = item.get("text", "") if isinstance(item, dict) else str(item)
+                                st.markdown(text)
+                                if isinstance(item, dict) and item.get("source_location"):
+                                    st.caption(item["source_location"])
+                    chemicals = advisory.get("chemical_options") or []
+                    if chemicals and trace.get("tier") == "full":
+                        st.markdown("**Chemical options (quoted source text)**")
+                        for item in chemicals:
+                            st.markdown(f"> {item.get('quote', '')}")
+                            if item.get("source_location"):
+                                st.caption(item["source_location"])
+                    label_reminder = advisory.get("label_reminder", "Consult a local agronomist.")
+                    if isinstance(label_reminder, dict):
+                        st.caption(label_reminder.get("quote", "Consult a local agronomist."))
+                        if label_reminder.get("source_location"):
+                            st.caption(label_reminder["source_location"])
+                    else:
+                        st.caption(label_reminder)
+                    st.caption(advisory.get("weather_note", "risk unknown"))
+                    for hint in data.get("confusable_hints", []):
+                        st.info(hint.get("hint", "May be confused with an unlisted class."))
+                        if hint.get("how_to_tell_apart") and hint.get("source_url"):
+                            st.caption(hint["how_to_tell_apart"])
+                    st.caption(f"Rules fired: {', '.join(trace.get('rules_fired') or []) or 'none'}")
 
                 disc = data.get("disclaimer", "")
                 if disc:

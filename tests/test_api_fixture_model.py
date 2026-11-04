@@ -127,7 +127,9 @@ def test_fixture_model_exercises_health_predict_and_metrics(
             api,
             "AdvisoryEngine",
             return_value=SimpleNamespace(
-                get_advisory=lambda *_args, **_kwargs: {"recommendation_text": "fixture"}
+                get_entry=lambda *_args, **_kwargs: None,
+                get_confusable_hints=lambda *_args, **_kwargs: [],
+                kb_version="fixture-kb-version",
             ),
         ),
         patch.object(api, "preprocess_image", return_value=torch.rand(1, 3, 8, 8)),
@@ -153,6 +155,9 @@ def test_fixture_model_exercises_health_predict_and_metrics(
             assert isinstance(body["confidence"], float)
             assert isinstance(body["top_k"], list)
             assert "advisory" in body
+            assert "advice_trace" in body
+            assert body["kb_version"] == "fixture-kb-version"
+            assert body["advice_trace"]["kb_version"] == body["kb_version"]
 
             metrics = client.get("/metrics")
             assert metrics.status_code == 200
@@ -164,3 +169,6 @@ def test_fixture_model_exercises_health_predict_and_metrics(
         assert "predict_latency_seconds" in metrics_text
         assert "predict_confidence" in metrics_text
         assert "model_info" in metrics_text
+        assert "advice_total" in metrics_text
+        assert "advice_withheld_total" in metrics_text
+        assert "advice_gap_total" in metrics_text

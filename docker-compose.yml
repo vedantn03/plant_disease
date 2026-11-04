@@ -13,6 +13,7 @@ services:
     volumes:
       - ./models:/app/models:ro
       - ./kb:/app/kb:ro
+      - ./reports:/app/reports:ro
       - ./logs:/app/logs
       - ./mlflow.db:/app/mlflow.db:ro
     environment:

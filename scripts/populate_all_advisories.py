@@ -1,4 +1,6 @@
 """
+DO NOT RUN: legacy generator pending source re-check and human review.
+
 scripts/populate_all_advisories.py
 ==================================
 Populates genuine, verified agronomic and chemical spray recommendations for ALL 26 disease classes

@@ -83,6 +83,9 @@ def test_metrics_names_after_prediction_or_skip(client):
     assert "predict_latency_seconds" in body
     assert "predict_confidence" in body
     assert "bg_check_total" in body
+    assert "advice_total" in body
+    assert "advice_withheld_total" in body
+    assert "advice_gap_total" in body
     assert 'traffic_source="replay"' in body
     assert "model_info" in body
 
@@ -147,9 +150,10 @@ def test_predict_schema(client):
         assert "confidence" in body
         assert isinstance(body["confidence"], float)
         assert "advisory" in body
-        advisory = body["advisory"]
-        assert "recommendation_text" in advisory
-        assert "disclaimer" in advisory
+        assert "advice_trace" in body
+        assert "kb_version" in body
+        assert body["advisory"]["tier"] in {"withheld", "scouting", "full"}
+        assert body["advice_trace"]["kb_version"] == body["kb_version"]
         # Grad-CAM may be empty string on error, but key must exist
         assert "gradcam_png_base64" in body
 

@@ -29,6 +29,7 @@ def test_compose_profiles_healthchecks_and_read_only_model_mount():
         assert service.get("restart") == "unless-stopped"
 
     assert "./models:/app/models:ro" in services["api"]["volumes"]
+    assert "./reports:/app/reports:ro" in services["api"]["volumes"]
     assert "DATA_ROOT" not in services["api"].get("environment", {})
     assert {"prometheus_data", "grafana_data"} <= set(compose["volumes"])
 
@@ -61,7 +62,7 @@ def test_dashboard_queries_only_metrics_declared_by_api():
     expressions = [
         target["expr"]
         for panel in dashboard["panels"]
-        for target in panel["targets"]
+        for target in panel.get("targets", [])
     ]
 
     source_text = "\n".join(
@@ -73,6 +74,7 @@ def test_dashboard_queries_only_metrics_declared_by_api():
     known_functions_and_labels = {
         "sum", "rate", "histogram_quantile", "increase", "by",
         "status", "traffic_source", "reason", "le",
+        "tier", "evidence_grade", "class",
     }
     tokens = {
         token
@@ -91,6 +93,10 @@ def test_dashboard_queries_only_metrics_declared_by_api():
     assert any("predict_abstain_total" in expression for expression in expressions)
     assert any("model_info" in expression for expression in expressions)
     assert any("bg_check_total" in expression for expression in expressions)
+    assert any("advice_total" in expression for expression in expressions)
+    assert any("advice_withheld_total" in expression for expression in expressions)
+    assert any("advice_gap_total" in expression for expression in expressions)
+    assert any(panel["title"] == "Advice coverage" for panel in dashboard["panels"])
 
 
 def test_grafana_provisioning_and_credentials_have_no_committed_secret():
