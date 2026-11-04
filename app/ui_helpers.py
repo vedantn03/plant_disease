@@ -7,6 +7,43 @@ from pathlib import Path
 from typing import Any
 
 
+SUPPORTED_EXPLANATION_LANGUAGES = {
+    "English": "en",
+    "मराठी (Marathi)": "mr",
+    "हिन्दी (Hindi)": "hi",
+}
+
+# Localized text is intentionally absent until fluent reviewers approve it.
+# Never label machine-drafted text as reviewed farmer guidance.
+REVIEWED_EXPLANATION_TEXT: dict[str, dict[str, str]] = {
+    "en": {
+        "explainability_title": "Where the model looked — Explainability",
+        "explanation_scope": (
+            "Attribution maps show image regions that influenced this model output. They do not "
+            "prove a disease, explain its cause, or establish that the model relied only on leaf "
+            "tissue. Background sensitivity is a separate check."
+        ),
+    }
+}
+
+
+def explanation_text(key: str, language: str) -> tuple[str, bool]:
+    """Return reviewed localized text, or the English source with fallback status."""
+    english = REVIEWED_EXPLANATION_TEXT["en"].get(key, key)
+    localized = REVIEWED_EXPLANATION_TEXT.get(language, {}).get(key)
+    return (localized, True) if localized else (english, language == "en")
+
+
+def prediction_explanation_values(payload: dict[str, Any]) -> dict[str, Any]:
+    """Expose prediction/evidence unchanged for explanation views."""
+    return {
+        "label": payload.get("predicted_class") or "not available",
+        "confidence": payload.get("confidence"),
+        "gradcam_available": bool(payload.get("gradcam_png_base64")),
+        "advice_trace": payload.get("advice_trace"),
+    }
+
+
 def parse_prediction_trust(payload: dict[str, Any]) -> dict[str, Any]:
     """Extract only fields the API returned; absent values remain unavailable."""
     crop = payload.get("crop")
