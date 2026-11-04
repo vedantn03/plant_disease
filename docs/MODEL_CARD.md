@@ -1,234 +1,161 @@
-# Model Card: PlantVillage Leaf Disease Classifier
+# Model Card — Plant Disease Pipeline
 
-> All numbers in this card come from `reports/metrics.json` and `models/best_metrics.json`.
-> Run `make evaluate` to regenerate. Do not use numbers from older session summaries
-> or conversation logs — only the artifact files are authoritative.
 
----
+Generated from committed sanitized files in `reports/snapshot/` only. This engineering prototype is not field validated and is not a diagnostic authority.
 
-## Model Details
 
-| Field | Value |
-|-------|-------|
-| **Name** | PlantDiseaseClassifier |
-| **Architecture** | ResNet18 (pretrained ImageNet, fine-tuned on PlantVillage full split) |
-| **Framework** | PyTorch 2.11.0+cu128 |
-| **Task** | Multi-class image classification (38 classes, 14 crops) |
-| **Input** | RGB image → Resize(256) → CenterCrop(224) → ImageNet normalise |
-| **Output** | Class probabilities over 38 PlantVillage classes |
-| **Version** | Local full-data checkpoint (historical documents called this Champion v2) |
-| **MLflow Run ID** | `fb731412d82544e0abc231b8d7c62f95` |
-| **Checkpoint** | `models/best_model.pth` |
-| **Registry alias** | Not verifiable from this checkout; inspect the MLflow registry before claiming an alias |
+## Model and intended use
 
----
+The repository config identifies a ResNet-18 image classifier. It is intended for course demonstration and engineering evaluation. It is not validated for field use, commercial decisions, or safety-critical diagnosis. Source: `configs/config.yaml`, `src/model.py`. Source date: not recorded in those files.
 
-## Intended Use
+## Evaluation summary
 
-**This model is intended ONLY for:**
-- Demonstrating an MLOps pipeline for a university course project.
-- Educational illustration of how a leaf-image classification system could be structured.
-- Providing a prototype advisory suggestion from a cited, auditable knowledge base — NOT from the model itself.
+Source file: `reports/snapshot/eval_summary.json`
+Source date: date not recorded in snapshot
 
-**This model is NOT intended for:**
-- Field-ready crop disease diagnosis.
-- Replacing professional agronomic or regulatory advice.
-- Any commercial or safety-critical application.
+- `accuracy`: `0.993`
+- `calibration`: `{"ece_after": 0.005, "ece_before": 0.002, "reliability_diagram": "reports/figures/fig_05_calibration.png", "temperature": 1.3199}`
+- `checkpoint_path`: `models/best_model.pth`
+- `headline`: `{"accuracy": 0.993, "bootstrap_ci_95": {"accuracy": {"high": 0.9947, "low": 0.9913, "mean": 0.993}, "macro_f1": {"high": 0.9931, "low": 0.9871, "mean": 0.9902}, "weighted_f1": {"high": 0.9947, "low": 0.9912, "mean": 0.993}}, "macro_f1": 0.9903, "n_test": 8134, "weighted_f1": 0.993}`
+- `macro_f1`: `0.9903`
+- `mlflow_run_id`: `<redacted-identifier>`
+- `per_crop`: `{"apple": {"accuracy": 1.0, "is_single_class": false, "macro_f1": 1.0, "support": 474}, "blueberry": {"accuracy": 1.0, "is_single_class": true, "macro_f1": 1.0, "support": 225}, "cherry_(including_sour)": {"accuracy": 1.0, "is_single_class": false, "macro_f1": 1.0, "support": 286}, "corn_(maize)": {"accuracy": 0.9706, "is_single_class": false, "macro_f1": 0.9593, "support": 578}, "grape": {"accuracy": 1.0, "is_single_class": false, "macro_f1": 1.0, "support": 608}, "orange": {"accuracy": 1.0, "is_single_class": true, "macro_f1": 1.0, "support": 826}, "peach": {"accuracy": 1.0, "is_single_class": false, "macro_f1": 1.0, "support": 399}, "pepper,_bell": {"accuracy": 1.0, "is_single_class": false, "macro_f1": 1.0, "support": 372}, "potato": {"accuracy": 0.9907, "is_single_class": false, "macro_f1": 0.7371, "support": 323}, "raspberry": {"accuracy": 1.0, "is_single_class": true, "macro_f1": 1.0, "support": 56}, "soybean": {"accuracy": 1.0, "is_single_class": true, "macro_f1": 1.0, "support": 764}, "squash": {"accuracy": 1.0, "is_single_class": true, "macro_f1": 1.0, "support": 275}, "strawberry": {"accuracy": 1.0, "is_single_class": false, "macro_f1": 1.0, "support": 234}, "tomato": {"accuracy": 0.9864, "is_single_class": false, "macro_f1": 0.821, "support": 2714}}`
+- `single_class_crops_excluded`: `["blueberry", "orange", "raspberry", "soybean", "squash"]`
+- `top_10_confused_pairs`: `[{"count": 10, "pred": "Corn_(maize)___Northern_Leaf_Blight", "true": "Corn_(maize)___Cercospora_leaf_spot Gray_leaf_spot"}, {"count": 6, "pred": "Tomato___Late_blight", "true": "Tomato___Early_blight"}, {"count": 5, "pred": "Corn_(maize)___Cercospora_leaf_spot Gray_leaf_spot", "true": "Corn_(maize)___Northern_Leaf_Blight"}, {"count": 4, "pred": "Tomato___Spider_mites Two-spotted_spider_mite", "true": "Tomato___Tomato_Yellow_Leaf_Curl_Virus"}, {"count": 3, "pred": "Tomato___Early_blight", "true": "Tomato___Late_blight"}, {"count": 3, "pred": "Tomato___healthy", "true": "Tomato___Target_Spot"}, {"count": 3, "pred": "Tomato___Bacterial_spot", "true": "Tomato___Tomato_Yellow_Leaf_Curl_Virus"}, {"count": 2, "pred": "Potato___healthy", "true": "Potato___Late_blight"}, {"count": 2, "pred": "Tomato___Target_Spot", "true": "Tomato___Septoria_leaf_spot"}, {"count": 2, "pred": "Tomato___Target_Spot", "true": "Tomato___Spider_mites Two-spotted_spider_mite"}]`
+- `weakest_5_classes`: `[{"class_idx": 7, "class_name": "Corn_(maize)___Cercospora_leaf_spot Gray_leaf_spot", "f1": 0.8993, "precision": 0.9306, "recall": 0.8701, "support": 77}, {"class_idx": 9, "class_name": "Corn_(maize)___Northern_Leaf_Blight", "f1": 0.9435, "precision": 0.9281, "recall": 0.9595, "support": 148}, {"class_idx": 22, "class_name": "Potato___healthy", "f1": 0.9583, "precision": 0.92, "recall": 1.0, "support": 23}, {"class_idx": 29, "class_name": "Tomato___Early_blight", "f1": 0.9592, "precision": 0.9792, "recall": 0.94, "support": 150}, {"class_idx": 30, "class_name": "Tomato___Late_blight", "f1": 0.9748, "precision": 0.9748, "recall": 0.9748, "support": 278}]`
+- `weighted_f1`: `0.993`
+- `within_crop_macro_f1_excluding_single_class_crops`: `0.9888`
 
----
+## Three-fill robustness
 
-## Training Data
+Not generated: missing `reports/snapshot/robustness_three_fill.json`.
 
-| Item | Value |
-|------|-------|
-| **Dataset** | PlantVillage (color subset) |
-| **Total images audited** | 54,305 |
-| **Exact duplicates removed** | 21 (SHA-256 deduplication) |
-| **Images after deduplication** | 54,284 |
-| **Split strategy** | Group-aware stratified 70 / 15 / 15 — `<crop>::<capture_id>` scoping, zero group overlap across splits |
-| **Training images** | **38,002 (full split, no subsampling)** |
-| **Validation images** | 8,148 |
-| **Test images** | 8,134 |
-| **Training epochs** | 8 |
-| **Batch size** | 64 |
-| **Learning rate** | 0.001 (CosineAnnealingLR) |
-| **Loss** | Weighted cross-entropy (inverse-frequency class weights) |
-| **Augmentations (train)** | RandomResizedCrop(224, scale=(0.7,1.0)), RandomHorizontalFlip(p=0.5), RandomVerticalFlip(p=0.3), RandomRotation(±15°), RandomAffine(translate 8%, scale ±5%), ColorJitter |
-| **Preprocessing (val/test/inference)** | Resize(256) → CenterCrop(224) → ImageNet normalise |
-| **AMP** | Enabled (FP16, RTX 3050 6 GB) |
-| **Imbalance handling** | Inverse-frequency class-weighted CE loss |
-| **Measured champion training time** | 287.6 s/epoch; 2321.9 s for 8 epochs (~39 min) |
+## Seed variance (descriptive only)
 
----
+Source file: `reports/snapshot/seed_variance.json`
+Source date: date not recorded in snapshot
 
-## Evaluation Metrics (Held-Out Test Split, N = 8,134)
+- `driving_class_counts`: `{"champion": {"correct": 70, "total": 77}, "seed_43": {"correct": 68, "total": 77}, "seed_44": {"correct": 69, "total": 77}}`
+- `metrics`: `{"bg_drop_black": {"champion": 0.1843, "mean": 0.17213333333333333, "range": 0.031899999999999984, "seed_43": 0.1797, "seed_44": 0.1524}, "bg_drop_mid_grey": {"champion": 0.0938, "mean": 0.08326666666666667, "range": 0.043399999999999994, "seed_43": 0.0563, "seed_44": 0.0997}, "bg_drop_per_image_mean": {"champion": 0.0364, "mean": 0.03656666666666667, "range": 0.0407, "seed_43": 0.0163, "seed_44": 0.057}, "clean_macro_f1": {"champion": 0.991907, "mean": 0.9916876666666666, "range": 0.002794000000000074, "seed_43": 0.990181, "seed_44": 0.992975}, "ece": {"champion": 0.001097, "mean": 0.0013586666666666667, "range": 0.000495, "seed_43": 0.001387, "seed_44": 0.001592}, "min_recall": {"champion": 0.909091, "mean": 0.8961039999999999, "range": 0.02597399999999994, "seed_43": 0.883117, "seed_44": 0.896104}, "within_crop_macro_f1": {"champion": 0.990758, "mean": 0.991863, "range": 0.0021240000000000148, "seed_43": 0.992882, "seed_44": 0.991949}}`
+- `minimum_recall_driving_class`: `Corn_(maize)___Cercospora_leaf_spot Gray_leaf_spot`
+- `models`: `{"champion": {"bg_drop_black": 0.1843, "bg_drop_mid_grey": 0.0938, "bg_drop_per_image_mean": 0.0364, "clean_macro_f1": 0.991907, "ece": 0.001097, "min_recall": 0.909091, "run_id": "<redacted-identifier>", "within_crop_macro_f1": 0.990758}, "seed_43": {"bg_drop_black": 0.1797, "bg_drop_mid_grey": 0.0563, "bg_drop_per_image_mean": 0.0163, "clean_macro_f1": 0.990181, "ece": 0.001387, "min_recall": 0.883117, "run_id": "<redacted-identifier>", "within_crop_macro_f1": 0.992882}, "seed_44": {"bg_drop_black": 0.1524, "bg_drop_mid_grey": 0.0997, "bg_drop_per_image_mean": 0.057, "clean_macro_f1": 0.992975, "ece": 0.001592, "min_recall": 0.896104, "run_id": "<redacted-identifier>", "within_crop_macro_f1": 0.991949}}`
+- `notes`: `["Three seeds are a small sample; summaries are descriptive, not a stable variance estimate.", "The earlier 0.8750 (70/80) uses a different denominator from supplied VAL n=77. Current counts are derived from each report; seed 43's supplied 0.883117 is 68/77. Reconcile 70/80 against its source before comparing."]`
+- `split`: `VAL`
 
-All from `reports/metrics.json`.
+## Background sensitivity
 
-| Metric | Point Estimate | 95% Bootstrap CI |
-| :--- | :---: | :---: |
-| **Macro-F1** | **99.03%** | [98.71%, 99.31%] |
-| **Weighted-F1** | **99.30%** | [99.12%, 99.47%] |
-| **Overall Accuracy** | **99.30%** | [99.13%, 99.47%] |
+Source file: `reports/snapshot/bg_check_rates.json`
+Source date: date not recorded in snapshot
 
-### Inference Cost
+- `background_check_enabled`: `True`
+- `counts`: `{"consistent": 87, "inconsistent": 9, "unknown": 4}`
+- `elapsed_seconds`: `2.541690199999721`
+- `mask_area_bounds`: `{"max": 0.95, "min": 0.05}`
+- `mean_added_latency_ms`: `17.304315000055794`
+- `sample_size`: `100`
+- `sample_size_requested`: `100`
+- `seed`: `42`
+- `shares`: `{"consistent": 0.87, "inconsistent": 0.09, "unknown": 0.04}`
+- `split`: `VAL`
+- `thresholds_provisional`: `True`
 
-| Item | Value |
-|------|-------|
-| Parameters | 11.2 M |
-| Model file size | 128.26 MB |
-| GPU latency (RTX 3050) | 2.54 ms median, 4.19 ms p95 |
-| CPU latency (host) | 61.98 ms median, 64.74 ms p95 |
+## Latest drift snapshot
 
-### Weakest 5 Classes (from `reports/metrics.json`)
+Source file: `reports/snapshot/drift_latest.json`
+Source date: 2026-11-04T11:51:29.535575+00:00
 
-| Class | F1 | Recall | Support |
-|---|---|---|---|
-| Corn Cercospora leaf spot / Gray leaf spot | 0.8993 | 0.8701 | 77 |
-| Corn Northern Leaf Blight | 0.9435 | 0.9595 | 148 |
-| Potato healthy | 0.9583 | 1.0000 | 23 |
-| Tomato Early Blight | 0.9592 | 0.9400 | 150 |
-| Tomato Late Blight | see metrics.json | see metrics.json | — |
+- `drift_flag`: `1`
+- `features`: `{"blur": {"drift_flag": true, "ks_p_value": 2.534427291796815e-54, "psi": 2.324407676148042, "sample_count": 200}, "brightness": {"drift_flag": true, "ks_p_value": 5.585287660352168e-07, "psi": 1.016240402677685, "sample_count": 200}, "confidence": {"drift_flag": true, "ks_p_value": 3.1895957136651878e-15, "psi": 9.346005829777273, "sample_count": 200}}`
+- `ks_alpha`: `0.05`
+- `minimum_sample_count`: `30`
+- `psi_threshold`: `0.2`
+- `replay_share`: `0.765`
+- `rule`: `any feature: PSI > configured threshold AND KS p-value < ks_alpha`
+- `status`: `evaluated`
+- `thresholds_provisional`: `True`
+- `timestamp`: `2026-11-04T11:51:29.535575+00:00`
+- `traffic_source_note`: `Replay traffic is staged traffic, not real users.`
+- `window_size`: `200`
 
-### Per-Crop Summary
+## Promotion history
 
-| Crop | Macro-F1 | Accuracy | N |
-|---|---|---|---|
-| Apple | 1.0000 | 1.0000 | 474 |
-| Blueberry | 1.0000 | 1.0000 | 225 |
-| Cherry (incl. sour) | 1.0000 | 1.0000 | 286 |
-| Corn (maize) | 0.9593 | 0.9706 | 578 |
-| Grape | 1.0000 | 1.0000 | 608 |
-| Orange | 1.0000 | 1.0000 | 826 |
-| Peach | 1.0000 | 1.0000 | 399 |
-| Pepper (bell) | 1.0000 | 1.0000 | 372 |
-| Potato | 0.7371 | 0.9907 | 323 |
-| Raspberry | 1.0000 | 1.0000 | 56 |
-| Soybean | 1.0000 | 1.0000 | 764 |
-| Squash | 1.0000 | 1.0000 | 275 |
-| Strawberry | 1.0000 | 1.0000 | 234 |
-| Tomato | 0.8210 | 0.9864 | 2,714 |
+Source file: `reports/snapshot/promotion_log.jsonl`
+Source date: 2026-11-03T08:30:28.157995+00:00
 
-> Note: Potato (F1=0.7371) and Tomato (F1=0.8210) crop-level macro-F1 are lower because
-> (a) they have more disease sub-classes with small support (e.g. Potato healthy: n=23),
-> and (b) Solanaceae leaves share morphological features across crops.
+```text
+[{"action": "promote", "alias": "champion", "alias_moved": false, "champion_version": "2", "dry_run": true, "model": "PlantDiseaseClassifier", "notes": "Thresholds are provisional; @champion was not moved.", "tags": {"config_hash": "<redacted-identifier>", "dvc_data_hash": "<redacted-identifier>", "gate_provisional": "true", "gate_verdict": "PASS", "git_commit": "<redacted-identifier>", "robustness_metrics": "val_bg_drop=0.1797;val_ece=0.00139;val_min_recall=0.8831", "split": "val", "val_bg_drop": "0.1797", "val_ece": "0.00139", "val_macro_f1": "0.9902", "val_min_recall": "0.8831"}, "timestamp": "2026-11-03T08:30:28.157995+00:00", "verdict": {"all_passed": true, "any_provisional": true, "champion_macro_f1": 0.990758, "criteria": [{"name": "macro_f1", "observed": 0.992882, "passed": true, "provisional": true, "reason": "VAL within-crop macro-F1 0.9929 vs floor 0.9858 (champion 0.9908 - margin 0.0050)", "threshold": 0.985758}, {"name": "min_recall", "observed": 0.883117, "passed": true, "provisional": true, "reason": "VAL min-recall 0.8831 (class=Corn_(maize)___Cercospora_leaf_spot Gray_leaf_spot, n=77) vs floor 0.8500; tiny_class_rule=pending_approval", "threshold": 0.85}, {"name": "bg_drop", "observed": 0.1797, "passed": true, "provisional": true, "reason": "VAL bg_drop 0.1797 vs champion-relative ceiling 0.2043 (margin 0.0200; absolute informational value 0.08; drop mixes background reliance with masking artifacts)", "threshold": 0.2043}, {"name": "ece", "observed": 0.001387, "passed": true, "provisional": true, "reason": "VAL ECE 0.00139 vs max 0.0500", "threshold": 0.05}], "failures": [], "first_model": false, "verdict": "PASS"}, "version": null}, {"action": "promote", "alias": "champion", "alias_moved": false, "champion_version": "2", "dry_run": true, "model": "PlantDiseaseClassifier", "notes": "Thresholds are provisional; @champion was not moved.", "tags": {"config_hash": "<redacted-identifier>", "dvc_data_hash": "<redacted-identifier>", "gate_provisional": "true", "gate_verdict": "PASS", "git_commit": "<redacted-identifier>", "robustness_metrics": "val_bg_drop=0.1524;val_ece=0.00159;val_min_recall=0.8961", "split": "val", "val_bg_drop": "0.1524", "val_ece": "0.00159", "val_macro_f1": "0.9930", "val_min_recall": "0.8961"}, "timestamp": "2026-11-03T08:30:30.872438+00:00", "verdict": {"all_passed": true, "any_provisional": true, "champion_macro_f1": 0.990758, "criteria": [{"name": "macro_f1", "observed": 0.991949, "passed": true, "provisional": true, "reason": "VAL within-crop macro-F1 0.9919 vs floor 0.9858 (champion 0.9908 - margin 0.0050)", "threshold": 0.985758}, {"name": "min_recall", "observed": 0.896104, "passed": true, "provisional": true, "reason": "VAL min-recall 0.8961 (class=Corn_(maize)___Cercospora_leaf_spot Gray_leaf_spot, n=77) vs floor 0.8500; tiny_class_rule=pending_approval", "threshold": 0.85}, {"name": "bg_drop", "observed": 0.1524, "passed": true, "provisional": true, "reason": "VAL bg_drop 0.1524 vs champion-relative ceiling 0.2043 (margin 0.0200; absolute informational value 0.08; drop mixes background reliance with masking artifacts)", "threshold": 0.2043}, {"name": "ece", "observed": 0.001592, "passed": true, "provisional": true, "reason": "VAL ECE 0.00159 vs max 0.0500", "threshold": 0.05}], "failures": [], "first_model": false, "verdict": "PASS"}, "version": null}, {"action": "promote", "alias": "champion", "alias_moved": false, "approval_message": "approval.yaml does not set approved: true", "approval_valid": false, "candidate_run_id": "<redacted-identifier>", "champion_run_id": "<redacted-identifier>", "champion_version": "2", "dry_run": true, "model": "PlantDiseaseClassifier", "notes": "Dry-run performs no registry writes and never moves the alias.", "observed": {"bg_drop_black": 0.1797, "bg_drop_mid_grey": 0.0563, "clean_macro_f1": 0.990181, "run_id": "<redacted-identifier>", "seed": 43}, "split": "VAL", "thresholds_sha256": "<redacted-identifier>", "timestamp": "2026-11-03T17:23:23.859793+00:00", "verdict": {"all_passed": true, "any_provisional": true, "champion_macro_f1": 0.990758, "criteria": [{"name": "within_crop_macro_f1", "observed": 0.992882, "passed": true, "provisional": true, "reason": "VAL within-crop macro-F1 0.9929 vs floor 0.9858 (champion 0.9908 - margin 0.0050)", "threshold": 0.985758}, {"name": "minimum_class_recall", "observed": 0.8568788745827373, "passed": true, "provisional": true, "reason": "VAL recall floor score 0.8569 (class=Potato___healthy, n=23, wilson_95_used=True) vs floor 0.8500", "threshold": 0.85}, {"name": "bg_drop_per_image_mean", "observed": 0.0163, "passed": true, "provisional": true, "reason": "VAL per-image-mean bg_drop 0.0163 vs champion-relative ceiling 0.0664 (margin 0.0300); black and mid-grey fills are informational", "threshold": 0.0664}, {"name": "ece", "observed": 0.001387, "passed": true, "provisional": true, "reason": "VAL ECE 0.00139 vs max 0.0100", "threshold": 0.01}], "failures": [], "first_model": false, "verdict": "PASS"}, "version": "3"}, {"action": "promote", "alias": "champion", "alias_moved": false, "approval_message": "approval.yaml does not set approved: true", "approval_valid": false, "candidate_run_id": "<redacted-identifier>", "champion_run_id": "<redacted-identifier>", "champion_version": "2", "dry_run": true, "model": "PlantDiseaseClassifier", "notes": "Dry-run performs no registry writes and never moves the alias.", "observed": {"bg_drop_black": 0.1524, "bg_drop_mid_grey": 0.0997, "clean_macro_f1": 0.992975, "run_id": "<redacted-identifier>", "seed": 44}, "split": "VAL", "thresholds_sha256": "<redacted-identifier>", "timestamp": "2026-11-03T17:23:26.698247+00:00", "verdict": {"all_passed": true, "any_provisional": true, "champion_macro_f1": 0.990758, "criteria": [{"name": "within_crop_macro_f1", "observed": 0.991949, "passed": true, "provisional": true, "reason": "VAL within-crop macro-F1 0.9919 vs floor 0.9858 (champion 0.9908 - margin 0.0050)", "threshold": 0.985758}, {"name": "minimum_class_recall", "observed": 0.8568788745827373, "passed": true, "provisional": true, "reason": "VAL recall floor score 0.8569 (class=Potato___healthy, n=23, wilson_95_used=True) vs floor 0.8500", "threshold": 0.85}, {"name": "bg_drop_per_image_mean", "observed": 0.057, "passed": true, "provisional": true, "reason": "VAL per-image-mean bg_drop 0.0570 vs champion-relative ceiling 0.0664 (margin 0.0300); black and mid-grey fills are informational", "threshold": 0.0664}, {"name": "ece", "observed": 0.001592, "passed": true, "provisional": true, "reason": "VAL ECE 0.00159 vs max 0.0100", "threshold": 0.01}], "failures": [], "first_model": false, "verdict": "PASS"}, "version": "4"}, {"action": "promote", "alias": "champion", "alias_moved": false, "approval_message": "approval.yaml does not set approved: true", "approval_valid": false, "candidate_run_id": "<redacted-identifier>", "champion_run_id": "<redacted-identifier>", "champion_version": "2", "dry_run": true, "model": "PlantDiseaseClassifier", "notes": "Dry-run performs no registry writes and never moves the alias.", "observed": {"bg_drop_black": 0.1797, "bg_drop_mid_grey": 0.0563, "clean_macro_f1": 0.990181, "run_id": "<redacted-identifier>", "seed": 43}, "split": "VAL", "thresholds_sha256": "<redacted-identifier>", "timestamp": "2026-11-03T17:23:38.685124+00:00", "verdict": {"all_passed": true, "any_provisional": true, "champion_macro_f1": 0.990758, "criteria": [{"name": "within_crop_macro_f1", "observed": 0.992882, "passed": true, "provisional": true, "reason": "VAL within-crop macro-F1 0.9929 vs floor 0.9858 (champion 0.9908 - margin 0.0050)", "threshold": 0.985758}, {"name": "minimum_class_recall", "observed": 0.8568788745827373, "passed": true, "provisional": true, "reason": "VAL recall floor score 0.8569 (class=Potato___healthy, n=23, wilson_95_used=True) vs floor 0.8500", "threshold": 0.85}, {"name": "bg_drop_per_image_mean", "observed": 0.0163, "passed": true, "provisional": true, "reason": "VAL per-image-mean bg_drop 0.0163 vs champion-relative ceiling 0.0664 (margin 0.0300); black and mid-grey fills are informational", "threshold": 0.0664}, {"name": "ece", "observed": 0.001387, "passed": true, "provisional": true, "reason": "VAL ECE 0.00139 vs max 0.0100", "threshold": 0.01}], "failures": [], "first_model": false, "verdict": "PASS"}, "version": "3"}, {"action": "promote", "alias": "champion", "alias_moved": false, "approval_message": "approval.yaml does not set approved: true", "approval_valid": false, "candidate_run_id": "<redacted-identifier>", "champion_run_id": "<redacted-identifier>", "champion_version": "2", "dry_run": true, "model": "PlantDiseaseClassifier", "notes": "Dry-run performs no registry writes and never moves the alias.", "observed": {"bg_drop_black": 0.1524, "bg_drop_mid_grey": 0.0997, "clean_macro_f1": 0.992975, "run_id": "<redacted-identifier>", "seed": 44}, "split": "VAL", "thresholds_sha256": "<redacted-identifier>", "timestamp": "2026-11-03T17:23:41.535931+00:00", "verdict": {"all_passed": true, "any_provisional": true, "champion_macro_f1": 0.990758, "criteria": [{"name": "within_crop_macro_f1", "observed": 0.991949, "passed": true, "provisional": true, "reason": "VAL within-crop macro-F1 0.9919 vs floor 0.9858 (champion 0.9908 - margin 0.0050)", "threshold": 0.985758}, {"name": "minimum_class_recall", "observed": 0.8568788745827373, "passed": true, "provisional": true, "reason": "VAL recall floor score 0.8569 (class=Potato___healthy, n=23, wilson_95_used=True) vs floor 0.8500", "threshold": 0.85}, {"name": "bg_drop_per_image_mean", "observed": 0.057, "passed": true, "provisional": true, "reason": "VAL per-image-mean bg_drop 0.0570 vs champion-relative ceiling 0.0664 (margin 0.0300); black and mid-grey fills are informational", "threshold": 0.0664}, {"name": "ece", "observed": 0.001592, "passed": true, "provisional": true, "reason": "VAL ECE 0.00159 vs max 0.0100", "threshold": 0.01}], "failures": [], "first_model": false, "verdict": "PASS"}, "version": "4"}]
+```
 
----
+## Registry snapshot
 
-## Calibration
+Source file: `reports/snapshot/registry_export.json`
+Source date: date not recorded in snapshot
 
-| Item | Value | Source |
-|------|-------|--------|
-| Temperature scaling factor T | 0.9759 diagnostic optimum; serving uses T=1 | `reports/temperature_refit.json` |
-| Pre-scaling ECE | see calibration section of metrics.json | measured |
-| Post-scaling ECE | see calibration section of metrics.json | measured |
+- `alias`: `{"name": "champion", "version": "2"}`
+- `container_compatibility`: `{"reason": "This inspection runs on the host; source URI readability inside a Linux container requires a container-side check.", "status": "not_verified"}`
+- `model`: `PlantDiseaseClassifier`
+- `source_note`: `Paths, arbitrary tags, params, metrics, and usernames are omitted.`
+- `versions`: `[{"artifact_source_kind": "local_file_uri", "creation_timestamp": 1791959535766, "current_stage": "None", "gate_verdict": "unknown", "run_id": "<redacted-identifier>", "version": "1"}, {"artifact_source_kind": "local_file_uri", "creation_timestamp": 1791970631238, "current_stage": "None", "gate_verdict": "unknown", "run_id": "<redacted-identifier>", "version": "2"}, {"artifact_source_kind": "local_file_uri", "creation_timestamp": 1793630453842, "current_stage": "None", "gate_verdict": "PENDING", "run_id": "<redacted-identifier>", "version": "3"}, {"artifact_source_kind": "local_file_uri", "creation_timestamp": 1793635144433, "current_stage": "None", "gate_verdict": "PENDING", "run_id": "<redacted-identifier>", "version": "4"}]`
 
-Temperature scaling is not applied at serving because the VAL NLL improvement from
-0.01920 to 0.01919 is negligible.
+## Advisory provenance coverage
 
-## Background-Masking Robustness
+Source file: `reports/snapshot/advisory_audit.json`
+Source date: not recorded in source file
 
-The shared protocol uses Woebbecke ExG segmentation and reports three fills:
-black, mid-grey, and each image's mean background colour. A masked-background drop
-mixes background reliance with masking artifacts; it is not a measurement of the
-fraction of signal derived from pathology.
+- `counts`: `{"PLACEHOLDER": 37, "UNVERIFIED-SOURCE": 0, "VERIFIED": 1}`
+- `note`: `The retained VERIFIED entry has no reviewer and is evidence grade B. Counts describe the active KB after WP8 migration.`
+- `source_date`: `not recorded in source file`
+- `source_file`: `docs/ADVISORY_AUDIT.md`
 
-| Split / fill | Clean macro-F1 | Masked macro-F1 | bg_drop |
-|---|---:|---:|---:|
-| VAL / black | 0.9919 | 0.8076 | 0.1843 |
-| TEST / black | 0.9903 | 0.9240 | 0.0663 |
-| VAL / mid-grey | pending artifact | pending artifact | pending artifact |
-| TEST / mid-grey | pending artifact | pending artifact | pending artifact |
-| VAL / per-image mean | pending artifact | pending artifact | pending artifact |
-| TEST / per-image mean | pending artifact | pending artifact | pending artifact |
+## Corn weak-class evidence
 
-The three-fill range, rather than one fill, is the robustness report and gate input.
+Source file: `reports/snapshot/eval_summary.json`
+Source date: date not recorded in snapshot
 
----
+- `records`: `[{"accuracy": 0.993, "calibration": {"ece_after": 0.005, "ece_before": 0.002, "reliability_diagram": "reports/figures/fig_05_calibration.png", "temperature": 1.3199}, "checkpoint_path": "models/best_model.pth", "headline": {"accuracy": 0.993, "bootstrap_ci_95": {"accuracy": {"high": 0.9947, "low": 0.9913, "mean": 0.993}, "macro_f1": {"high": 0.9931, "low": 0.9871, "mean": 0.9902}, "weighted_f1": {"high": 0.9947, "low": 0.9912, "mean": 0.993}}, "macro_f1": 0.9903, "n_test": 8134, "weighted_f1": 0.993}, "macro_f1": 0.9903, "mlflow_run_id": "<redacted-identifier>", "per_crop": {"apple": {"accuracy": 1.0, "is_single_class": false, "macro_f1": 1.0, "support": 474}, "blueberry": {"accuracy": 1.0, "is_single_class": true, "macro_f1": 1.0, "support": 225}, "cherry_(including_sour)": {"accuracy": 1.0, "is_single_class": false, "macro_f1": 1.0, "support": 286}, "corn_(maize)": {"accuracy": 0.9706, "is_single_class": false, "macro_f1": 0.9593, "support": 578}, "grape": {"accuracy": 1.0, "is_single_class": false, "macro_f1": 1.0, "support": 608}, "orange": {"accuracy": 1.0, "is_single_class": true, "macro_f1": 1.0, "support": 826}, "peach": {"accuracy": 1.0, "is_single_class": false, "macro_f1": 1.0, "support": 399}, "pepper,_bell": {"accuracy": 1.0, "is_single_class": false, "macro_f1": 1.0, "support": 372}, "potato": {"accuracy": 0.9907, "is_single_class": false, "macro_f1": 0.7371, "support": 323}, "raspberry": {"accuracy": 1.0, "is_single_class": true, "macro_f1": 1.0, "support": 56}, "soybean": {"accuracy": 1.0, "is_single_class": true, "macro_f1": 1.0, "support": 764}, "squash": {"accuracy": 1.0, "is_single_class": true, "macro_f1": 1.0, "support": 275}, "strawberry": {"accuracy": 1.0, "is_single_class": false, "macro_f1": 1.0, "support": 234}, "tomato": {"accuracy": 0.9864, "is_single_class": false, "macro_f1": 0.821, "support": 2714}}, "single_class_crops_excluded": ["blueberry", "orange", "raspberry", "soybean", "squash"], "top_10_confused_pairs": [{"count": 10, "pred": "Corn_(maize)___Northern_Leaf_Blight", "true": "Corn_(maize)___Cercospora_leaf_spot Gray_leaf_spot"}, {"count": 6, "pred": "Tomato___Late_blight", "true": "Tomato___Early_blight"}, {"count": 5, "pred": "Corn_(maize)___Cercospora_leaf_spot Gray_leaf_spot", "true": "Corn_(maize)___Northern_Leaf_Blight"}, {"count": 4, "pred": "Tomato___Spider_mites Two-spotted_spider_mite", "true": "Tomato___Tomato_Yellow_Leaf_Curl_Virus"}, {"count": 3, "pred": "Tomato___Early_blight", "true": "Tomato___Late_blight"}, {"count": 3, "pred": "Tomato___healthy", "true": "Tomato___Target_Spot"}, {"count": 3, "pred": "Tomato___Bacterial_spot", "true": "Tomato___Tomato_Yellow_Leaf_Curl_Virus"}, {"count": 2, "pred": "Potato___healthy", "true": "Potato___Late_blight"}, {"count": 2, "pred": "Tomato___Target_Spot", "true": "Tomato___Septoria_leaf_spot"}, {"count": 2, "pred": "Tomato___Target_Spot", "true": "Tomato___Spider_mites Two-spotted_spider_mite"}], "weakest_5_classes": [{"class_idx": 7, "class_name": "Corn_(maize)___Cercospora_leaf_spot Gray_leaf_spot", "f1": 0.8993, "precision": 0.9306, "recall": 0.8701, "support": 77}, {"class_idx": 9, "class_name": "Corn_(maize)___Northern_Leaf_Blight", "f1": 0.9435, "precision": 0.9281, "recall": 0.9595, "support": 148}, {"class_idx": 22, "class_name": "Potato___healthy", "f1": 0.9583, "precision": 0.92, "recall": 1.0, "support": 23}, {"class_idx": 29, "class_name": "Tomato___Early_blight", "f1": 0.9592, "precision": 0.9792, "recall": 0.94, "support": 150}, {"class_idx": 30, "class_name": "Tomato___Late_blight", "f1": 0.9748, "precision": 0.9748, "recall": 0.9748, "support": 278}], "weighted_f1": 0.993, "within_crop_macro_f1_excluding_single_class_crops": 0.9888}, {"count": 10, "pred": "Corn_(maize)___Northern_Leaf_Blight", "true": "Corn_(maize)___Cercospora_leaf_spot Gray_leaf_spot"}, {"count": 5, "pred": "Corn_(maize)___Cercospora_leaf_spot Gray_leaf_spot", "true": "Corn_(maize)___Northern_Leaf_Blight"}, {"class_idx": 7, "class_name": "Corn_(maize)___Cercospora_leaf_spot Gray_leaf_spot", "f1": 0.8993, "precision": 0.9306, "recall": 0.8701, "support": 77}]`
 
-## Empirical Bias Probe (Capture-Bias Replication, Noyan 2022)
+## Candidate gate reports
 
-> These numbers are **unflattering and intentionally disclosed**. They document that
-> PlantVillage is a biased benchmark, NOT that our model is poor at leaf diagnosis.
+## Candidate gate: candidate_gate_0e2c51ab.json
 
-| Probe | Result | Chance | Meaning |
-|---|---|---|---|
-| Corner-pixel RF (4 corner pixels, 12 values, no leaf) | **46.1% accuracy** | 2.6% | Nearly half the class identity is in the background paper/lighting |
-| Centre-masked CNN (central 60% of leaf hidden) | **68.67% accuracy** | 2.6% | Model can classify many images from background alone |
+Source file: `reports/snapshot/candidate_gate_0e2c51ab.json`
+Source date: date not recorded in snapshot
 
----
+- `candidate_only`: `True`
+- `device`: `cuda`
+- `elapsed_seconds`: `321.29`
+- `read_only`: `True`
+- `results`: `[{"checkpoint": "models/candidates/<redacted-identifier>.pth", "clean_macro_f1": 0.992975, "ece": 0.001592, "inference_seconds": null, "masked_background_by_fill": {"black": {"bg_drop": 0.1524, "clean_macro_f1": 0.993, "fill": "black", "masked_macro_f1": 0.8406, "n": 8148, "retention_rate": 0.8465}, "mid_grey": {"bg_drop": 0.0997, "clean_macro_f1": 0.993, "fill": "mid_grey", "masked_macro_f1": 0.8933, "n": 8148, "retention_rate": 0.8996}, "per_image_mean": {"bg_drop": 0.057, "clean_macro_f1": 0.993, "fill": "per_image_mean", "masked_macro_f1": 0.936, "n": 8148, "retention_rate": 0.9426}}, "min_recall": {"all": {"Apple___Apple_scab": {"correct": 94, "n": 94, "recall": 1.0}, "Apple___Black_rot": {"correct": 93, "n": 93, "recall": 1.0}, "Apple___Cedar_apple_rust": {"correct": 41, "n": 41, "recall": 1.0}, "Apple___healthy": {"correct": 246, "n": 246, "recall": 1.0}, "Blueberry___healthy": {"correct": 225, "n": 225, "recall": 1.0}, "Cherry_(including_sour)___Powdery_mildew": {"correct": 158, "n": 158, "recall": 1.0}, "Cherry_(including_sour)___healthy": {"correct": 127, "n": 128, "recall": 0.992188}, "Corn_(maize)___Cercospora_leaf_spot Gray_leaf_spot": {"correct": 69, "n": 77, "recall": 0.896104}, "Corn_(maize)___Common_rust_": {"correct": 179, "n": 179, "recall": 1.0}, "Corn_(maize)___Northern_Leaf_Blight": {"correct": 141, "n": 148, "recall": 0.952703}, "Corn_(maize)___healthy": {"correct": 174, "n": 174, "recall": 1.0}, "Grape___Black_rot": {"correct": 177, "n": 177, "recall": 1.0}, "Grape___Esca_(Black_Measles)": {"correct": 206, "n": 207, "recall": 0.995169}, "Grape___Leaf_blight_(Isariopsis_Leaf_Spot)": {"correct": 161, "n": 161, "recall": 1.0}, "Grape___healthy": {"correct": 63, "n": 63, "recall": 1.0}, "Orange___Haunglongbing_(Citrus_greening)": {"correct": 825, "n": 826, "recall": 0.998789}, "Peach___Bacterial_spot": {"correct": 343, "n": 345, "recall": 0.994203}, "Peach___healthy": {"correct": 54, "n": 54, "recall": 1.0}, "Pepper,_bell___Bacterial_spot": {"correct": 150, "n": 150, "recall": 1.0}, "Pepper,_bell___healthy": {"correct": 221, "n": 222, "recall": 0.995495}, "Potato___Early_blight": {"correct": 150, "n": 150, "recall": 1.0}, "Potato___Late_blight": {"correct": 150, "n": 150, "recall": 1.0}, "Potato___healthy": {"correct": 23, "n": 23, "recall": 1.0}, "Raspberry___healthy": {"correct": 56, "n": 56, "recall": 1.0}, "Soybean___healthy": {"correct": 764, "n": 764, "recall": 1.0}, "Squash___Powdery_mildew": {"correct": 275, "n": 275, "recall": 1.0}, "Strawberry___Leaf_scorch": {"correct": 166, "n": 166, "recall": 1.0}, "Strawberry___healthy": {"correct": 68, "n": 68, "recall": 1.0}, "Tomato___Bacterial_spot": {"correct": 317, "n": 319, "recall": 0.99373}, "Tomato___Early_blight": {"correct": 146, "n": 150, "recall": 0.973333}, "Tomato___Late_blight": {"correct": 281, "n": 282, "recall": 0.996454}, "Tomato___Leaf_Mold": {"correct": 142, "n": 143, "recall": 0.993007}, "Tomato___Septoria_leaf_spot": {"correct": 262, "n": 266, "recall": 0.984962}, "Tomato___Spider_mites Two-spotted_spider_mite": {"correct": 251, "n": 251, "recall": 1.0}, "Tomato___Target_Spot": {"correct": 207, "n": 211, "recall": 0.981043}, "Tomato___Tomato_Yellow_Leaf_Curl_Virus": {"correct": 799, "n": 804, "recall": 0.993781}, "Tomato___Tomato_mosaic_virus": {"correct": 56, "n": 56, "recall": 1.0}, "Tomato___healthy": {"correct": 246, "n": 246, "recall": 1.0}}, "class": "Corn_(maize)___Cercospora_leaf_spot Gray_leaf_spot", "correct": 69, "n": 77, "value": 0.896104}, "name": "candidate_seed_44", "run_id": "<redacted-identifier>", "seed": 44, "val_n": 8148, "within_crop_macro_f1": 0.991949}]`
+- `same_preprocessing`: `get_transforms('val', cfg): Resize(256)+CenterCrop(224)+ImageNet normalize`
 
-## Out-of-Distribution (OOD) Rejection at 0.50 Softmax Threshold
+## Candidate gate: candidate_gate_48ecf14d.json
 
-| Item | Value | Source |
-|------|-------|--------|
-| N OOD samples tested (synthetic noise + gradients) | 200 | `reports/metrics.json` → ood_rejection |
-| Rejection rate at 0.50 threshold | **0.0% (0 of 200 rejected)** | measured |
-| Mean OOD confidence | 0.9362 (93.62%) | measured |
-| p95 OOD confidence | 0.9997 | measured |
+Source file: `reports/snapshot/candidate_gate_48ecf14d.json`
+Source date: date not recorded in snapshot
 
-> **Critical limitation**: Standard Softmax thresholding does NOT adequately detect
-> out-of-distribution inputs. The model accepts ALL synthetic noise/non-leaf images
-> with very high confidence. An upstream leaf detection or dedicated OOD detector
-> (Energy score, Mahalanobis distance) is required before production use.
+- `candidate_only`: `False`
+- `device`: `cuda`
+- `elapsed_seconds`: `685.48`
+- `read_only`: `True`
+- `results`: `[{"checkpoint": "models/best_model.pth", "clean_macro_f1": 0.991907, "ece": 0.001097, "inference_seconds": null, "masked_background_by_fill": {"black": {"bg_drop": 0.1843, "clean_macro_f1": 0.9919, "fill": "black", "masked_macro_f1": 0.8076, "n": 8148, "retention_rate": 0.8142}, "mid_grey": {"bg_drop": 0.0938, "clean_macro_f1": 0.9919, "fill": "mid_grey", "masked_macro_f1": 0.8981, "n": 8148, "retention_rate": 0.9054}, "per_image_mean": {"bg_drop": 0.0364, "clean_macro_f1": 0.9919, "fill": "per_image_mean", "masked_macro_f1": 0.9555, "n": 8148, "retention_rate": 0.9633}}, "min_recall": {"all": {"Apple___Apple_scab": {"correct": 94, "n": 94, "recall": 1.0}, "Apple___Black_rot": {"correct": 93, "n": 93, "recall": 1.0}, "Apple___Cedar_apple_rust": {"correct": 41, "n": 41, "recall": 1.0}, "Apple___healthy": {"correct": 245, "n": 246, "recall": 0.995935}, "Blueberry___healthy": {"correct": 225, "n": 225, "recall": 1.0}, "Cherry_(including_sour)___Powdery_mildew": {"correct": 158, "n": 158, "recall": 1.0}, "Cherry_(including_sour)___healthy": {"correct": 127, "n": 128, "recall": 0.992188}, "Corn_(maize)___Cercospora_leaf_spot Gray_leaf_spot": {"correct": 70, "n": 77, "recall": 0.909091}, "Corn_(maize)___Common_rust_": {"correct": 179, "n": 179, "recall": 1.0}, "Corn_(maize)___Northern_Leaf_Blight": {"correct": 141, "n": 148, "recall": 0.952703}, "Corn_(maize)___healthy": {"correct": 174, "n": 174, "recall": 1.0}, "Grape___Black_rot": {"correct": 177, "n": 177, "recall": 1.0}, "Grape___Esca_(Black_Measles)": {"correct": 206, "n": 207, "recall": 0.995169}, "Grape___Leaf_blight_(Isariopsis_Leaf_Spot)": {"correct": 161, "n": 161, "recall": 1.0}, "Grape___healthy": {"correct": 63, "n": 63, "recall": 1.0}, "Orange___Haunglongbing_(Citrus_greening)": {"correct": 825, "n": 826, "recall": 0.998789}, "Peach___Bacterial_spot": {"correct": 344, "n": 345, "recall": 0.997101}, "Peach___healthy": {"correct": 54, "n": 54, "recall": 1.0}, "Pepper,_bell___Bacterial_spot": {"correct": 148, "n": 150, "recall": 0.986667}, "Pepper,_bell___healthy": {"correct": 222, "n": 222, "recall": 1.0}, "Potato___Early_blight": {"correct": 150, "n": 150, "recall": 1.0}, "Potato___Late_blight": {"correct": 150, "n": 150, "recall": 1.0}, "Potato___healthy": {"correct": 23, "n": 23, "recall": 1.0}, "Raspberry___healthy": {"correct": 56, "n": 56, "recall": 1.0}, "Soybean___healthy": {"correct": 764, "n": 764, "recall": 1.0}, "Squash___Powdery_mildew": {"correct": 275, "n": 275, "recall": 1.0}, "Strawberry___Leaf_scorch": {"correct": 165, "n": 166, "recall": 0.993976}, "Strawberry___healthy": {"correct": 68, "n": 68, "recall": 1.0}, "Tomato___Bacterial_spot": {"correct": 317, "n": 319, "recall": 0.99373}, "Tomato___Early_blight": {"correct": 142, "n": 150, "recall": 0.946667}, "Tomato___Late_blight": {"correct": 278, "n": 282, "recall": 0.985816}, "Tomato___Leaf_Mold": {"correct": 142, "n": 143, "recall": 0.993007}, "Tomato___Septoria_leaf_spot": {"correct": 260, "n": 266, "recall": 0.977444}, "Tomato___Spider_mites Two-spotted_spider_mite": {"correct": 250, "n": 251, "recall": 0.996016}, "Tomato___Target_Spot": {"correct": 207, "n": 211, "recall": 0.981043}, "Tomato___Tomato_Yellow_Leaf_Curl_Virus": {"correct": 801, "n": 804, "recall": 0.996269}, "Tomato___Tomato_mosaic_virus": {"correct": 56, "n": 56, "recall": 1.0}, "Tomato___healthy": {"correct": 246, "n": 246, "recall": 1.0}}, "class": "Corn_(maize)___Cercospora_leaf_spot Gray_leaf_spot", "correct": 70, "n": 77, "value": 0.909091}, "name": "champion_v2", "run_id": "<redacted-identifier>", "seed": null, "val_n": 8148, "within_crop_macro_f1": 0.993043}, {"checkpoint": "models/candidates/<redacted-identifier>.pth", "clean_macro_f1": 0.990181, "ece": 0.001387, "inference_seconds": null, "masked_background_by_fill": {"black": {"bg_drop": 0.1797, "clean_macro_f1": 0.9902, "fill": "black", "masked_macro_f1": 0.8105, "n": 8148, "retention_rate": 0.8185}, "mid_grey": {"bg_drop": 0.0563, "clean_macro_f1": 0.9902, "fill": "mid_grey", "masked_macro_f1": 0.9339, "n": 8148, "retention_rate": 0.9432}, "per_image_mean": {"bg_drop": 0.0163, "clean_macro_f1": 0.9902, "fill": "per_image_mean", "masked_macro_f1": 0.9739, "n": 8148, "retention_rate": 0.9836}}, "min_recall": {"all": {"Apple___Apple_scab": {"correct": 94, "n": 94, "recall": 1.0}, "Apple___Black_rot": {"correct": 93, "n": 93, "recall": 1.0}, "Apple___Cedar_apple_rust": {"correct": 41, "n": 41, "recall": 1.0}, "Apple___healthy": {"correct": 245, "n": 246, "recall": 0.995935}, "Blueberry___healthy": {"correct": 225, "n": 225, "recall": 1.0}, "Cherry_(including_sour)___Powdery_mildew": {"correct": 158, "n": 158, "recall": 1.0}, "Cherry_(including_sour)___healthy": {"correct": 127, "n": 128, "recall": 0.992188}, "Corn_(maize)___Cercospora_leaf_spot Gray_leaf_spot": {"correct": 68, "n": 77, "recall": 0.883117}, "Corn_(maize)___Common_rust_": {"correct": 178, "n": 179, "recall": 0.994413}, "Corn_(maize)___Northern_Leaf_Blight": {"correct": 141, "n": 148, "recall": 0.952703}, "Corn_(maize)___healthy": {"correct": 174, "n": 174, "recall": 1.0}, "Grape___Black_rot": {"correct": 177, "n": 177, "recall": 1.0}, "Grape___Esca_(Black_Measles)": {"correct": 206, "n": 207, "recall": 0.995169}, "Grape___Leaf_blight_(Isariopsis_Leaf_Spot)": {"correct": 161, "n": 161, "recall": 1.0}, "Grape___healthy": {"correct": 63, "n": 63, "recall": 1.0}, "Orange___Haunglongbing_(Citrus_greening)": {"correct": 825, "n": 826, "recall": 0.998789}, "Peach___Bacterial_spot": {"correct": 344, "n": 345, "recall": 0.997101}, "Peach___healthy": {"correct": 54, "n": 54, "recall": 1.0}, "Pepper,_bell___Bacterial_spot": {"correct": 150, "n": 150, "recall": 1.0}, "Pepper,_bell___healthy": {"correct": 221, "n": 222, "recall": 0.995495}, "Potato___Early_blight": {"correct": 150, "n": 150, "recall": 1.0}, "Potato___Late_blight": {"correct": 150, "n": 150, "recall": 1.0}, "Potato___healthy": {"correct": 23, "n": 23, "recall": 1.0}, "Raspberry___healthy": {"correct": 56, "n": 56, "recall": 1.0}, "Soybean___healthy": {"correct": 762, "n": 764, "recall": 0.997382}, "Squash___Powdery_mildew": {"correct": 275, "n": 275, "recall": 1.0}, "Strawberry___Leaf_scorch": {"correct": 166, "n": 166, "recall": 1.0}, "Strawberry___healthy": {"correct": 68, "n": 68, "recall": 1.0}, "Tomato___Bacterial_spot": {"correct": 318, "n": 319, "recall": 0.996865}, "Tomato___Early_blight": {"correct": 145, "n": 150, "recall": 0.966667}, "Tomato___Late_blight": {"correct": 275, "n": 282, "recall": 0.975177}, "Tomato___Leaf_Mold": {"correct": 142, "n": 143, "recall": 0.993007}, "Tomato___Septoria_leaf_spot": {"correct": 264, "n": 266, "recall": 0.992481}, "Tomato___Spider_mites Two-spotted_spider_mite": {"correct": 248, "n": 251, "recall": 0.988048}, "Tomato___Target_Spot": {"correct": 207, "n": 211, "recall": 0.981043}, "Tomato___Tomato_Yellow_Leaf_Curl_Virus": {"correct": 799, "n": 804, "recall": 0.993781}, "Tomato___Tomato_mosaic_virus": {"correct": 56, "n": 56, "recall": 1.0}, "Tomato___healthy": {"correct": 246, "n": 246, "recall": 1.0}}, "class": "Corn_(maize)___Cercospora_leaf_spot Gray_leaf_spot", "correct": 68, "n": 77, "value": 0.883117}, "name": "candidate_seed_43", "run_id": "<redacted-identifier>", "seed": 43, "val_n": 8148, "within_crop_macro_f1": 0.992882}]`
+- `same_preprocessing`: `get_transforms('val', cfg): Resize(256)+CenterCrop(224)+ImageNet normalize`
 
----
+## Candidate gate: candidate_gate_comparison.json
 
-## Robustness Under Corruption (from `reports/metrics.json`)
+Source file: `reports/snapshot/candidate_gate_comparison.json`
+Source date: date not recorded in snapshot
 
-Accuracy at mild / moderate / severe corruption levels:
+- `candidate_only`: `False`
+- `device`: `cuda`
+- `elapsed_seconds`: `725.38`
+- `read_only`: `True`
+- `results`: `[{"checkpoint": "models/best_model.pth", "clean_macro_f1": 0.991907, "ece": 0.001097, "inference_seconds": null, "masked_background_by_fill": {"black": {"bg_drop": 0.1843, "clean_macro_f1": 0.9919, "fill": "black", "masked_macro_f1": 0.8076, "n": 8148, "retention_rate": 0.8142}, "mid_grey": {"bg_drop": 0.0938, "clean_macro_f1": 0.9919, "fill": "mid_grey", "masked_macro_f1": 0.8981, "n": 8148, "retention_rate": 0.9054}, "per_image_mean": {"bg_drop": 0.0364, "clean_macro_f1": 0.9919, "fill": "per_image_mean", "masked_macro_f1": 0.9555, "n": 8148, "retention_rate": 0.9633}}, "min_recall": {"all": {"Apple___Apple_scab": {"correct": 94, "n": 94, "recall": 1.0}, "Apple___Black_rot": {"correct": 93, "n": 93, "recall": 1.0}, "Apple___Cedar_apple_rust": {"correct": 41, "n": 41, "recall": 1.0}, "Apple___healthy": {"correct": 245, "n": 246, "recall": 0.995935}, "Blueberry___healthy": {"correct": 225, "n": 225, "recall": 1.0}, "Cherry_(including_sour)___Powdery_mildew": {"correct": 158, "n": 158, "recall": 1.0}, "Cherry_(including_sour)___healthy": {"correct": 127, "n": 128, "recall": 0.992188}, "Corn_(maize)___Cercospora_leaf_spot Gray_leaf_spot": {"correct": 70, "n": 77, "recall": 0.909091}, "Corn_(maize)___Common_rust_": {"correct": 179, "n": 179, "recall": 1.0}, "Corn_(maize)___Northern_Leaf_Blight": {"correct": 141, "n": 148, "recall": 0.952703}, "Corn_(maize)___healthy": {"correct": 174, "n": 174, "recall": 1.0}, "Grape___Black_rot": {"correct": 177, "n": 177, "recall": 1.0}, "Grape___Esca_(Black_Measles)": {"correct": 206, "n": 207, "recall": 0.995169}, "Grape___Leaf_blight_(Isariopsis_Leaf_Spot)": {"correct": 161, "n": 161, "recall": 1.0}, "Grape___healthy": {"correct": 63, "n": 63, "recall": 1.0}, "Orange___Haunglongbing_(Citrus_greening)": {"correct": 825, "n": 826, "recall": 0.998789}, "Peach___Bacterial_spot": {"correct": 344, "n": 345, "recall": 0.997101}, "Peach___healthy": {"correct": 54, "n": 54, "recall": 1.0}, "Pepper,_bell___Bacterial_spot": {"correct": 148, "n": 150, "recall": 0.986667}, "Pepper,_bell___healthy": {"correct": 222, "n": 222, "recall": 1.0}, "Potato___Early_blight": {"correct": 150, "n": 150, "recall": 1.0}, "Potato___Late_blight": {"correct": 150, "n": 150, "recall": 1.0}, "Potato___healthy": {"correct": 23, "n": 23, "recall": 1.0}, "Raspberry___healthy": {"correct": 56, "n": 56, "recall": 1.0}, "Soybean___healthy": {"correct": 764, "n": 764, "recall": 1.0}, "Squash___Powdery_mildew": {"correct": 275, "n": 275, "recall": 1.0}, "Strawberry___Leaf_scorch": {"correct": 165, "n": 166, "recall": 0.993976}, "Strawberry___healthy": {"correct": 68, "n": 68, "recall": 1.0}, "Tomato___Bacterial_spot": {"correct": 317, "n": 319, "recall": 0.99373}, "Tomato___Early_blight": {"correct": 142, "n": 150, "recall": 0.946667}, "Tomato___Late_blight": {"correct": 278, "n": 282, "recall": 0.985816}, "Tomato___Leaf_Mold": {"correct": 142, "n": 143, "recall": 0.993007}, "Tomato___Septoria_leaf_spot": {"correct": 260, "n": 266, "recall": 0.977444}, "Tomato___Spider_mites Two-spotted_spider_mite": {"correct": 250, "n": 251, "recall": 0.996016}, "Tomato___Target_Spot": {"correct": 207, "n": 211, "recall": 0.981043}, "Tomato___Tomato_Yellow_Leaf_Curl_Virus": {"correct": 801, "n": 804, "recall": 0.996269}, "Tomato___Tomato_mosaic_virus": {"correct": 56, "n": 56, "recall": 1.0}, "Tomato___healthy": {"correct": 246, "n": 246, "recall": 1.0}}, "class": "Corn_(maize)___Cercospora_leaf_spot Gray_leaf_spot", "correct": 70, "n": 77, "value": 0.909091}, "name": "champion_v2", "run_id": "<redacted-identifier>", "seed": null, "val_n": 8148, "within_crop_macro_f1": 0.990758}, {"checkpoint": "models/candidates/<redacted-identifier>.pth", "clean_macro_f1": 0.990181, "ece": 0.001387, "inference_seconds": null, "masked_background_by_fill": {"black": {"bg_drop": 0.1797, "clean_macro_f1": 0.9902, "fill": "black", "masked_macro_f1": 0.8105, "n": 8148, "retention_rate": 0.8185}, "mid_grey": {"bg_drop": 0.0563, "clean_macro_f1": 0.9902, "fill": "mid_grey", "masked_macro_f1": 0.9339, "n": 8148, "retention_rate": 0.9432}, "per_image_mean": {"bg_drop": 0.0163, "clean_macro_f1": 0.9902, "fill": "per_image_mean", "masked_macro_f1": 0.9739, "n": 8148, "retention_rate": 0.9836}}, "min_recall": {"all": {"Apple___Apple_scab": {"correct": 94, "n": 94, "recall": 1.0}, "Apple___Black_rot": {"correct": 93, "n": 93, "recall": 1.0}, "Apple___Cedar_apple_rust": {"correct": 41, "n": 41, "recall": 1.0}, "Apple___healthy": {"correct": 245, "n": 246, "recall": 0.995935}, "Blueberry___healthy": {"correct": 225, "n": 225, "recall": 1.0}, "Cherry_(including_sour)___Powdery_mildew": {"correct": 158, "n": 158, "recall": 1.0}, "Cherry_(including_sour)___healthy": {"correct": 127, "n": 128, "recall": 0.992188}, "Corn_(maize)___Cercospora_leaf_spot Gray_leaf_spot": {"correct": 68, "n": 77, "recall": 0.883117}, "Corn_(maize)___Common_rust_": {"correct": 178, "n": 179, "recall": 0.994413}, "Corn_(maize)___Northern_Leaf_Blight": {"correct": 141, "n": 148, "recall": 0.952703}, "Corn_(maize)___healthy": {"correct": 174, "n": 174, "recall": 1.0}, "Grape___Black_rot": {"correct": 177, "n": 177, "recall": 1.0}, "Grape___Esca_(Black_Measles)": {"correct": 206, "n": 207, "recall": 0.995169}, "Grape___Leaf_blight_(Isariopsis_Leaf_Spot)": {"correct": 161, "n": 161, "recall": 1.0}, "Grape___healthy": {"correct": 63, "n": 63, "recall": 1.0}, "Orange___Haunglongbing_(Citrus_greening)": {"correct": 825, "n": 826, "recall": 0.998789}, "Peach___Bacterial_spot": {"correct": 344, "n": 345, "recall": 0.997101}, "Peach___healthy": {"correct": 54, "n": 54, "recall": 1.0}, "Pepper,_bell___Bacterial_spot": {"correct": 150, "n": 150, "recall": 1.0}, "Pepper,_bell___healthy": {"correct": 221, "n": 222, "recall": 0.995495}, "Potato___Early_blight": {"correct": 150, "n": 150, "recall": 1.0}, "Potato___Late_blight": {"correct": 150, "n": 150, "recall": 1.0}, "Potato___healthy": {"correct": 23, "n": 23, "recall": 1.0}, "Raspberry___healthy": {"correct": 56, "n": 56, "recall": 1.0}, "Soybean___healthy": {"correct": 762, "n": 764, "recall": 0.997382}, "Squash___Powdery_mildew": {"correct": 275, "n": 275, "recall": 1.0}, "Strawberry___Leaf_scorch": {"correct": 166, "n": 166, "recall": 1.0}, "Strawberry___healthy": {"correct": 68, "n": 68, "recall": 1.0}, "Tomato___Bacterial_spot": {"correct": 318, "n": 319, "recall": 0.996865}, "Tomato___Early_blight": {"correct": 145, "n": 150, "recall": 0.966667}, "Tomato___Late_blight": {"correct": 275, "n": 282, "recall": 0.975177}, "Tomato___Leaf_Mold": {"correct": 142, "n": 143, "recall": 0.993007}, "Tomato___Septoria_leaf_spot": {"correct": 264, "n": 266, "recall": 0.992481}, "Tomato___Spider_mites Two-spotted_spider_mite": {"correct": 248, "n": 251, "recall": 0.988048}, "Tomato___Target_Spot": {"correct": 207, "n": 211, "recall": 0.981043}, "Tomato___Tomato_Yellow_Leaf_Curl_Virus": {"correct": 799, "n": 804, "recall": 0.993781}, "Tomato___Tomato_mosaic_virus": {"correct": 56, "n": 56, "recall": 1.0}, "Tomato___healthy": {"correct": 246, "n": 246, "recall": 1.0}}, "class": "Corn_(maize)___Cercospora_leaf_spot Gray_leaf_spot", "correct": 68, "n": 77, "value": 0.883117}, "name": "candidate_seed_43", "run_id": "<redacted-identifier>", "seed": 43, "val_n": 8148, "within_crop_macro_f1": 0.988771}]`
+- `same_preprocessing`: `get_transforms('val', cfg): Resize(256)+CenterCrop(224)+ImageNet normalize`
 
-| Corruption | Mild | Moderate | Severe |
-|---|---|---|---|
-| Gaussian Blur | 0.9667 | 0.6033 | 0.3000 |
-| Darken | 0.9967 | 0.9800 | 0.4300 |
-| Brighten | 0.9933 | 0.9733 | 0.9167 |
-| Gaussian Noise | 0.9867 | 0.5867 | 0.0933 |
+## Interpretation and limitations
 
----
-
-## Dataset Structural Gaps
-
-| Crop | Classes Available | Missing |
-|---|---|---|
-| Blueberry | healthy only | no disease class |
-| Raspberry | healthy only | no disease class |
-| Soybean | healthy only | no disease class |
-| Orange | disease only (Citrus Greening) | no healthy class |
-| Squash | disease only (Powdery Mildew) | no healthy class |
-
-These 5 crops represent ~26.4% of the test set (2,146 / 8,134 images). For these
-crops, crop identity alone determines the predicted label — the model is forced to
-diagnose Orange leaves as diseased regardless of actual health status.
-
----
-
-## Advisory Knowledge Base Coverage
-
-| Status | Count | Notes |
-|---|---|---|
-| VERIFIED | 8 | Cited university extension sources (US-based); regions noted |
-| PLACEHOLDER | 30 | No verified dosage; returns "No verified recommendation available" |
-| Total | 38 | One entry per class |
-
----
-
-## Limitations
-
-1. **Lab vs. field gap**: Trained exclusively on PlantVillage single-leaf lab images
-   (uniform backgrounds). Behaviour on field photos with soil, shadows, and complex
-   backgrounds is unknown and likely poor.
-2. **Capture bias**: Corner-pixel probe accuracy 46.1% (vs. 2.6% chance) proves
-   substantial label information is in the background, not the leaf.
-3. **OOD overconfidence**: 0% rejection of synthetic noise at the 0.50 threshold;
-   model is severely overconfident on unknown inputs.
-4. **Structural class gaps**: Orange/Squash have no healthy class; Blueberry/Raspberry/
-   Soybean have no disease class. Predictions for these crops cannot be "wrong or right"
-   in the traditional sense.
-5. **Advisory coverage**: Only 8/38 classes have university-verified treatment notes.
-6. **Single-crop image assumption**: Model assumes the uploaded image contains a single
-   crop type. Mixed-crop or whole-plant images are not supported.
-7. **No severity rating**: Outputs a class label only; does not rate disease severity
-   (% leaf area affected).
-8. **EXIF metadata**: Uploaded images are processed in-memory and not stored. GPS/EXIF
-   data is never logged. (Phase 3 privacy hardening adds explicit EXIF stripping.)
+- Validation and test results describe the saved evaluation protocol only; they do not establish field performance. The available image data are lab-style images, and field validation has not been established.
+- The black-fill background ablation is sensitive to the segmentation mask and fill artifact; it is not proof of shortcut learning. Compare all three fills, including per-image mean.
+- A class-level weakness is described only when its record is present in the saved evaluation snapshot.
+- Serving reports unscaled softmax confidence (T=1). Temperature fitting is a diagnostic step; the serving path does not apply fitted temperature scaling. See `src/api.py` and `docs/DECISIONS.md`.
+- PlantVillage dataset license and redistribution rights must be verified before any public release. Sources: `docs/ADVISORY_AUDIT.md`, `src/api.py`, and the cited snapshot sections above; source dates are not recorded unless shown with a snapshot section.

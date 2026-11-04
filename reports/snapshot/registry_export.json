@@ -1,0 +1,46 @@
+{
+  "alias": {
+    "name": "champion",
+    "version": "2"
+  },
+  "container_compatibility": {
+    "reason": "This inspection runs on the host; source URI readability inside a Linux container requires a container-side check.",
+    "status": "not_verified"
+  },
+  "model": "PlantDiseaseClassifier",
+  "source_note": "Paths, arbitrary tags, params, metrics, and usernames are omitted.",
+  "versions": [
+    {
+      "artifact_source_kind": "local_file_uri",
+      "creation_timestamp": 1791959535766,
+      "current_stage": "None",
+      "gate_verdict": "unknown",
+      "run_id": "<redacted-identifier>",
+      "version": "1"
+    },
+    {
+      "artifact_source_kind": "local_file_uri",
+      "creation_timestamp": 1791970631238,
+      "current_stage": "None",
+      "gate_verdict": "unknown",
+      "run_id": "<redacted-identifier>",
+      "version": "2"
+    },
+    {
+      "artifact_source_kind": "local_file_uri",
+      "creation_timestamp": 1793630453842,
+      "current_stage": "None",
+      "gate_verdict": "PENDING",
+      "run_id": "<redacted-identifier>",
+      "version": "3"
+    },
+    {
+      "artifact_source_kind": "local_file_uri",
+      "creation_timestamp": 1793635144433,
+      "current_stage": "None",
+      "gate_verdict": "PENDING",
+      "run_id": "<redacted-identifier>",
+      "version": "4"
+    }
+  ]
+}

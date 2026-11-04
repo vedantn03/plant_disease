@@ -1,0 +1,33 @@
+{
+  "drift_flag": 1,
+  "features": {
+    "blur": {
+      "drift_flag": true,
+      "ks_p_value": 2.534427291796815e-54,
+      "psi": 2.324407676148042,
+      "sample_count": 200
+    },
+    "brightness": {
+      "drift_flag": true,
+      "ks_p_value": 5.585287660352168e-07,
+      "psi": 1.016240402677685,
+      "sample_count": 200
+    },
+    "confidence": {
+      "drift_flag": true,
+      "ks_p_value": 3.1895957136651878e-15,
+      "psi": 9.346005829777273,
+      "sample_count": 200
+    }
+  },
+  "ks_alpha": 0.05,
+  "minimum_sample_count": 30,
+  "psi_threshold": 0.2,
+  "replay_share": 0.765,
+  "rule": "any feature: PSI > configured threshold AND KS p-value < ks_alpha",
+  "status": "evaluated",
+  "thresholds_provisional": true,
+  "timestamp": "2026-11-04T11:51:29.535575+00:00",
+  "traffic_source_note": "Replay traffic is staged traffic, not real users.",
+  "window_size": 200
+}

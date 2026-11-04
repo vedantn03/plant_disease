@@ -1,101 +1,42 @@
-# Datasheet for Dataset: PlantVillage (Foliar Disease Subset)
+# Dataset Datasheet
 
-**Standard**: Gebru et al. (2021) *Datasheets for Datasets*, Communications of the ACM
-**Project**: Automated Crop Leaf Disease Identification and Precision Dosage Recommendation Pipeline
-**Dataset Name**: PlantVillage (Color Leaf Disease Dataset)
-**Curators**: David P. Hughes and Marcel Salathé (Penn State University & EPFL)
-**Audit & Splitting Date**: October 2026
 
----
+This datasheet is generated only from `reports/snapshot/` and tracked project configuration. Missing evidence is stated as missing; no dataset history or license terms are inferred.
 
-## 1. Motivation
+## Saved evaluation data
 
-### For what purpose was the dataset created?
-The PlantVillage dataset was created in 2015–2016 as an open-access image repository to facilitate computer vision research in automated plant pathology diagnosis, specifically to empower smallholder farmers via mobile smartphone screening.
+Source file: `reports/snapshot/eval_summary.json`
+Source date: date not recorded in snapshot
 
-### Who created the dataset and on behalf of which entity?
-Created by Dr. David P. Hughes (Department of Entomology and Biology, Penn State University) and Dr. Marcel Salathé (School of Life Sciences and School of Computer and Communication Sciences, EPFL).
+- `accuracy`: `0.993`
+- `calibration`: `{"ece_after": 0.005, "ece_before": 0.002, "reliability_diagram": "reports/figures/fig_05_calibration.png", "temperature": 1.3199}`
+- `checkpoint_path`: `models/best_model.pth`
+- `headline`: `{"accuracy": 0.993, "bootstrap_ci_95": {"accuracy": {"high": 0.9947, "low": 0.9913, "mean": 0.993}, "macro_f1": {"high": 0.9931, "low": 0.9871, "mean": 0.9902}, "weighted_f1": {"high": 0.9947, "low": 0.9912, "mean": 0.993}}, "macro_f1": 0.9903, "n_test": 8134, "weighted_f1": 0.993}`
+- `macro_f1`: `0.9903`
+- `mlflow_run_id`: `<redacted-identifier>`
+- `per_crop`: `{"apple": {"accuracy": 1.0, "is_single_class": false, "macro_f1": 1.0, "support": 474}, "blueberry": {"accuracy": 1.0, "is_single_class": true, "macro_f1": 1.0, "support": 225}, "cherry_(including_sour)": {"accuracy": 1.0, "is_single_class": false, "macro_f1": 1.0, "support": 286}, "corn_(maize)": {"accuracy": 0.9706, "is_single_class": false, "macro_f1": 0.9593, "support": 578}, "grape": {"accuracy": 1.0, "is_single_class": false, "macro_f1": 1.0, "support": 608}, "orange": {"accuracy": 1.0, "is_single_class": true, "macro_f1": 1.0, "support": 826}, "peach": {"accuracy": 1.0, "is_single_class": false, "macro_f1": 1.0, "support": 399}, "pepper,_bell": {"accuracy": 1.0, "is_single_class": false, "macro_f1": 1.0, "support": 372}, "potato": {"accuracy": 0.9907, "is_single_class": false, "macro_f1": 0.7371, "support": 323}, "raspberry": {"accuracy": 1.0, "is_single_class": true, "macro_f1": 1.0, "support": 56}, "soybean": {"accuracy": 1.0, "is_single_class": true, "macro_f1": 1.0, "support": 764}, "squash": {"accuracy": 1.0, "is_single_class": true, "macro_f1": 1.0, "support": 275}, "strawberry": {"accuracy": 1.0, "is_single_class": false, "macro_f1": 1.0, "support": 234}, "tomato": {"accuracy": 0.9864, "is_single_class": false, "macro_f1": 0.821, "support": 2714}}`
+- `single_class_crops_excluded`: `["blueberry", "orange", "raspberry", "soybean", "squash"]`
+- `top_10_confused_pairs`: `[{"count": 10, "pred": "Corn_(maize)___Northern_Leaf_Blight", "true": "Corn_(maize)___Cercospora_leaf_spot Gray_leaf_spot"}, {"count": 6, "pred": "Tomato___Late_blight", "true": "Tomato___Early_blight"}, {"count": 5, "pred": "Corn_(maize)___Cercospora_leaf_spot Gray_leaf_spot", "true": "Corn_(maize)___Northern_Leaf_Blight"}, {"count": 4, "pred": "Tomato___Spider_mites Two-spotted_spider_mite", "true": "Tomato___Tomato_Yellow_Leaf_Curl_Virus"}, {"count": 3, "pred": "Tomato___Early_blight", "true": "Tomato___Late_blight"}, {"count": 3, "pred": "Tomato___healthy", "true": "Tomato___Target_Spot"}, {"count": 3, "pred": "Tomato___Bacterial_spot", "true": "Tomato___Tomato_Yellow_Leaf_Curl_Virus"}, {"count": 2, "pred": "Potato___healthy", "true": "Potato___Late_blight"}, {"count": 2, "pred": "Tomato___Target_Spot", "true": "Tomato___Septoria_leaf_spot"}, {"count": 2, "pred": "Tomato___Target_Spot", "true": "Tomato___Spider_mites Two-spotted_spider_mite"}]`
+- `weakest_5_classes`: `[{"class_idx": 7, "class_name": "Corn_(maize)___Cercospora_leaf_spot Gray_leaf_spot", "f1": 0.8993, "precision": 0.9306, "recall": 0.8701, "support": 77}, {"class_idx": 9, "class_name": "Corn_(maize)___Northern_Leaf_Blight", "f1": 0.9435, "precision": 0.9281, "recall": 0.9595, "support": 148}, {"class_idx": 22, "class_name": "Potato___healthy", "f1": 0.9583, "precision": 0.92, "recall": 1.0, "support": 23}, {"class_idx": 29, "class_name": "Tomato___Early_blight", "f1": 0.9592, "precision": 0.9792, "recall": 0.94, "support": 150}, {"class_idx": 30, "class_name": "Tomato___Late_blight", "f1": 0.9748, "precision": 0.9748, "recall": 0.9748, "support": 278}]`
+- `weighted_f1`: `0.993`
+- `within_crop_macro_f1_excluding_single_class_crops`: `0.9888`
 
-### Who funded the creation of the dataset?
-Supported in part by Pennsylvania State University, EPFL, and the open-access PlantVillage initiative.
+## Seed summary
 
----
+Source file: `reports/snapshot/seed_variance.json`
+Source date: date not recorded in snapshot
 
-## 2. Composition
+- `driving_class_counts`: `{"champion": {"correct": 70, "total": 77}, "seed_43": {"correct": 68, "total": 77}, "seed_44": {"correct": 69, "total": 77}}`
+- `metrics`: `{"bg_drop_black": {"champion": 0.1843, "mean": 0.17213333333333333, "range": 0.031899999999999984, "seed_43": 0.1797, "seed_44": 0.1524}, "bg_drop_mid_grey": {"champion": 0.0938, "mean": 0.08326666666666667, "range": 0.043399999999999994, "seed_43": 0.0563, "seed_44": 0.0997}, "bg_drop_per_image_mean": {"champion": 0.0364, "mean": 0.03656666666666667, "range": 0.0407, "seed_43": 0.0163, "seed_44": 0.057}, "clean_macro_f1": {"champion": 0.991907, "mean": 0.9916876666666666, "range": 0.002794000000000074, "seed_43": 0.990181, "seed_44": 0.992975}, "ece": {"champion": 0.001097, "mean": 0.0013586666666666667, "range": 0.000495, "seed_43": 0.001387, "seed_44": 0.001592}, "min_recall": {"champion": 0.909091, "mean": 0.8961039999999999, "range": 0.02597399999999994, "seed_43": 0.883117, "seed_44": 0.896104}, "within_crop_macro_f1": {"champion": 0.990758, "mean": 0.991863, "range": 0.0021240000000000148, "seed_43": 0.992882, "seed_44": 0.991949}}`
+- `minimum_recall_driving_class`: `Corn_(maize)___Cercospora_leaf_spot Gray_leaf_spot`
+- `models`: `{"champion": {"bg_drop_black": 0.1843, "bg_drop_mid_grey": 0.0938, "bg_drop_per_image_mean": 0.0364, "clean_macro_f1": 0.991907, "ece": 0.001097, "min_recall": 0.909091, "run_id": "<redacted-identifier>", "within_crop_macro_f1": 0.990758}, "seed_43": {"bg_drop_black": 0.1797, "bg_drop_mid_grey": 0.0563, "bg_drop_per_image_mean": 0.0163, "clean_macro_f1": 0.990181, "ece": 0.001387, "min_recall": 0.883117, "run_id": "<redacted-identifier>", "within_crop_macro_f1": 0.992882}, "seed_44": {"bg_drop_black": 0.1524, "bg_drop_mid_grey": 0.0997, "bg_drop_per_image_mean": 0.057, "clean_macro_f1": 0.992975, "ece": 0.001592, "min_recall": 0.896104, "run_id": "<redacted-identifier>", "within_crop_macro_f1": 0.991949}}`
+- `notes`: `["Three seeds are a small sample; summaries are descriptive, not a stable variance estimate.", "The earlier 0.8750 (70/80) uses a different denominator from supplied VAL n=77. Current counts are derived from each report; seed 43's supplied 0.883117 is 68/77. Reconcile 70/80 against its source before comparing."]`
+- `split`: `VAL`
 
-### What do the instances that comprise the dataset represent?
-Each instance is a standardized digital photograph ($256 \times 256$ pixels, RGB) of a single detached crop leaf placed against a uniform sheet of paper (typically white, grey, or light blue) under diffuse indoor or greenhouse lighting.
+## Data characteristics and limitations
 
-### How many instances are there in total?
-- **Raw Image Count**: 54,305 image files.
-- **Deduplicated Image Count**: 54,284 images (21 exact SHA-256 duplicate copies removed during audit).
-- **Partitioned Splits**:
-  - **Train**: 38,002 images (70%)
-  - **Validation**: 8,148 images (15%)
-  - **Test**: 8,134 images (15%)
+The project evaluates plant-leaf image classes using a PlantVillage-derived dataset as named in the project configuration and documentation. The available data are lab-style images; field representativeness is not established. A missing evaluation snapshot means counts and class distributions are not generated in this card.
 
-### What are the classes and distributions?
-38 crop-condition classes across 14 crop species:
-- **Crops**: Apple, Blueberry, Cherry, Corn (Maize), Grape, Orange, Peach, Bell Pepper, Potato, Raspberry, Soybean, Squash, Strawberry, Tomato.
-- **Class Imbalance**: High imbalance with a **36:1 frequency ratio**.
-  - Largest class: `Orange___Haunglongbing_(Citrus_greening)` ($N = 5,507$).
-  - Smallest class: `Potato___healthy` ($N = 152$).
+## Collection, consent, and license
 
-### What are the known structural gaps in composition?
-1. **Disease-Only Gaps**: Orange (Citrus greening only) and Squash (Powdery mildew only) have **zero healthy reference samples**.
-2. **Healthy-Only Gaps**: Blueberry, Raspberry, and Soybean contain **only healthy images** with zero disease conditions.
-3. Together, single-condition crops constitute **26.0% of total dataset volume**.
-
----
-
-## 3. Collection Process
-
-### How was the data collected?
-Leaves exhibiting visible symptoms of fungal, bacterial, or viral disease (as well as healthy control leaves) were physically excised from host plants in experimental agricultural research stations and commercial farms in Pennsylvania, USA, and partner facilities. Excised leaves were brought indoors, laid flat upon laboratory paper backdrops, and photographed using digital cameras under controlled ambient lighting.
-
-### Who was involved in data collection and what were their roles?
-Trained agricultural technicians and plant pathologists harvested and staged the leaves; photographers executed multi-shot capture sequences.
-
----
-
-## 4. Preprocessing, Cleaning & Group Labeling
-
-### What preprocessing or cleaning was performed?
-1. **Deduplication**: SHA-256 hash calculation identified and expunged 21 identical duplicate files.
-2. **Capture Group Token Extraction**: Filename regex patterns were extracted (e.g. `GH_HL Leaf 173.1`, `173.2`). Multiple images originating from the same leaf or shooting sequence share capture tokens.
-3. **Crop-Prefixed Group Scoping**: Photographers reused generic sequence numbers across different crops (e.g. `RS_HL 5672` in Apple and Soybean). Groups were prefixed as `<crop>::<id>` to isolate distinct capture events.
-4. **Group-Aware Stratified Splitting**: Partitioned train, validation, and test splits ensuring zero group intersection between train and test:
-   $$\text{Train Groups} \cap \text{Test Groups} = \emptyset$$
-
----
-
-## 5. Uses
-
-### Has the dataset been used for previous tasks?
-Extensively used in academic benchmarking (>3,000 citations). Widely utilized for evaluating convolutional neural networks (ResNet, MobileNet, EfficientNet) and Vision Transformers in agricultural leaf classification.
-
-### What are known limitations or potential biases?
-1. **Capture Paper Bias (Noyan et al., 2022)**: The background paper and lighting conditions correlate with disease classes. A baseline classifier trained solely on 4 corner background pixels achieved 46.1% accuracy, confirming spurious background memorization.
-2. **Absence of In-Situ Field Context**: Images lack natural field complexity: no soil textures, direct sunlight glare, shadowing, insect chew holes, or overlapping adjacent foliage.
-3. **Detached Leaf Morphology**: Excised leaves wilt rapidly, altering foliar turgor and reflectance characteristics compared to live field canopies.
-
----
-
-## 6. Distribution
-
-### How is the dataset distributed?
-Freely available under public open-access academic repositories (e.g., Mendeley Data, Kaggle).
-
-### What is the dataset license?
-The repository does not record the exact download URL used for the local copy, so
-the applicable license for that copy is **unverified**. The official Zenodo
-color-image record currently states Creative Commons Attribution-ShareAlike 3.0
-United States (CC BY-SA 3.0 US): https://zenodo.org/records/1204914. Confirm
-that record is the source used before redistributing derived images.
-
----
-
-## 7. Maintenance
-
-### Who maintains the dataset?
-Maintained by the open-source agricultural research community. In this project repository, the partitioned manifest files (`data/splits/train.csv`, `val.csv`, `test.csv`) and SHA-256 checksums are version-controlled via DVC and Git.
+Collection methods, consent details, and redistribution terms are not established by the committed snapshot inputs. Verify the dataset license and permitted uses before public release.
