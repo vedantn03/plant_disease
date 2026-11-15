@@ -1,7 +1,7 @@
 # Demo Rehearsal Checklist
 
-Run these commands from the repository root in Windows PowerShell. Leave the timing and result
-columns blank until you run the steps and record your observations. The Docker Desktop image-export
+Run these commands from the `feat/farmer-web-ui` linked-worktree root in Windows PowerShell. Leave
+the timing and result columns blank until you run the steps and record your observations. The Docker Desktop image-export
 I/O error reported during the prior rebuild is an environment failure; no successful rebuild is
 claimed here. The supplied `no matching manifest for ...` line was marked as an example, not an
 observed error, so it is not used as evidence or diagnosed here.
@@ -9,7 +9,7 @@ observed error, so it is not used as evidence or diagnosed here.
 | Check | My time | Pass/fail and notes |
 |---|---|---|
 | Core config, build, and cold start | | |
-| API health and Streamlit availability | | |
+| API health and browser dashboard availability | | |
 | Prediction trust panel and explanation fallback | | |
 | Prometheus and Grafana availability | | |
 | Normal replay and drift state | | |
@@ -20,34 +20,44 @@ observed error, so it is not used as evidence or diagnosed here.
 ## Core app and explanation view
 
 ```powershell
-docker compose --profile core config
-docker compose --profile core build ui
-docker compose --profile core up -d
-docker compose --profile core ps
+$env:DATA_DIR = (Resolve-Path ..\data).Path
+$env:MODEL_DIR = (Resolve-Path ..\models).Path
+$env:REPORTS_DIR = (Resolve-Path ..\reports).Path
+$env:MLFLOW_DB_PATH = (Resolve-Path ..\mlflow.db).Path
+docker compose --env-file ..\.env --profile core config --quiet
+docker compose --env-file ..\.env --profile core build api ui
+docker compose --env-file ..\.env --profile core up -d
+docker compose --env-file ..\.env --profile core ps
 Invoke-RestMethod http://127.0.0.1:8000/health | ConvertTo-Json -Depth 5
-Invoke-WebRequest -UseBasicParsing http://127.0.0.1:8501/_stcore/health
+Invoke-WebRequest -UseBasicParsing http://127.0.0.1:8501/
 ```
 
-Open `http://127.0.0.1:8501`, upload a local sample image, and open Explainability. Grad-CAM is
-provided by the API when present. The UI image does not install SHAP or LIME; it should show saved
-offline comparison figures when available and label them as offline rather than as explanations
-computed for the uploaded image. If those figures are absent, the UI should say “Not generated yet.”
-Attribution images show model feature attribution; they do not prove a diagnosis or explain a
-disease's cause. Save the screenshot under `docs/evidence/ui/` only after checking that it contains
-no private image or local path you do not want committed.
+Open `http://127.0.0.1:8501`, upload a local sample image, and inspect the farmer result. Grad-CAM
+and background sensitivity appear only when returned by the API. Open the LIME and SHAP tabs to
+request current-image asynchronous jobs; record their actual result or explicit failure state.
+SHAP needs the configured TRAIN manifest and images. No unrelated saved figure is shown as an
+explanation for the uploaded photo. The advice section shows status and cited source; the technical
+trace is expandable. See `UI_TEST_CHECKLIST.md` for the full manual workflow and responsive widths.
+Save screenshots only after checking that they contain no private image or local path you do not
+want committed.
+
+Open `http://127.0.0.1:8501/insights` to inspect the separate read-only evaluator route. Its process
+counters, bounded log window, and saved snapshots are different evidence scopes. Replayed traffic
+is staged traffic. If a metric panel says its report is not generated, leave it empty rather than
+substituting a value from another split or run.
 
 ## Monitoring and staged replay
 
 ```powershell
-docker compose --profile core --profile monitoring config
-docker compose --profile core --profile monitoring up -d
+docker compose --env-file ..\.env --profile core --profile monitoring config --quiet
+docker compose --env-file ..\.env --profile core --profile monitoring up -d
 Invoke-WebRequest -UseBasicParsing http://127.0.0.1:9090/targets
 Invoke-WebRequest -UseBasicParsing http://127.0.0.1:3000/api/health
-..\.venv\Scripts\python.exe scripts\replay_traffic.py --limit 20 --rate 1
-Get-Content reports\drift_latest.json
-..\.venv\Scripts\python.exe scripts\replay_traffic.py --limit 20 --rate 1 --degrade blur
-Get-Content reports\drift_latest.json
-..\.venv\Scripts\python.exe scripts\replay_traffic.py --limit 20 --rate 1 --degrade dark
+..\..\.venv\Scripts\python.exe scripts\replay_traffic.py --limit 20 --rate 1
+Get-Content ..\reports\drift_latest.json
+..\..\.venv\Scripts\python.exe scripts\replay_traffic.py --limit 20 --rate 1 --degrade blur
+Get-Content ..\reports\drift_latest.json
+..\..\.venv\Scripts\python.exe scripts\replay_traffic.py --limit 20 --rate 1 --degrade dark
 Invoke-WebRequest -UseBasicParsing http://127.0.0.1:9090/api/v1/alerts
 ```
 
@@ -63,9 +73,9 @@ The following are read-only dry-runs. They require the local candidate and champ
 They do not change the registry alias. Do not run `--apply` or rollback as part of this rehearsal.
 
 ```powershell
-..\.venv\Scripts\python.exe scripts\promote.py --dry-run --candidate-metrics reports\candidate_gate_48ecf14d.json --champion-metrics reports\candidate_gate_comparison.json --candidate-run-id 48ecf14da2d84803a36d6fd108bd6b61 --champion-run-id fb731412d82544e0abc231b8d7c62f95 --champion-version 2 --version 3
-..\.venv\Scripts\python.exe scripts\promote.py --dry-run --candidate-metrics reports\candidate_gate_0e2c51ab.json --champion-metrics reports\candidate_gate_comparison.json --candidate-run-id 0e2c51abf0834c248e03c5aef774e291 --champion-run-id fb731412d82544e0abc231b8d7c62f95 --champion-version 2 --version 4
-Get-Content reports\promotion_log.jsonl
+..\..\.venv\Scripts\python.exe scripts\promote.py --dry-run --candidate-metrics ..\reports\candidate_gate_48ecf14d.json --champion-metrics ..\reports\candidate_gate_comparison.json --candidate-run-id 48ecf14da2d84803a36d6fd108bd6b61 --champion-run-id fb731412d82544e0abc231b8d7c62f95 --champion-version 2 --version 3
+..\..\.venv\Scripts\python.exe scripts\promote.py --dry-run --candidate-metrics ..\reports\candidate_gate_0e2c51ab.json --champion-metrics ..\reports\candidate_gate_comparison.json --candidate-run-id 0e2c51abf0834c248e03c5aef774e291 --champion-run-id fb731412d82544e0abc231b8d7c62f95 --champion-version 2 --version 4
+Get-Content ..\reports\promotion_log.jsonl
 ```
 
 Show only saved gate verdicts and actual promotion-log entries. If no real apply or rollback entry
@@ -74,15 +84,15 @@ hand-written entry.
 
 ## Known environment failure and troubleshooting
 
-The reported image-export error was `failed to create temp dir ... input/output error`. This points
-to Docker Desktop's local image storage/engine, not to an application-level Python exception; the
-cloud sandbox cannot inspect or repair that Windows engine. Check the engine before rebuilding:
+An earlier image export failed with `failed to create temp dir ... input/output error`. The latest
+Docker check in this worktree returned `permission denied` for the Docker Desktop Linux engine pipe;
+no image build or container startup was run. Check the engine before rebuilding:
 
 ```powershell
 docker info --format '{{.ServerVersion}}'
 docker system df
-docker compose --profile core ps -a
-docker compose --profile core logs --tail 80 api ui
+docker compose --env-file ..\.env --profile core ps -a
+docker compose --env-file ..\.env --profile core logs --tail 80 api ui
 ```
 
 If `docker info` cannot connect, start Docker Desktop and wait for its Linux engine to become
@@ -95,7 +105,7 @@ this rehearsal was not enough to identify an image or platform mismatch.
 ## Teardown
 
 ```powershell
-docker compose --profile core --profile monitoring down
+docker compose --env-file ..\.env --profile core --profile monitoring down
 ```
 
 This stops the containers while retaining named-volume data. Do not add `-v` unless intentionally

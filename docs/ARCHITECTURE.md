@@ -31,7 +31,7 @@ Compose service nodes are `api`, `ui`, `prometheus`, `drift-exporter`, and `graf
 
 | Flow | Evidence | Behavior |
 |---|---|---|
-| Browser to API | `app/ui.py`, `docker-compose.yml` | Streamlit sends an uploaded image to the configured API URL. |
+| Browser to API | `web/`, `src/api.py`, `docker-compose.yml` | Static HTML/CSS/JS sends an uploaded image to FastAPI on port 8000. |
 | Model load and health | `src/api.py`, `src/model_loader.py`, `models/champion_manifest.json` | API resolves serving identity and reports health; weights are read from the mounted model path. |
 | Prediction audit log | `src/api.py`, `configs/config.yaml` | Request records go to the configured JSONL log; replay requests are labeled as replay. |
 | Metrics to monitoring | `src/api.py`, `scripts/drift_exporter.py`, `monitoring/prometheus.yml` | Prometheus scrapes observed API and drift-exporter metrics. |
@@ -40,8 +40,10 @@ Compose service nodes are `api`, `ui`, `prometheus`, `drift-exporter`, and `graf
 | Drift trigger | `scripts/drift_exporter.py`, `monitoring/rules/drift.yml` | Real request-log windows can set the configured drift flag; replay traffic is staged. |
 
 The Compose API mounts `models/`, `kb/`, and `reports/` read-only, `logs/` read/write, and
-`mlflow.db` read-only. The UI mounts demo samples, reports, and logs read-only. Prometheus and
-Grafana use named data volumes. Inspect `docker-compose.yml` for exact configuration.
+`mlflow.db` read-only. Those host paths can be overridden through `MODEL_DIR`, `REPORTS_DIR`, and
+`MLFLOW_DB_PATH`. The static UI has no model or report volume and can start while the API is
+unavailable. Prometheus and Grafana use named data volumes. Inspect `docker-compose.yml` for exact
+configuration.
 
 ## Deliberate boundaries
 
@@ -50,5 +52,8 @@ Grafana use named data volumes. Inspect `docker-compose.yml` for exact configura
 - Drift checks can use real API logs, but replay is staged traffic and is not field traffic.
 - `scripts/promote.py --dry-run` does not move the registry alias. Apply requires the configured
   governance checks; this documentation does not perform registry writes.
-- The Streamlit interface has Diagnostic Screening, Production Telemetry, and MLOps System tabs,
-  as defined in `app/ui.py`.
+- The farmer browser route `/` is separate from the read-only evaluator route `/insights`. The UI
+  service is static and can render when the API is unavailable; predictions need the local model.
+  LIME and SHAP are asynchronous API jobs, and SHAP also needs the configured TRAIN manifest and
+  images. Insights separates process counters from bounded request-log values and labels saved
+  snapshots by source. No browser route runs training, DVC reproduction, or promotion.

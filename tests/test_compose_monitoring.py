@@ -3,12 +3,27 @@
 import json
 import re
 import subprocess
+from html.parser import HTMLParser
 from pathlib import Path
 
 import yaml
 
 
 ROOT = Path(__file__).resolve().parents[1]
+
+
+class _DashboardMarkup(HTMLParser):
+    def __init__(self):
+        super().__init__()
+        self.ids = []
+        self.internal_links = []
+
+    def handle_starttag(self, tag, attrs):
+        values = dict(attrs)
+        if "id" in values:
+            self.ids.append(values["id"])
+        if tag == "a" and values.get("href", "").startswith("#"):
+            self.internal_links.append(values["href"][1:])
 
 
 def _yaml(path):
@@ -19,6 +34,65 @@ def test_ci_pillow_range_is_compatible_with_pinned_streamlit():
     requirements = (ROOT / "requirements-ci.txt").read_text(encoding="utf-8")
     assert re.search(r"(?im)^pillow\s*>=\s*7\.1\.0\s*,\s*<\s*12\s*$", requirements)
     assert re.search(r"(?im)^streamlit==1\.45\.1\s*$", requirements)
+
+
+def test_ui_is_static_web_frontend_with_local_api_origin():
+    compose = _yaml(ROOT / "docker-compose.yml")
+    ui = compose["services"]["ui"]
+    dockerfile = (ROOT / "Dockerfile").read_text(encoding="utf-8")
+    assert "web/server.py" in dockerfile
+    assert "depends_on" not in ui
+    assert "LEAFWISE_API_URL" in (ROOT / "web" / "app.js").read_text(encoding="utf-8")
+    html = (ROOT / "web" / "index.html").read_text(encoding="utf-8")
+    script = (ROOT / "web" / "app.js").read_text(encoding="utf-8")
+    insights_html = (ROOT / "web" / "insights.html").read_text(encoding="utf-8")
+    insights_script = (ROOT / "web" / "insights.js").read_text(encoding="utf-8")
+    css = (ROOT / "web" / "style.css").read_text(encoding="utf-8")
+    assert 'id="upload-form"' in html
+    assert 'api("/predict"' in script
+    assert "payload.advice_trace" in script
+    assert 'id="demo-sample"' in html
+    assert "demo_samples.json" in script
+    assert "demo_samples/*.jpg" in (ROOT / "Dockerfile").read_text(encoding="utf-8")
+    assert 'href="/insights"' in html
+    assert 'capture="environment"' in html
+    assert 'id="temperature"' in html and 'id="humidity"' in html
+    assert 'role="tab"' in insights_html
+    assert '"/explain/jobs"' in script
+    assert 'get("/insights")' in insights_script
+    assert 'id="disclaimer"' in html
+    assert 'option value="hi"' not in html
+    assert 'option value="mr"' in html
+    assert '"disclaimer"' in (ROOT / "web" / "explanation_strings.json").read_text(encoding="utf-8")
+    assert "payload.confusable_hints" in script
+    assert "item.label" in script
+    assert "weather_source_citation" in script
+    assert "@media(max-width:520px){#submit{position:sticky" in css.replace(" ", "")
+    assert "[hidden]{display:none!important}" in css.replace(" ", "")
+    assert "@import url('https://" not in css
+    assert "FROM python:3.12-slim AS ui" in dockerfile
+    assert '"lime"' not in str(ui).lower()
+    assert '"shap"' not in str(ui).lower()
+    assert "@import url('https://" not in css
+    ui_sources = html + script + insights_html + insights_script
+    assert not re.search(r"https?://(?:cdnjs|unpkg|fonts\.googleapis|cdn\.)", ui_sources)
+    assert 'id="mlflow-run"' in insights_html
+    assert "allowlisted parameters" in insights_script
+    markup = _DashboardMarkup()
+    markup.feed(html)
+    assert len(markup.ids) == len(set(markup.ids))
+    assert set(markup.internal_links) <= set(markup.ids)
+
+
+def test_browser_sample_manifest_omits_machine_paths_and_files_exist():
+    samples = json.loads((ROOT / "web" / "demo_samples.json").read_text(encoding="utf-8"))
+    source_manifest = (ROOT / "demo_samples" / "manifest.json").read_text(encoding="utf-8")
+    assert samples
+    assert all(set(item) == {"filename", "label"} for item in samples)
+    assert all("source_path" not in item for item in samples)
+    assert all((ROOT / "demo_samples" / item["filename"]).is_file() for item in samples)
+    assert '"source_path"' not in source_manifest
+    assert not re.search(r"[A-Za-z]:\\", source_manifest)
 
 
 def test_compose_profiles_healthchecks_and_read_only_model_mount():
@@ -34,9 +108,12 @@ def test_compose_profiles_healthchecks_and_read_only_model_mount():
         assert service.get("healthcheck", {}).get("test")
         assert service.get("restart") == "unless-stopped"
 
-    assert "./models:/app/models:ro" in services["api"]["volumes"]
-    assert "./reports:/app/reports:ro" in services["api"]["volumes"]
-    assert "DATA_ROOT" not in services["api"].get("environment", {})
+    assert "${MODEL_DIR:-./models}:/app/models:ro" in services["api"]["volumes"]
+    assert "${DATA_DIR:-./data}:/app/data:ro" in services["api"]["volumes"]
+    assert "${REPORTS_DIR:-./reports}:/app/reports:ro" in services["api"]["volumes"]
+    assert "${MLFLOW_DB_PATH:-./mlflow.db}:/app/mlflow.db:ro" in services["api"]["volumes"]
+    assert services["api"].get("environment", {}).get("DATA_ROOT") == "/dataset"
+    assert "${DATA_ROOT:-./data}:/dataset:ro" in services["api"]["volumes"]
     assert {"prometheus_data", "grafana_data"} <= set(compose["volumes"])
     ui_build = services["ui"].get("build", {})
     assert ui_build.get("target") == "ui"

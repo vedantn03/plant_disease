@@ -195,6 +195,41 @@ class AdvisoryEngine:
             return {}
         return self.get_advisory(crop, condition)
 
+    def weather_risk(
+        self,
+        crop: str | None,
+        condition: str | None,
+        temperature_c: float | None,
+        humidity_pct: float | None,
+    ) -> dict[str, Any]:
+        """Return a configured weather note only when user inputs match a rule."""
+        if temperature_c is None or humidity_pct is None:
+            return {"status": "not_provided", "note": "risk unknown", "source_citation": None}
+        if crop is None or condition is None or not self.weather_rules_path.is_file():
+            return {"status": "risk_unknown", "note": "risk unknown", "source_citation": None}
+        try:
+            payload = yaml.safe_load(self.weather_rules_path.read_text(encoding="utf-8")) or {}
+        except (OSError, yaml.YAMLError):
+            return {"status": "risk_unknown", "note": "risk unknown", "source_citation": None}
+        for rule in payload.get("rules", []):
+            if str(rule.get("crop", "")).lower() != crop.lower():
+                continue
+            if str(rule.get("condition", "")).lower() != condition.lower():
+                continue
+            temp_min = rule.get("temp_min")
+            temp_max = rule.get("temp_max")
+            humidity_min = rule.get("humidity_min")
+            if not all(isinstance(value, (int, float)) for value in (temp_min, temp_max, humidity_min)):
+                continue
+            if float(temp_min) <= temperature_c <= float(temp_max) and humidity_pct >= float(humidity_min):
+                return {
+                    "status": "rule_matched",
+                    "note": str(rule.get("note", "risk unknown")),
+                    "source_citation": rule.get("source_citation"),
+                    "rule_id": rule.get("id"),
+                }
+        return {"status": "risk_unknown", "note": "risk unknown", "source_citation": None}
+
     def version_metadata(self) -> dict[str, Any]:
         return {"kb_version": self.kb_version, "entry_count": len(self._entries)}
 

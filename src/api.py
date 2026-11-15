@@ -18,25 +18,29 @@ Model loading:
   MD5-verified checkpoint from the mounted models/ volume via its manifest.
 """
 
-import io
 import asyncio
+import hashlib
 import hmac
+import io
 import ipaddress
 import json
-import hashlib
 import logging
+import math
 import os
+import threading
 import time
-from contextlib import asynccontextmanager
 from collections import defaultdict
+from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Optional
 
 import torch
 import torch.nn.functional as F
 import yaml
-from fastapi import FastAPI, File, Form, Header, HTTPException, Request, UploadFile
-from fastapi.responses import JSONResponse, Response
+from fastapi import FastAPI, File, Form, Header, HTTPException, Query, Request, UploadFile
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse, JSONResponse, Response
+from starlette.concurrency import run_in_threadpool
 from PIL import Image
 
 try:
@@ -78,10 +82,18 @@ from src.advisory_engine import AdvisoryEngine, DISCLAIMER, decide_advice, evide
 from src.background_check import build_trust_response_fields, run_background_sensitivity
 from src.calibration import probs_from_logits
 from src.config_loader import load_config
+from src.explainability import (
+    ExplanationJobStore,
+    ExplanationQueueFull,
+    ExplanationUnavailable,
+    generate_explanation,
+)
 from src.image_features import blur_score, image_brightness
+from src.insights import build_insights, latest_mlflow_run
 from src.model import GradCAM, build_model, heatmap_to_base64_png, preprocess_image
 from src.model_loader import resolve_serving_checkpoint
 from src.ood_detector import check_image_heuristics
+from src.presentation import build_prediction_views
 from src.utils import ensure_dir, get_logger, parse_class_name
 
 log = get_logger("api", level=logging.INFO)
@@ -139,9 +151,27 @@ _state: dict = {
     "registry_error": None,
     "strict_blocked": False,
     "model_version": "unknown",
+    "device": "unknown",
+    "explanation_jobs": None,
+    "started_at": None,
 }
 
 _reload_lock = asyncio.Lock()
+_model_inference_lock = threading.RLock()
+
+
+def _config_section(config, key: str, default=None):
+    """Read a config section from the project's AttrDict or a test namespace."""
+    if config is None:
+        return {} if default is None else default
+    if hasattr(config, "get"):
+        return config.get(key, {} if default is None else default)
+    return getattr(config, key, {} if default is None else default)
+
+
+def _config_value(section, key: str, default):
+    """Read one key from the project's mapping or a lightweight test namespace."""
+    return section.get(key, default) if hasattr(section, "get") else getattr(section, key, default)
 
 
 def _is_loopback_host(host: str | None) -> bool:
@@ -268,8 +298,10 @@ async def startup() -> None:
         require_data_root=False,
     )
     _state["cfg"] = cfg
+    _state["started_at"] = time.time()
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
+    _state["device"] = device
     log.info(f"Inference device: {device}")
 
     try:
@@ -341,10 +373,20 @@ async def startup() -> None:
     log_path = project_root / cfg.serving.log_file
     ensure_dir(log_path.parent)
     _state["log_file"] = open(log_path, "a", encoding="utf-8", buffering=1)
+    explain_cfg = _config_section(cfg, "explainability")
+    _state["explanation_jobs"] = ExplanationJobStore(
+        workers=int(explain_cfg.get("workers", 1)),
+        cache_size=int(explain_cfg.get("cache_size", 0)),
+        timeout_s=float(explain_cfg.get("timeout_s", 60)),
+        max_pending=int(explain_cfg.get("max_pending_jobs", 1)),
+        max_records=int(explain_cfg.get("max_job_records", 100)),
+    )
     log.info(f"Request log: {log_path}")
 
 
 async def shutdown() -> None:
+    if _state.get("explanation_jobs"):
+        _state["explanation_jobs"].shutdown()
     if _state["log_file"]:
         _state["log_file"].close()
     if _state["grad_cam"]:
@@ -370,6 +412,384 @@ app = FastAPI(
     version="0.1.0",
     lifespan=lifespan,
 )
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:8501", "http://127.0.0.1:8501"],
+    allow_methods=["GET", "POST", "DELETE"],
+    allow_headers=["Content-Type", "X-Traffic-Source"],
+)
+
+
+UI_REPORT_ALLOWLIST = frozenset({
+    "drift_latest.json",
+    "promotion_log.jsonl",
+    "seed_variance.json",
+    "candidate_gate_comparison.json",
+})
+
+
+def _prediction_presentation(
+    predicted_class: str | None,
+    confidence: float | None,
+    status: str,
+    trust_fields: dict,
+    advice_payload: dict,
+) -> dict:
+    """Build additive farmer and developer views without changing raw outputs."""
+    trace = advice_payload.get("advice_trace", {})
+    engine = _state.get("advisory_engine")
+    entry = None
+    if engine and predicted_class:
+        lookup = getattr(engine, "get_advisory_from_class_name", None)
+        if callable(lookup):
+            entry = lookup(predicted_class)
+        else:
+            try:
+                entry_crop, entry_condition = parse_class_name(predicted_class)
+                entry = engine.get_entry(entry_crop, entry_condition)
+            except (ValueError, AttributeError):
+                entry = None
+    config = _state.get("cfg")
+    serving_cfg = _config_section(config, "serving")
+    if not isinstance(serving_cfg, dict):
+        serving_cfg = vars(serving_cfg)
+    crop, condition = (None, None)
+    if predicted_class:
+        try:
+            crop, condition = parse_class_name(predicted_class)
+        except ValueError:
+            pass
+    views = build_prediction_views(
+        predicted_class=predicted_class,
+        confidence=confidence,
+        status=status,
+        ood_status=str(trust_fields.get("ood_status", "unknown")),
+        bg_check=str(trust_fields.get("bg_check", "unknown")),
+        quality=trust_fields.get("quality"),
+        coverage=_state.get("coverage"),
+        confidence_bands=serving_cfg.get("confidence_bands", {}),
+        pathogen_type=entry.get("pathogen_type") if isinstance(entry, dict) else None,
+        rules_fired=trace.get("rules_fired", []),
+        kb_version=str(trace.get("kb_version") or _kb_version()),
+        evidence_grade=trace.get("evidence_grade"),
+    )
+    display = views["display"]
+    display["crop"]["label"] = display["crop"]["label"] or (crop.title() if crop else None)
+    display["condition"]["label"] = (
+        display["condition"]["label"] or (condition.replace("_", " ").title() if condition else None)
+    )
+    return views
+
+
+def resolve_ui_report(report_name: str) -> Path:
+    """Resolve only a fixed set of read-only report names for the local UI."""
+    if report_name not in UI_REPORT_ALLOWLIST:
+        raise HTTPException(status_code=404, detail="Report not available")
+    path = Path(__file__).resolve().parent.parent / "reports" / report_name
+    if not path.is_file():
+        raise HTTPException(status_code=404, detail="Report not generated yet")
+    return path
+
+
+@app.get("/ui-data/telemetry", include_in_schema=False)
+def ui_telemetry(limit: int = Query(default=100, ge=1, le=500)) -> dict:
+    """Return bounded, read-only request-log summaries for the local UI."""
+    path = Path(__file__).resolve().parent.parent / "logs" / "requests.jsonl"
+    if not path.is_file():
+        return {
+            "available": False,
+            "message": "No request log has been generated yet.",
+            "records": [],
+            "summary": {},
+        }
+    records: list[dict[str, object]] = []
+    malformed = 0
+    truncated = False
+
+    def finite_number(value: object) -> float | None:
+        if isinstance(value, (int, float)) and not isinstance(value, bool):
+            return float(value) if math.isfinite(value) else None
+        return None
+
+    def text_value(value: object) -> str | None:
+        return value if isinstance(value, str) else None
+
+    try:
+        # The append-only log may grow during long local runs. Read only its
+        # tail so this dashboard endpoint has bounded memory and response size.
+        with path.open("rb") as stream:
+            stream.seek(0, 2)
+            size = stream.tell()
+            read_size = min(size, 2 * 1024 * 1024)
+            truncated = size > read_size
+            stream.seek(size - read_size)
+            tail = stream.read(read_size).decode("utf-8", errors="replace")
+        lines = tail.splitlines()
+        if truncated and lines:
+            lines = lines[1:]  # Discard a possibly partial first record.
+        for line in reversed(lines):
+            try:
+                value = json.loads(line)
+                if isinstance(value, dict):
+                    # Expose only the fields used in the UI, even if a future
+                    # log record grows to include additional internal details.
+                    records.append({
+                        "timestamp": text_value(value.get("timestamp")),
+                        "predicted_class": text_value(value.get("predicted_class")),
+                        "confidence": finite_number(value.get("confidence")),
+                        "latency_ms": finite_number(value.get("latency_ms")),
+                        "status": text_value(value.get("status")),
+                        "traffic_source": text_value(value.get("traffic_source")),
+                    })
+                else:
+                    malformed += 1
+            except (json.JSONDecodeError, TypeError):
+                malformed += 1
+            if len(records) >= limit:
+                break
+        records.reverse()
+    except OSError as exc:
+        raise HTTPException(status_code=503, detail="Request log cannot be read") from exc
+    latencies = [row["latency_ms"] for row in records if row["latency_ms"] is not None]
+    confidences = [row["confidence"] for row in records if row["confidence"] is not None]
+    statuses: dict[str, int] = {}
+    sources: dict[str, int] = {}
+    for row in records:
+        status = str(row.get("status", "unknown"))
+        source = str(row.get("traffic_source", "unknown"))
+        statuses[status] = statuses.get(status, 0) + 1
+        sources[source] = sources.get(source, 0) + 1
+    serving_cfg = _config_section(_state.get("cfg"), "serving")
+    minimum = int(_config_value(serving_cfg, "percentile_min_samples", 30))
+    percentiles = None
+    if len(latencies) >= minimum:
+        ordered = sorted(latencies)
+        def at_percentile(fraction: float) -> float:
+            position = (len(ordered) - 1) * fraction
+            lower = int(position)
+            upper = min(lower + 1, len(ordered) - 1)
+            weight = position - lower
+            return round(ordered[lower] * (1 - weight) + ordered[upper] * weight, 2)
+        percentiles = {"p50_latency_ms": at_percentile(0.50), "p95_latency_ms": at_percentile(0.95)}
+    return {
+        "available": bool(records),
+        "message": None if records else "Request log is empty.",
+        "record_count": len(records),
+        "malformed_lines": malformed,
+        "truncated": truncated,
+        "summary": {
+            "mean_latency_ms": round(sum(latencies) / len(latencies), 2) if latencies else None,
+            "mean_confidence": round(sum(confidences) / len(confidences), 4) if confidences else None,
+            "statuses": statuses,
+            "traffic_sources": sources,
+            "latency_percentiles": percentiles,
+            "percentile_sample_count": len(latencies),
+            "percentile_min_samples": minimum,
+        },
+        "records": records[-limit:],
+    }
+
+
+@app.get("/ui-data/pipeline", include_in_schema=False)
+def ui_pipeline() -> dict[str, object]:
+    """Expose declared DVC stage names without running or changing the pipeline."""
+    path = Path(__file__).resolve().parent.parent / "dvc.yaml"
+    try:
+        document = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+    except OSError as exc:
+        raise HTTPException(status_code=503, detail="DVC pipeline definition is unavailable") from exc
+    stages = document.get("stages", {})
+    if not isinstance(stages, dict):
+        raise HTTPException(status_code=503, detail="DVC pipeline definition is invalid")
+    return {"stages": list(stages), "source": "dvc.yaml", "reproduction_run": False}
+
+
+@app.get("/ui-data/{report_name}", include_in_schema=False)
+async def ui_report(report_name: str) -> FileResponse:
+    """Read-only allow-listed report access for the local browser dashboard."""
+    return FileResponse(resolve_ui_report(report_name))
+
+
+@app.get("/classes")
+async def classes() -> dict:
+    """Return class/crop options from the loaded serving checkpoint."""
+    names = sorted((_state.get("class_to_idx") or {}).keys())
+    crops: dict[str, list[str]] = defaultdict(list)
+    for name in names:
+        try:
+            crop_name, _condition = parse_class_name(name)
+            crops[crop_name].append(name)
+        except ValueError:
+            continue
+    return {
+        "available": bool(names),
+        "classes": names,
+        "crops": [
+            {"key": key, "label": key.replace("_", " ").replace(",", "").title(), "classes": values}
+            for key, values in sorted(crops.items())
+        ],
+    }
+
+
+@app.get("/ui-config")
+async def ui_config() -> dict:
+    """Expose browser-only display limits from the serving configuration."""
+    cfg = _state.get("cfg")
+    serving = _config_section(cfg, "serving")
+    return {
+        "browser_history_limit": int(_config_value(serving, "browser_history_limit", 8)),
+        "drift_simulation_enabled": bool(
+            _config_value(_config_section(cfg, "drift"), "ui_simulation_enabled", False)
+        ),
+    }
+
+
+@app.get("/insights")
+async def insights() -> dict:
+    """Read-only evaluator payload built from process stats and saved artifacts."""
+    cfg = _state.get("cfg")
+    limit = int(_config_value(_config_section(cfg, "serving"), "telemetry_window_size", 100))
+    telemetry = ui_telemetry(min(max(1, limit), 500))
+    process_stats = await stats()
+    serving = await health()
+    project_root = Path(__file__).resolve().parent.parent
+    drift_cfg = _config_section(cfg, "drift")
+    monitoring_config = {
+        key: _config_value(drift_cfg, key, None)
+        for key in (
+            "psi_threshold", "ks_alpha", "minimum_sample_count", "window_size",
+            "drift_rule", "thresholds_provisional",
+        )
+    }
+    mlflow_uri = _config_value(_config_section(cfg, "mlflow"), "tracking_uri", None)
+    mlflow_summary = await run_in_threadpool(latest_mlflow_run, mlflow_uri)
+    return build_insights(
+        project_root,
+        serving=serving,
+        process_stats=process_stats,
+        telemetry=telemetry,
+        class_names=sorted((_state.get("class_to_idx") or {}).keys()),
+        max_report_bytes=int(_config_value(
+            _config_section(cfg, "serving"), "insights_report_max_bytes", 200000
+        )),
+        drift_config=monitoring_config,
+        mlflow_summary=mlflow_summary,
+    )
+
+
+def _explanation_job_response(job) -> dict:
+    payload = {"job_id": job.job_id, "status": job.status, "method": job.method}
+    if job.result is not None:
+        payload.update(job.result)
+    if job.status in {"failed", "timeout"}:
+        payload.update({"reason_code": job.reason_code, "message": job.message})
+    return payload
+
+
+@app.post("/explain/jobs", status_code=202)
+async def create_explanation_job(
+    file: UploadFile = File(...),
+    method: str = Form(...),
+    crop: Optional[str] = Form(default=None),
+) -> dict:
+    """Queue a bounded LIME/SHAP job; prediction requests never wait for explainers."""
+    method = method.strip().lower()
+    if method not in {"lime", "shap"}:
+        raise HTTPException(status_code=400, detail="method must be lime or shap")
+    cfg = _state.get("cfg")
+    store = _state.get("explanation_jobs")
+    if cfg is None or store is None:
+        raise HTTPException(status_code=503, detail="Explanation service is not initialized")
+    raw_bytes = await file.read()
+    if not raw_bytes or len(raw_bytes) > int(cfg.serving.max_upload_bytes):
+        raise HTTPException(status_code=413, detail="Image is empty or exceeds the upload limit")
+    try:
+        image = Image.open(io.BytesIO(raw_bytes)).convert("RGB")
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail="Cannot open the uploaded image") from exc
+
+    explain_cfg = _config_section(cfg, "explainability")
+    if not explain_cfg.get("enabled", True):
+        raise HTTPException(status_code=503, detail="Explainability jobs are disabled")
+    lime_cfg = explain_cfg.get("lime", {})
+    shap_cfg = explain_cfg.get("shap", {})
+    project_root = Path(__file__).resolve().parent.parent
+    train_manifest = project_root / explain_cfg.get("train_manifest", "data/splits/train.csv")
+    train_hash = (
+        hashlib.sha256(train_manifest.read_bytes()).hexdigest()
+        if train_manifest.is_file() else "missing"
+    )
+    params = {
+        "seed": int(explain_cfg.get("seed", getattr(cfg, "seed", 42))),
+        "image_size": int(cfg.data.image_size),
+        "train_manifest": str(train_manifest),
+        "train_manifest_sha256": train_hash,
+        "data_root": str(cfg.data.root),
+        "lime_num_samples": int(lime_cfg.get("num_samples", 100)),
+        "lime_num_features": int(lime_cfg.get("num_features", 5)),
+        "lime_kernel_size": int(lime_cfg.get("kernel_size", 4)),
+        "lime_max_dist": int(lime_cfg.get("max_dist", 200)),
+        "lime_ratio": float(lime_cfg.get("ratio", 0.2)),
+        "shap_n_background": int(shap_cfg.get("n_background", 4)),
+        "shap_n_samples": int(shap_cfg.get("n_samples", 32)),
+        "deletion_region_fraction": float(explain_cfg.get("deletion_region_fraction", 0.10)),
+    }
+    model = _state.get("model")
+    device = str(_state.get("device", "cpu"))
+    class_index = _state.get("class_to_idx") or {}
+    idx_to_class = _state.get("idx_to_class") or {}
+    class_names = None
+    if crop and crop.strip().lower() not in {"", "auto", "all"}:
+        allowed = _state.get("crop_to_classes", {}).get(crop.strip().lower())
+        if allowed:
+            class_names = [class_index[name] for name in allowed if name in class_index]
+    version = str(_state.get("model_version", "unknown"))
+
+    def work(cancel_event):
+        if model is None:
+            raise ExplanationUnavailable("model_unavailable", "The serving model is not loaded.")
+        with _model_inference_lock:
+            return generate_explanation(
+                method=method,
+                image=image,
+                model=model,
+                device=device,
+                idx_to_class=idx_to_class,
+                model_version=version,
+                params=params,
+                crop_class_ids=class_names,
+                cancel_event=cancel_event,
+            )
+
+    try:
+        job = store.submit(
+            image_bytes=raw_bytes,
+            method=method,
+            params=params,
+            model_version=version,
+            work=work,
+        )
+    except ExplanationQueueFull as exc:
+        raise HTTPException(status_code=429, detail=str(exc)) from exc
+    return _explanation_job_response(job)
+
+
+@app.get("/explain/jobs/{job_id}")
+async def get_explanation_job(job_id: str) -> dict:
+    store = _state.get("explanation_jobs")
+    job = store.get(job_id) if store else None
+    if job is None:
+        raise HTTPException(status_code=404, detail="Explanation job not found")
+    return _explanation_job_response(job)
+
+
+@app.delete("/explain/jobs/{job_id}")
+async def cancel_explanation_job(job_id: str) -> dict:
+    store = _state.get("explanation_jobs")
+    job = store.cancel(job_id) if store else None
+    if job is None:
+        raise HTTPException(status_code=404, detail="Explanation job not found")
+    return _explanation_job_response(job)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -395,6 +815,10 @@ async def health() -> dict:
         "registry_match": _state.get("registry_match", "unknown"),
         "registry_error": _state.get("registry_error"),
         "registry_strict_blocked": _state.get("strict_blocked", False),
+        "uptime_seconds": (
+            max(0.0, round(time.time() - _state["started_at"], 2))
+            if _state.get("started_at") else None
+        ),
     }
 
 
@@ -558,6 +982,13 @@ async def predict(
             "REJECTED_OOD", 0.0, brightness, b_score, latency_ms,
             "rejected_not_a_leaf", source_header,
         )
+        advice_payload = _advice_for_prediction(
+            "rejected", None, reason_code, None, None, "unknown", brightness, b_score,
+            temperature_c, humidity_pct,
+        )
+        presentation = _prediction_presentation(
+            None, 0.0, "rejected_not_a_leaf", trust_fields, advice_payload
+        )
         return JSONResponse({
             "status": "rejected_not_a_leaf",
             "reason_code": reason_code,
@@ -567,10 +998,9 @@ async def predict(
             "latency_ms": round(latency_ms, 1),
             "disclaimer": DISCLAIMER,
             "kb_version": _kb_version(),
-            **_advice_for_prediction(
-                "rejected", None, reason_code, None, None, "unknown", brightness, b_score
-            ),
+            **advice_payload,
             **trust_fields,
+            **presentation,
         })
 
     # ── Inference ─────────────────────────────────────────────────────────────
@@ -582,9 +1012,17 @@ async def predict(
 
     input_tensor = preprocess_image(img, cfg.data.image_size).to(device)
 
-    with torch.no_grad():
-        with torch.autocast(device_type=device if device != "cpu" else "cpu", dtype=torch.float16, enabled=(device == "cuda")):
-            logits = model(input_tensor)
+    def run_forward() -> torch.Tensor:
+        with _model_inference_lock:
+            with torch.no_grad():
+                with torch.autocast(
+                    device_type=device if device != "cpu" else "cpu",
+                    dtype=torch.float16,
+                    enabled=(device == "cuda"),
+                ):
+                    return model(input_tensor)
+
+    logits = await run_in_threadpool(run_forward)
 
     # Unscaled softmax (T=1). Stored temperature is NOT applied at serving.
     # ── Crop-Aware Filtering / Hierarchical Inference ─────────────────────────
@@ -628,21 +1066,26 @@ async def predict(
     best_prob = top_probs[0]
 
     bg_cfg = cfg.background_check
-    bg_result = run_background_sensitivity(
-        img,
-        model,
-        device=device,
-        image_size=cfg.data.image_size,
-        idx_to_class=idx_to_class,
-        original_label=best_class,
-        original_confidence=best_prob,
-        min_mask_area_fraction=float(bg_cfg.min_mask_area_fraction),
-        max_mask_area_fraction=float(bg_cfg.max_mask_area_fraction),
-        allowed_class_names=(
-            valid_classes if target_crop and target_crop in _state["crop_to_classes"] else None
-        ),
-        enabled=bool(bg_cfg.bg_check_enabled),
-    )
+    def run_bg_check() -> dict:
+        with _model_inference_lock:
+            return run_background_sensitivity(
+                img,
+                model,
+                device=device,
+                image_size=cfg.data.image_size,
+                idx_to_class=idx_to_class,
+                original_label=best_class,
+                original_confidence=best_prob,
+                min_mask_area_fraction=float(bg_cfg.min_mask_area_fraction),
+                max_mask_area_fraction=float(bg_cfg.max_mask_area_fraction),
+                allowed_class_names=(
+                    valid_classes
+                    if target_crop and target_crop in _state["crop_to_classes"] else None
+                ),
+                enabled=bool(bg_cfg.bg_check_enabled),
+            )
+
+    bg_result = await run_in_threadpool(run_bg_check)
     bg_result_name = bg_result.get("result", "unknown")
     if bg_result_name not in {"consistent", "inconsistent", "unknown"}:
         bg_result_name = "unknown"
@@ -676,6 +1119,13 @@ async def predict(
             best_class, best_prob, brightness, b_score, latency_ms, "uncertain", source_header
         )
         _update_stats(best_class, best_prob, latency_ms)
+        advice_payload = _advice_for_prediction(
+            "uncertain", best_prob, reason, pred_crop, pred_condition,
+            bg_result_name, brightness, b_score, temperature_c, humidity_pct,
+        )
+        presentation = _prediction_presentation(
+            best_class, best_prob, "uncertain", trust_fields, advice_payload
+        )
         return JSONResponse({
             "status": "uncertain",
             "reason_code": reason,
@@ -688,11 +1138,9 @@ async def predict(
             "coverage_caveat": coverage_caveat,
             "disclaimer": DISCLAIMER,
             "kb_version": _kb_version(),
-            **_advice_for_prediction(
-                "uncertain", best_prob, reason, pred_crop, pred_condition,
-                bg_result_name, brightness, b_score,
-            ),
+            **advice_payload,
             **trust_fields,
+            **presentation,
         })
 
     # ── Rejection / Uncertainty Check ─────────────────────────────────────────
@@ -701,6 +1149,13 @@ async def predict(
         _record_prediction("uncertain", latency_ms, best_prob, "confidence_below_threshold", source_header)
         _log_request(best_class, best_prob, brightness, b_score, latency_ms, "uncertain", source_header)
         _update_stats(best_class, best_prob, latency_ms)
+        advice_payload = _advice_for_prediction(
+            "uncertain", best_prob, "confidence_below_threshold", pred_crop,
+            pred_condition, bg_result_name, brightness, b_score, temperature_c, humidity_pct,
+        )
+        presentation = _prediction_presentation(
+            best_class, best_prob, "uncertain", trust_fields, advice_payload
+        )
         return JSONResponse({
             "status": "uncertain",
             "reason_code": "confidence_below_threshold",
@@ -716,18 +1171,22 @@ async def predict(
             "coverage_caveat": coverage_caveat,
             "disclaimer": DISCLAIMER,
             "kb_version": _kb_version(),
-            **_advice_for_prediction(
-                "uncertain", best_prob, "confidence_below_threshold", pred_crop,
-                pred_condition, bg_result_name, brightness, b_score,
-            ),
+            **advice_payload,
             **trust_fields,
+            **presentation,
         })
 
     # ── Grad-CAM ──────────────────────────────────────────────────────────────
     gradcam_b64 = ""
     try:
         grad_cam = _state["grad_cam"]
-        heatmap = grad_cam.generate(input_tensor.requires_grad_(True), class_idx=top_idxs[0])
+        def run_gradcam():
+            with _model_inference_lock:
+                return grad_cam.generate(
+                    input_tensor.requires_grad_(True), class_idx=top_idxs[0]
+                )
+
+        heatmap = await run_in_threadpool(run_gradcam)
         gradcam_b64 = heatmap_to_base64_png(heatmap, img)
     except Exception as exc:
         log.warning(f"Grad-CAM failed: {exc}")
@@ -735,7 +1194,10 @@ async def predict(
     # ── Advisory ──────────────────────────────────────────────────────────────
     advice_payload = _advice_for_prediction(
         "ok", best_prob, "none", pred_crop, pred_condition,
-        bg_result_name, brightness, b_score,
+        bg_result_name, brightness, b_score, temperature_c, humidity_pct,
+    )
+    presentation = _prediction_presentation(
+        best_class, best_prob, "ok", trust_fields, advice_payload
     )
 
     # ── Build response ────────────────────────────────────────────────────────
@@ -759,6 +1221,7 @@ async def predict(
         "latency_ms": round(latency_ms, 1),
         "disclaimer": DISCLAIMER,
         **trust_fields,
+        **presentation,
     })
 
 
@@ -792,9 +1255,16 @@ async def predict_batch(
                 continue
 
             input_tensor = preprocess_image(im, _state["cfg"].data.image_size).to(_state["device"])
-            with torch.no_grad():
-                with torch.autocast(device_type=_state["device"] if _state["device"] != "cpu" else "cpu", dtype=torch.float16, enabled=(_state["device"] == "cuda")):
-                    logits = _state["model"](input_tensor)
+            def run_batch_forward():
+                with _model_inference_lock, torch.no_grad():
+                    with torch.autocast(
+                        device_type=_state["device"] if _state["device"] != "cpu" else "cpu",
+                        dtype=torch.float16,
+                        enabled=(_state["device"] == "cuda"),
+                    ):
+                        return _state["model"](input_tensor)
+
+            logits = await run_in_threadpool(run_batch_forward)
             probs = probs_from_logits(logits, temperature=1.0).squeeze()
             top_prob, top_idx = probs.max(dim=0)
             cls_name = _state["idx_to_class"][top_idx.item()]
@@ -865,6 +1335,8 @@ def _advice_for_prediction(
     bg_check: str,
     brightness: float | None,
     blur_value: float | None,
+    temperature_c: float | None = None,
+    humidity_pct: float | None = None,
 ) -> dict:
     engine = _state.get("advisory_engine")
     entry = engine.get_entry(crop, condition) if engine and crop and condition else None
@@ -884,6 +1356,19 @@ def _advice_for_prediction(
         kb_version=_kb_version(),
         rules_fired=[reason] if reason not in {"", "none"} else [],
     )
+    weather = {"status": "not_provided", "note": "risk unknown", "source_citation": None}
+    weather_fn = getattr(engine, "weather_risk", None) if engine else None
+    if callable(weather_fn):
+        weather = weather_fn(crop, condition, temperature_c, humidity_pct)
+    advice["weather_note"] = weather.get("note", "risk unknown")
+    advice["weather_status"] = weather.get("status", "risk_unknown")
+    advice["weather_source_citation"] = weather.get("source_citation")
+    advice["status"] = (entry or {}).get("status", "PLACEHOLDER")
+    advice["translation_status"] = (entry or {}).get("translation_status", "MISSING")
+    advice["scouting_mr"] = (entry or {}).get("scouting_mr", [])
+    advice["cultural_mr"] = (entry or {}).get("cultural_mr", [])
+    if weather.get("rule_id"):
+        trace["rules_fired"].append(str(weather["rule_id"]))
     ADVICE_TOTAL.labels(tier=trace["tier"], evidence_grade=grade).inc()
     if trace["tier"] != "full":
         withheld_reason = next(
