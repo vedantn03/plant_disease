@@ -20,7 +20,7 @@
 | **Telemetry & Latency Audit**<br>`logs/requests.jsonl`, Prometheus | **Amazon CloudWatch** + OpenTelemetry | **Google Cloud Logging & Monitoring** | **Azure Monitor** + Application Insights | Real-time distributed tracing, latency p99 monitoring, and structured JSON payload ingestion. |
 | **Data Drift Detection & Monitoring**<br>SIMULATION ONLY: `simulate_drift.py`; real-log local monitor: `drift_exporter.py` | **SageMaker Model Monitor** (Baseline vs Live) | **Vertex AI Model Monitoring** (Skew & Drift) | **Azure ML Data Drift Service** | The old script is SIMULATION ONLY. WP4 compares real request-log brightness, blur, and confidence against a TRAIN baseline; replay is staged traffic. |
 | **Automated Retraining Trigger (SIMULATION)**<br>`check_drift_and_trigger.py` | **AWS EventBridge** + **SageMaker Pipelines** | **GCP Cloud Composer / Cloud Functions** + Vertex Pipelines | **Azure Event Grid** + **Azure ML Pipelines** | Future mapping for an event-driven service; current script output is SIMULATION. |
-| **Interactive Dashboard & Telemetry UI**<br>`app/ui.py` (Streamlit) | **AWS App Runner** / AWS ECS Fargate | **Google Cloud Run** | **Azure Container Apps** | Serverless container hosting for customer/agronomist screening portals with automatic TLS and DNS. |
+| **Interactive Dashboard & Telemetry UI**<br>`web/` (static HTML/CSS/JS) | **AWS App Runner** / AWS ECS Fargate | **Google Cloud Run** | **Azure Container Apps** | Possible hosting targets only; the current dashboard is local and no cloud deployment is claimed. |
 
 ---
 
@@ -44,7 +44,7 @@ flowchart LR
         SM_Registry --> SM_Endpoint["SageMaker Real-Time Endpoint\n(FastAPI Container)"]
         Client["Agronomist / Mobile App"] --> CloudFront["AWS CloudFront / API Gateway"]
         CloudFront --> SM_Endpoint
-        SM_Endpoint --> AppRunner["Streamlit Dashboard\n(AWS App Runner)"]
+        SM_Endpoint --> AppRunner["Browser Dashboard\n(static HTML/CSS/JS)"]
     end
 
     subgraph Monitoring["Observability & Closed-Loop Retraining"]

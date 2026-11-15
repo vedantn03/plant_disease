@@ -1,0 +1,34 @@
+[
+  {
+    "filename": "Tomato___Early_blight.jpg",
+    "label": "Tomato · Early blight"
+  },
+  {
+    "filename": "Apple___Apple_scab.jpg",
+    "label": "Apple · Apple scab"
+  },
+  {
+    "filename": "Corn_(maize)___Common_rust_.jpg",
+    "label": "Corn · Common rust"
+  },
+  {
+    "filename": "Potato___Late_blight.jpg",
+    "label": "Potato · Late blight"
+  },
+  {
+    "filename": "Strawberry___Leaf_scorch.jpg",
+    "label": "Strawberry · Leaf scorch"
+  },
+  {
+    "filename": "Pepper,_bell___healthy.jpg",
+    "label": "Bell pepper · Healthy"
+  },
+  {
+    "filename": "Orange___Haunglongbing_(Citrus_greening).jpg",
+    "label": "Orange · Citrus greening sample"
+  },
+  {
+    "filename": "non_leaf_sample.jpg",
+    "label": "Non-leaf sample"
+  }
+]

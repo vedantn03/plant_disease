@@ -5,6 +5,7 @@ from __future__ import annotations
 import io
 import asyncio
 import sys
+import time
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import patch
@@ -91,7 +92,8 @@ def test_fixture_model_exercises_health_predict_and_metrics(
     assert api._check_test_model_environment() == str(fixture_checkpoint)
 
     cfg = SimpleNamespace(
-        data=SimpleNamespace(image_size=8),
+        seed=7,
+        data=SimpleNamespace(image_size=8, root=str(tmp_path / "absent-dataset")),
         background_check=SimpleNamespace(
             bg_check_enabled=False,
             abstain_on_bg_inconsistent=False,
@@ -105,6 +107,10 @@ def test_fixture_model_exercises_health_predict_and_metrics(
             top_k=5,
             confidence_threshold=0.0,
             max_upload_bytes=1024**2,
+            browser_history_limit=4,
+            telemetry_window_size=10,
+            percentile_min_samples=2,
+            insights_report_max_bytes=10000,
         ),
     )
 
@@ -123,6 +129,21 @@ def test_fixture_model_exercises_health_predict_and_metrics(
             side_effect=lambda num_classes, pretrained: TinyFixtureModel(num_classes),
         ),
         patch.object(api, "GradCAM", FakeGradCAM),
+        patch.object(
+            api,
+            "generate_explanation",
+            return_value={
+                "status": "done",
+                "method": "lime",
+                "predicted_class": "Apple___healthy",
+                "confidence": 0.75,
+                "overlay_png_base64": "synthetic-test-overlay",
+                "runtime_ms": 1.0,
+                "parameters": {"seed": 7},
+                "model_version": "test-fixture",
+                "caption": "Synthetic test attribution only.",
+            },
+        ),
         patch.object(
             api,
             "AdvisoryEngine",
@@ -145,6 +166,19 @@ def test_fixture_model_exercises_health_predict_and_metrics(
             assert health.json()["model_loaded"] is True
             assert health.json()["model_source"] == "test_fixture"
 
+            classes = client.get("/classes")
+            assert classes.status_code == 200
+            assert classes.json()["available"] is True
+            assert classes.json()["crops"]
+            ui_config = client.get("/ui-config")
+            assert ui_config.status_code == 200
+            assert ui_config.json()["browser_history_limit"] == 4
+            insights = client.get("/insights")
+            assert insights.status_code == 200
+            assert "process" in insights.json() and "reports" in insights.json()
+            assert "monitoring_config" in insights.json()
+            assert insights.json()["mlflow"]["status"] == "not_configured"
+
             prediction = client.post(
                 "/predict",
                 files={"file": ("leaf.jpg", _image_bytes(), "image/jpeg")},
@@ -159,13 +193,47 @@ def test_fixture_model_exercises_health_predict_and_metrics(
             assert "advice_trace" in body
             assert body["kb_version"] == "fixture-kb-version"
             assert body["advice_trace"]["kb_version"] == body["kb_version"]
+            assert body["display"]["crop"]["label"]
+            assert "raw_class" in body["debug"]
+            assert "raw_class" not in body["display"]
+
+            explain = client.post(
+                "/explain/jobs",
+                data={"method": "lime"},
+                files={"file": ("leaf.jpg", _image_bytes(), "image/jpeg")},
+            )
+            assert explain.status_code == 202
+            job_id = explain.json()["job_id"]
+            deadline = time.monotonic() + 2
+            job = client.get(f"/explain/jobs/{job_id}")
+            while job.json()["status"] in {"queued", "running"} and time.monotonic() < deadline:
+                time.sleep(0.01)
+                job = client.get(f"/explain/jobs/{job_id}")
+            assert job.status_code == 200
+            assert job.json()["status"] == "done"
+            assert job.json()["predicted_class"] == "Apple___healthy"
+            assert client.delete(f"/explain/jobs/{job_id}").status_code == 200
+
+            invalid_explain = client.post(
+                "/explain/jobs",
+                data={"method": "not-an-explainer"},
+                files={"file": ("leaf.jpg", _image_bytes(), "image/jpeg")},
+            )
+            assert invalid_explain.status_code == 400
 
             metrics = client.get("/metrics")
             assert metrics.status_code == 200
             metrics_text = metrics.text
         finally:
             asyncio.run(api.shutdown())
-            api._state.update({"model": None, "grad_cam": None, "cfg": None, "log_file": None})
+            api._state.update({
+                "model": None,
+                "grad_cam": None,
+                "cfg": None,
+                "log_file": None,
+                "explanation_jobs": None,
+                "started_at": None,
+            })
         assert "predict_requests_total" in metrics_text
         assert "predict_latency_seconds" in metrics_text
         assert "predict_confidence" in metrics_text

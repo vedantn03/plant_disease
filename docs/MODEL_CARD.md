@@ -159,3 +159,5 @@ Source date: date not recorded in snapshot
 - A class-level weakness is described only when its record is present in the saved evaluation snapshot.
 - Serving reports unscaled softmax confidence (T=1). Temperature fitting is a diagnostic step; the serving path does not apply fitted temperature scaling. See `src/api.py` and `docs/DECISIONS.md`.
 - PlantVillage dataset license and redistribution rights must be verified before any public release. Sources: `docs/ADVISORY_AUDIT.md`, `src/api.py`, and the cited snapshot sections above; source dates are not recorded unless shown with a snapshot section.
+- Per-image LIME and SHAP are implemented as optional asynchronous API jobs. SHAP requires the configured TRAIN manifest and images; resource limits and dependencies can prevent a result. Attribution maps describe model behavior and do not establish a diagnosis.
+- Marathi explanatory and advisory text is a machine draft where present. Missing fields fall back to the source-language text; fluent agronomist review is required before farmer use.

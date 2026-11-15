@@ -65,6 +65,37 @@ serving:
   top_k: 5
   port: 8000
   log_file: "logs/requests.jsonl"
+  percentile_min_samples: 30
+  telemetry_window_size: 100
+  browser_history_limit: 8
+  insights_report_max_bytes: 200000
+  # Provisional presentation bands; review against saved VAL predictions before field use.
+  confidence_bands:
+    high_min: 0.85
+    medium_min: 0.65
+    provisional: true
+
+explainability:
+  enabled: true
+  seed: 42
+  workers: 1
+  max_pending_jobs: 2
+  max_job_records: 100
+  timeout_s: 60
+  cache_size: 16
+  train_manifest: "data/splits/train.csv"
+  deletion_region_fraction: 0.10
+  evaluation_max_images: 10
+  report_path: "reports/explain_eval.md"
+  lime:
+    num_samples: 100
+    num_features: 5
+    kernel_size: 4
+    max_dist: 200
+    ratio: 0.2
+  shap:
+    n_background: 4
+    n_samples: 32
 
 background_check:
   bg_check_enabled: true
@@ -78,6 +109,7 @@ background_check:
   request_timeout_seconds: 30
 
 drift:
+  ui_simulation_enabled: false
   blur_sigma: 3.0          # Gaussian blur sigma for drift simulation
   brightness_factor: 0.6   # multiply pixel values by this
   ks_alpha: 0.05           # Existing KS significance level; remains provisional

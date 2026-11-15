@@ -255,3 +255,36 @@ Compose service reads the mounted MLflow SQLite file as read-only to resolve the
 container serving concurrently with a host process that writes the same database. Registry writes
 occur only when the user runs
 `scripts/promote.py --apply` or `tasks.ps1 rollback`.
+
+[2026-11-15] Farmer and evaluator routes | The static HTML/CSS/JavaScript farmer flow lives at
+`/`; repository operations and saved evidence live at `/insights`. The API has one configurable
+browser origin and both routes remain renderable when the API is unavailable. This keeps
+developer-only status, confidence diagnostics, rules, and raw class keys out of the normal farmer
+result.
+
+[2026-11-15] On-demand image explainers | Grad-CAM remains in the ordinary prediction response.
+LIME and SHAP use bounded asynchronous API jobs with cancellation, timeout-on-poll, caching by
+image/method/parameters/model identity, and explicit errors. LIME uses the serving image
+preprocessing and a seeded perturbation explainer; SHAP uses a configured TRAIN-manifest subset.
+The API serializes access to its shared model, so an explainer does not block the async event loop
+but may wait for the model lock. This adds no claim of attribution faithfulness or field validity.
+
+[2026-11-15] Marathi scope | English remains the interface language. The selector changes
+explanatory/advisory strings only. Each Marathi field is shown only when returned as
+`MACHINE_DRAFT`; otherwise the field falls back to its source language with a notice. No Marathi
+text is marked human reviewed, and chemical/product terms are not translated by frontend code.
+
+[2026-11-15] Metric reconciliation in browser | Saved TEST evaluation snapshots and VAL gate/seed
+reports are displayed as separate evidence sources, each labelled with the source artifact.
+Missing snapshots are described as not generated; there are no static browser metrics. The UI does
+not infer accuracy from model confidence or combine metrics across model versions/splits.
+
+[2026-11-15] Prediction presentation contract | `/predict` keeps its raw fields for existing
+clients and adds `display` for farmer-safe crop/condition/confidence-band/coverage/next-step fields
+and `debug` for raw class, confidence, quality, OOD, rules, KB version, and evidence grade. New
+frontends should render `display`; raw diagnostic values belong only in evaluator/technical views.
+
+[2026-11-15] MLflow overview detail | The evaluator route queries the configured tracking URI for
+the newest run and renders only allowlisted training parameters and metrics. It omits run IDs,
+hashes, local paths and unreviewed parameter names; failures become an explicit unavailable state.
+This is read-only and does not move registry aliases.

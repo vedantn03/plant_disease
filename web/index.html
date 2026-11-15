@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#183f32"><title>LEAFWISE | Leaf check</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body class="farmer-app">
+  <header class="nav">
+    <a class="brand" href="/" aria-label="LEAFWISE home"><span class="brand-mark">L</span> LEAFWISE</a>
+    <div class="nav-tools"><label for="language">Explanation</label><select id="language" aria-label="Explanation language"><option value="en">English</option><option value="mr">मराठी</option></select><a href="/insights" class="evaluator-link">For evaluators</a></div>
+  </header>
+  <main class="farmer-main">
+    <section class="tool-heading"><div><p class="eyebrow">Crop health decision support</p><h1>Check a leaf photo</h1><p id="api-status" role="status" aria-live="polite">Checking prediction service…</p></div></section>
+    <div class="workspace">
+      <form id="upload-form" class="upload-card">
+        <h2><span class="step-number">1</span> Add a photo</h2>
+        <label class="drop" id="drop-zone" for="photo"><strong>Add or take a leaf photo</strong><span>One leaf, good light, leaf in focus</span><input id="photo" name="file" type="file" accept="image/jpeg,image/png,image/webp" capture="environment" required><img id="preview" alt="Preview of selected leaf photo" hidden></label>
+        <button id="replace-photo" class="text-button" type="button" hidden>Replace photo</button>
+        <details class="sample-picker"><summary>Try a sample photo</summary><select id="demo-sample" aria-label="Choose sample photo"><option value="">Select sample</option></select><p>Sample outputs are examples from lab-style images, not field validation.</p></details>
+        <h2 class="optional-heading"><span class="step-number">2</span> Field details <small>Optional</small></h2>
+        <label class="field-label" for="crop">Crop</label><select id="crop" name="crop"><option value="Auto">Not sure — let the app decide</option></select>
+        <div class="weather-fields"><label>Temperature (°C)<input id="temperature" name="temperature_c" type="number" step="any" inputmode="decimal"></label><label>Humidity (%)<input id="humidity" name="humidity_pct" type="number" min="0" max="100" step="any" inputmode="decimal"></label></div>
+        <p class="small-note">Temperature and humidity only refine a weather note; no automatic weather data is used.</p>
+        <button class="button primary full" id="submit" type="submit">Check my leaf</button>
+        <p class="api-footnote" id="service-note">The prediction needs the local API and model.</p>
+      </form>
+      <section class="result-card" aria-live="polite" aria-busy="false">
+        <div id="idle" class="empty"><div class="empty-sprout" aria-hidden="true">✳</div><h2>Your result will appear here</h2><p>Add a clear photo of one leaf to begin.</p></div>
+        <div id="loading" class="empty" hidden><div class="spinner"></div><h2>Checking the photo…</h2><p>The local model is processing this image.</p></div>
+        <div id="error" class="notice error" role="alert" hidden></div>
+        <div id="result" hidden></div>
+      </section>
+    </div>
+    <section class="history-section"><div class="section-head"><div><p class="eyebrow">This browser only</p><h2>Recent scans</h2></div><button id="clear-history" class="text-button" type="button">Clear history</button></div><div id="history-list" class="history-list" aria-live="polite"></div></section>
+  </main>
+  <aside id="disclaimer" class="disclaimer" role="note"></aside>
+  <footer><span>LEAFWISE · Local crop-health prototype</span><a href="/insights">Evaluator and MLOps view</a></footer>
+  <script src="/runtime-config.js"></script><script src="/app.js" defer></script>
+</body>
+</html>

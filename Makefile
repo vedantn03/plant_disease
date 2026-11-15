@@ -3,9 +3,10 @@
 # Usage (from the plant_disease/ directory):
 #   make up          — start API + UI via docker compose (recommended for demo)
 #   make serve       — start API directly (no Docker)
-#   make ui          — start Streamlit UI directly (no Docker)
+#   make ui          — start the static browser UI directly (no Docker)
 #   make evaluate    — run full evaluation suite, regenerate reports/metrics.json
-#   make test        — run pytest (18 tests)
+#   make explain-eval — compute real VAL explanation deletion comparisons
+#   make test        — run pytest
 #   make drift       — run drift simulation demo
 #   make promote     — run promotion gate
 
@@ -13,9 +14,8 @@ PYTHON     = ..\\.venv\\Scripts\\python.exe
 PIP        = ..\\.venv\\Scripts\\pip.exe
 PYTEST     = ..\\.venv\\Scripts\\pytest.exe
 UVICORN    = ..\\.venv\\Scripts\\uvicorn.exe
-STREAMLIT  = ..\\.venv\\Scripts\\streamlit.exe
 
-.PHONY: all setup verify-gpu audit train serve ui evaluate promote test drift up down clean
+.PHONY: all setup verify-gpu audit train serve ui evaluate explain-eval promote test drift demo up down clean
 
 # ── Default ────────────────────────────────────────────────────────────────────
 all: setup verify-gpu
@@ -41,9 +41,14 @@ train:
 serve:
 	$(UVICORN) src.api:app --host 127.0.0.1 --port 8000
 
-# ── Step 4b: Launch Streamlit UI directly (development) ───────────────────────
+# ── Step 4b: Launch browser UI directly (development) ─────────────────────────
 ui:
-	$(STREAMLIT) run app/ui.py --server.port 8501
+	$(PYTHON) web/server.py
+
+explain-eval:
+	$(PYTHON) scripts/explain_eval.py
+
+demo: up
 
 # ── One-command stack via Docker Compose (recommended for demo) ───────────────
 up:
@@ -65,7 +70,7 @@ promote:
 
 # ── Run all tests ──────────────────────────────────────────────────────────────
 test:
-	$(PYTEST) tests/ -v
+	$(PYTHON) -m pytest tests/ -v -rs
 
 # ── Drift simulation demo ──────────────────────────────────────────────────────
 drift:
